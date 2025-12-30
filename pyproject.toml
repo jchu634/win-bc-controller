@@ -1,0 +1,9 @@
+[project]
+name = "win-bc-controller"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bumble>=0.0.220",
+]
