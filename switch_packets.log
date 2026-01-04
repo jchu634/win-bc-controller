@@ -1,0 +1,30 @@
+2026-01-05 01:32:33,451 - Transport: usb:2357:0604
+2026-01-05 01:32:33,452 - Device address: 7C:BB:8A:39:21:24
+2026-01-05 01:32:33,452 - Device class: 0x2508
+2026-01-05 01:32:33,453 - Device name: Pro Controller
+2026-01-05 01:32:33,571 - Set discoverable to True, connectable to True
+2026-01-05 01:32:33,572 - Device class after discoverable: 0x2508
+2026-01-05 01:34:09,169 - Transport: usb:2357:0604
+2026-01-05 01:34:09,170 - Device address: 7C:BB:8A:39:21:24
+2026-01-05 01:34:09,170 - Device class: 0x2508
+2026-01-05 01:34:09,170 - Device name: Pro Controller
+2026-01-05 01:34:09,288 - Set discoverable to True, connectable to True
+2026-01-05 01:34:09,288 - Device class after discoverable: 0x2508
+2026-01-05 01:52:09,426 - Transport: usb:2357:0604
+2026-01-05 01:52:09,427 - Device address: 7C:BB:8A:39:21:24
+2026-01-05 01:52:09,428 - Device class: 0x2508
+2026-01-05 01:52:09,428 - Device name: Pro Controller
+2026-01-05 01:52:09,547 - Set discoverable to True, connectable to True
+2026-01-05 01:52:09,547 - Device class after discoverable: 0x2508
+2026-01-05 02:44:00,012 - Transport: usb:2357:0604
+2026-01-05 02:44:00,013 - Device address: 7C:BB:8A:39:21:24
+2026-01-05 02:44:00,013 - Device class: 0x2508
+2026-01-05 02:44:00,014 - Device name: Pro Controller
+2026-01-05 02:44:00,132 - Set discoverable to True, connectable to True
+2026-01-05 02:44:00,132 - Device class after discoverable: 0x2508
+2026-01-05 02:44:17,711 - Transport: usb:2357:0604
+2026-01-05 02:44:17,713 - Device address: BC:07:1D:B0:92:D7
+2026-01-05 02:44:17,713 - Device class: 0x2508
+2026-01-05 02:44:17,713 - Device name: Pro Controller
+2026-01-05 02:44:17,831 - Set discoverable to True, connectable to True
+2026-01-05 02:44:17,832 - Device class after discoverable: 0x2508
