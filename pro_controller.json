@@ -1,7 +1,5 @@
 {
   "name": "Pro Controller",
   "class_of_device": 9480,
-  "public_address": "bc:07:1d:b0:92:d7",
-  "address": "bc:07:1d:b0:92:d7",
   "keystore": "JsonKeyStore"
 }

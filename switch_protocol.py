@@ -5,8 +5,8 @@ Pro Controller only - focused on pairing functionality
 """
 
 import random
-from time import perf_counter
 from enum import Enum
+from time import perf_counter
 
 
 class SwitchResponses(Enum):
@@ -36,8 +36,9 @@ class SwitchProtocol:
         self.controller_type = controller_type
         self.report_size = report_size
 
-        self.report = None
-        self.set_empty_report()
+        self.report = [0] * self.report_size
+        self.report[0] = 0xA1
+        # self.set_empty_report()
 
         self.mode = None
         self.player_number = None

@@ -4,7 +4,6 @@
 import asyncio
 import logging
 import sys
-from datetime import datetime
 
 import bumble.logging
 from bumble.core import (
@@ -14,8 +13,8 @@ from bumble.core import (
 )
 from bumble.device import Device
 from bumble.hci import Address
-from bumble.hid import HID_CONTROL_PSM, HID_INTERRUPT_PSM, Message
 from bumble.hid import Device as HID_Device
+from bumble.hid import Message
 from bumble.sdp import (
     SDP_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
     SDP_BLUETOOTH_PROFILE_DESCRIPTOR_LIST_ATTRIBUTE_ID,
@@ -49,7 +48,6 @@ SDP_HID_PROFILE_VERSION_ATTRIBUTE_ID = 0x020B
 SDP_HID_SUPERVISION_TIMEOUT_ATTRIBUTE_ID = 0x020C
 SDP_HID_NORMALLY_CONNECTABLE_ATTRIBUTE_ID = 0x020D
 SDP_HID_BOOT_DEVICE_ATTRIBUTE_ID = 0x020E
-
 
 LANGUAGE = 0x656E
 ENCODING = 0x6A
@@ -328,14 +326,6 @@ def sdp_records():
     }
 
 
-async def get_stream_reader(pipe):
-    loop = asyncio.get_event_loop()
-    reader = asyncio.StreamReader(loop=loop)
-    protocol = asyncio.StreamReaderProtocol(reader)
-    await loop.connect_read_pipe(lambda: protocol, pipe)
-    return reader
-
-
 def setup_logging():
     """Setup logging to console and file"""
     console_handler = logging.StreamHandler()
@@ -403,138 +393,127 @@ async def main() -> None:
     print("=" * 60)
     print("")
 
+    if len(sys.argv) == 4:
+        bt_address = sys.argv[3]
+    else:
+        bt_address = "98:b6:e9:12:34:57"
+
+    protocol = SwitchProtocol("PRO_CONTROLLER", bt_address)
+
+    def on_hid_data_cb(pdu: bytes):
+        packet_log = format_switch_msg(pdu, "RX")
+        logger.debug(packet_log)
+        if len(pdu) > 40:
+            print(f"  [RX] Switch command: 0x{pdu[11]:02X}")
+
+        protocol.process_commands(pdu)
+        report = protocol.get_report()
+
+        if len(report) > 1:
+            tx_log = format_switch_msg(report, "TX")
+            logger.debug(tx_log)
+            if len(report) > 20:
+                print(f"  [TX] Response sent ({len(report)} bytes)")
+
+            hid_device.send_data(report)
+
+    def on_get_report_cb(
+        report_id: int, report_type: int, buffer_size: int
+    ) -> HID_Device.GetSetStatus:
+        retValue = hid_device.GetSetStatus()
+
+        logger.info(
+            f"GET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={buffer_size}"
+        )
+
+        if report_type == Message.ReportType.INPUT_REPORT:
+            if report_id == 0x21:
+                protocol.set_subcommand_reply()
+                retValue.data = bytes(protocol.get_report()[1:])
+                retValue.status = hid_device.GetSetReturn.SUCCESS
+                print(f"  [GET] Subcommand reply (0x21)")
+            elif report_id == 0x30:
+                protocol.set_full_input_report()
+                retValue.data = bytes(protocol.get_report()[1:])
+                retValue.status = hid_device.GetSetReturn.SUCCESS
+                print(f"  [GET] Full input report (0x30)")
+            else:
+                retValue.status = hid_device.GetSetReturn.REPORT_ID_NOT_FOUND
+
+            if buffer_size:
+                data_len = buffer_size - 1
+                retValue.data = retValue.data[:data_len]
+        else:
+            retValue.status = hid_device.GetSetReturn.ERR_INVALID_PARAMETER
+
+        return retValue
+
+    def on_set_report_cb(
+        report_id: int, report_type: int, report_size: int, data: bytes
+    ) -> HID_Device.GetSetStatus:
+        logger.info(
+            f"SET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={report_size}"
+        )
+
+        if report_type == Message.ReportType.OUTPUT_REPORT:
+            retValue = hid_device.GetSetStatus(status=hid_device.GetSetReturn.SUCCESS)
+        elif report_type == Message.ReportType.FEATURE_REPORT:
+            retValue = hid_device.GetSetStatus(
+                status=hid_device.GetSetReturn.ERR_INVALID_PARAMETER
+            )
+        else:
+            retValue = hid_device.GetSetStatus(status=hid_device.GetSetReturn.SUCCESS)
+
+        return retValue
+
+    def on_get_protocol_cb() -> HID_Device.GetSetStatus:
+        return HID_Device.GetSetStatus(
+            data=bytes([protocol_mode]),
+            status=hid_device.GetSetReturn.SUCCESS,
+        )
+
+    def on_set_protocol_cb(protocol_mode_arg: int) -> HID_Device.GetSetStatus:
+        logger.info(f"SET_PROTOCOL: {protocol_mode_arg}")
+        return HID_Device.GetSetStatus(
+            status=hid_device.GetSetReturn.ERR_UNSUPPORTED_REQUEST
+        )
+
+    def on_virtual_cable_unplug_cb():
+        print("\n! Virtual cable unplug received")
+        logger.warning("Virtual cable unplug received")
+
     async with await open_transport(sys.argv[2]) as hci_transport:
-        print("✓ HCI transport connected")
         logger.info(f"Transport: {sys.argv[2]}")
 
+        # Create a device
         device = Device.from_config_file_with_hci(
             sys.argv[1], hci_transport.source, hci_transport.sink
         )
         device.classic_enabled = True
-        device.public_address = Address("bc:07:1d:b0:92:d7")
+        device.public_address = Address(bt_address)
 
-        print(f"✓ Device created: {device.public_address}")
-        print(f"✓ Device class: 0x{device.class_of_device:04X}")
-        print(f"✓ Device name: {device.name}")
         logger.info(f"Device address: {device.public_address}")
         logger.info(f"Device class: 0x{device.class_of_device:04X}")
         logger.info(f"Device name: {device.name}")
 
+        # Create and register HID Device
         hid_device = HID_Device(device)
 
-        def on_connection(connection):
-            print(f"! Connection established from {connection.peer_address}")
+        async def on_connection(connection):
             logger.info(f"Connection from: {connection.peer_address}")
 
-            async def handle_connection():
-                try:
-                    await connection.authenticate()
-                    print("  ✓ Authentication successful")
-                    logger.info("Authentication successful")
+            try:
+                await connection.authenticate()
+                logger.info("Authentication successful")
 
-                    await connection.encrypt()
-                    print("  ✓ Encryption enabled")
-                    logger.info("Encryption enabled")
-                except Exception as e:
-                    print(f"  ✗ Auth/Encrypt failed: {e}")
-                    logger.error(f"Auth/Encrypt failed: {e}")
-
-            asyncio.create_task(handle_connection())
+                await connection.encrypt()
+                logger.info("Encryption enabled")
+            except Exception as e:
+                logger.error(f"Auth/Encrypt failed: {e}")
 
         device.on("connection", on_connection)
 
-        bt_address = str(device.public_address)
-        protocol = SwitchProtocol("PRO_CONTROLLER", bt_address)
-
-        print("✓ Switch protocol initialized")
-        print("")
-
-        def on_hid_data_cb(pdu: bytes):
-            packet_log = format_switch_msg(pdu, "RX")
-            logger.debug(packet_log)
-            if len(pdu) > 40:
-                print(f"  [RX] Switch command: 0x{pdu[11]:02X}")
-
-            protocol.process_commands(pdu)
-            report = protocol.get_report()
-
-            if len(report) > 1:
-                tx_log = format_switch_msg(report, "TX")
-                logger.debug(tx_log)
-                if len(report) > 20:
-                    print(f"  [TX] Response sent ({len(report)} bytes)")
-
-                hid_device.send_data(report)
-
-        def on_get_report_cb(
-            report_id: int, report_type: int, buffer_size: int
-        ) -> HID_Device.GetSetStatus:
-            retValue = hid_device.GetSetStatus()
-
-            logger.info(
-                f"GET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={buffer_size}"
-            )
-
-            if report_type == Message.ReportType.INPUT_REPORT:
-                if report_id == 0x21:
-                    protocol.set_subcommand_reply()
-                    retValue.data = bytes(protocol.get_report()[1:])
-                    retValue.status = hid_device.GetSetReturn.SUCCESS
-                    print(f"  [GET] Subcommand reply (0x21)")
-                elif report_id == 0x30:
-                    protocol.set_full_input_report()
-                    retValue.data = bytes(protocol.get_report()[1:])
-                    retValue.status = hid_device.GetSetReturn.SUCCESS
-                    print(f"  [GET] Full input report (0x30)")
-                else:
-                    retValue.status = hid_device.GetSetReturn.REPORT_ID_NOT_FOUND
-
-                if buffer_size:
-                    data_len = buffer_size - 1
-                    retValue.data = retValue.data[:data_len]
-            else:
-                retValue.status = hid_device.GetSetReturn.ERR_INVALID_PARAMETER
-
-            return retValue
-
-        def on_set_report_cb(
-            report_id: int, report_type: int, report_size: int, data: bytes
-        ) -> HID_Device.GetSetStatus:
-            logger.info(
-                f"SET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={report_size}"
-            )
-
-            if report_type == Message.ReportType.OUTPUT_REPORT:
-                retValue = hid_device.GetSetStatus(
-                    status=hid_device.GetSetReturn.SUCCESS
-                )
-            elif report_type == Message.ReportType.FEATURE_REPORT:
-                retValue = hid_device.GetSetStatus(
-                    status=hid_device.GetSetReturn.ERR_INVALID_PARAMETER
-                )
-            else:
-                retValue = hid_device.GetSetStatus(
-                    status=hid_device.GetSetReturn.SUCCESS
-                )
-
-            return retValue
-
-        def on_get_protocol_cb() -> HID_Device.GetSetStatus:
-            return HID_Device.GetSetStatus(
-                data=bytes([protocol_mode]),
-                status=hid_device.GetSetReturn.SUCCESS,
-            )
-
-        def on_set_protocol_cb(protocol_mode_arg: int) -> HID_Device.GetSetStatus:
-            logger.info(f"SET_PROTOCOL: {protocol_mode_arg}")
-            return HID_Device.GetSetStatus(
-                status=hid_device.GetSetReturn.ERR_UNSUPPORTED_REQUEST
-            )
-
-        def on_virtual_cable_unplug_cb():
-            print("\n! Virtual cable unplug received")
-            logger.warning("Virtual cable unplug received")
-
+        # Register for call backs
         hid_device.on("interrupt_data", on_hid_data_cb)
 
         hid_device.register_get_report_cb(on_get_report_cb)
@@ -542,24 +521,21 @@ async def main() -> None:
         hid_device.register_get_protocol_cb(on_get_protocol_cb)
         hid_device.register_set_protocol_cb(on_set_protocol_cb)
 
+        # Register for virtual cable unplug call back
         hid_device.on("virtual_cable_unplug", on_virtual_cable_unplug_cb)
 
+        # Setup the SDP to advertise HID Device service
         device.sdp_service_records = sdp_records()
+        logging.debug(f"Device class: 0x{device.class_of_device:04X}")
+        logging.debug(f"Device name: {device.name}")
 
-        print(f"✓ Device class: 0x{device.class_of_device:04X}")
-        print(f"✓ Device name: {device.name}")
-
+        # Start the controller
         await device.power_on()
+        logging.info("Device powered on + SDP Records registered")
 
-        print("✓ Device powered on")
-        print("✓ SDP records registered")
-        print("")
-
+        # Start being discoverable and connectable
         await device.set_discoverable(True)
         await device.set_connectable(True)
-
-        logger.info(f"Set discoverable to True, connectable to True")
-        logger.info(f"Device class after discoverable: 0x{device.class_of_device:04X}")
 
         print("")
         print("Waiting for Switch connection...")
