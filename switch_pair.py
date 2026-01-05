@@ -422,6 +422,27 @@ async def main() -> None:
 
         hid_device = HID_Device(device)
 
+        def on_connection(connection):
+            print(f"! Connection established from {connection.peer_address}")
+            logger.info(f"Connection from: {connection.peer_address}")
+
+            async def handle_connection():
+                try:
+                    await connection.authenticate()
+                    print("  ✓ Authentication successful")
+                    logger.info("Authentication successful")
+
+                    await connection.encrypt()
+                    print("  ✓ Encryption enabled")
+                    logger.info("Encryption enabled")
+                except Exception as e:
+                    print(f"  ✗ Auth/Encrypt failed: {e}")
+                    logger.error(f"Auth/Encrypt failed: {e}")
+
+            asyncio.create_task(handle_connection())
+
+        device.on("connection", on_connection)
+
         bt_address = str(device.public_address)
         protocol = SwitchProtocol("PRO_CONTROLLER", bt_address)
 

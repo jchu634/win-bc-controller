@@ -1,30 +1,616 @@
-2026-01-05 01:32:33,451 - Transport: usb:2357:0604
-2026-01-05 01:32:33,452 - Device address: 7C:BB:8A:39:21:24
-2026-01-05 01:32:33,452 - Device class: 0x2508
-2026-01-05 01:32:33,453 - Device name: Pro Controller
-2026-01-05 01:32:33,571 - Set discoverable to True, connectable to True
-2026-01-05 01:32:33,572 - Device class after discoverable: 0x2508
-2026-01-05 01:34:09,169 - Transport: usb:2357:0604
-2026-01-05 01:34:09,170 - Device address: 7C:BB:8A:39:21:24
-2026-01-05 01:34:09,170 - Device class: 0x2508
-2026-01-05 01:34:09,170 - Device name: Pro Controller
-2026-01-05 01:34:09,288 - Set discoverable to True, connectable to True
-2026-01-05 01:34:09,288 - Device class after discoverable: 0x2508
-2026-01-05 01:52:09,426 - Transport: usb:2357:0604
-2026-01-05 01:52:09,427 - Device address: 7C:BB:8A:39:21:24
-2026-01-05 01:52:09,428 - Device class: 0x2508
-2026-01-05 01:52:09,428 - Device name: Pro Controller
-2026-01-05 01:52:09,547 - Set discoverable to True, connectable to True
-2026-01-05 01:52:09,547 - Device class after discoverable: 0x2508
-2026-01-05 02:44:00,012 - Transport: usb:2357:0604
-2026-01-05 02:44:00,013 - Device address: 7C:BB:8A:39:21:24
-2026-01-05 02:44:00,013 - Device class: 0x2508
-2026-01-05 02:44:00,014 - Device name: Pro Controller
-2026-01-05 02:44:00,132 - Set discoverable to True, connectable to True
-2026-01-05 02:44:00,132 - Device class after discoverable: 0x2508
-2026-01-05 02:44:17,711 - Transport: usb:2357:0604
-2026-01-05 02:44:17,713 - Device address: BC:07:1D:B0:92:D7
-2026-01-05 02:44:17,713 - Device class: 0x2508
-2026-01-05 02:44:17,713 - Device name: Pro Controller
-2026-01-05 02:44:17,831 - Set discoverable to True, connectable to True
-2026-01-05 02:44:17,832 - Device class after discoverable: 0x2508
+PS D:\Repos\win-bc-controller> uv run .\main.py .\pro_controller.json usb:2357:0604
+01:15:31.897 D asyncio: Using proactor: IocpProactor
+<<< connecting to HCI...
+01:15:32.006 D bumble.transport.usb: USB Device: Bus 005 Device 001: ID 2357:0604
+01:15:32.007 D bumble.transport.usb: selected endpoints: configuration=1, interface=0, setting=0, acl_in=0x82, acl_out=0x02, events_in=0x81,
+01:15:32.007 D bumble.transport.usb: current configuration = 1
+01:15:32.008 D bumble.transport.usb: starting USB event loop
+<<< connected
+01:15:32.009 D bumble.hid: GetReport callback registered successfully
+01:15:32.009 D bumble.hid: SetReport callback registered successfully
+01:15:32.009 D bumble.hid: GetProtocol callback registered successfully
+01:15:32.009 D bumble.hid: SetProtocol callback registered successfully
+01:15:32.010 D bumble.drivers: Probing driver class: rtk
+01:15:32.010 D bumble.host: ### HOST -> CONTROLLER: HCI_RESET_COMMAND
+01:15:32.020 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 3
+  command_opcode:          HCI_RESET_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.021 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_VERSION_INFORMATION_COMMAND
+01:15:32.022 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_VERSION_INFORMATION_COMMAND
+  return_parameters:
+    status:             HCI_SUCCESS
+    hci_version:        10
+    hci_subversion:     57286
+    lmp_version:        10
+    company_identifier: 93
+    lmp_subversion:     55586
+01:15:32.022 D bumble.drivers.rtk: looking for a driver: 0xD922 (0x0A, 0xDFC6)
+01:15:32.023 D bumble.drivers.rtk: firmware already loaded or no known driver for this device
+01:15:32.023 D bumble.drivers: Probing driver class: intel
+01:15:32.023 D bumble.drivers.intel: USB device (2357, 0604) not in known list
+01:15:32.023 D bumble.host: ### HOST -> CONTROLLER: HCI_RESET_COMMAND
+01:15:32.034 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 3
+  command_opcode:          HCI_RESET_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.034 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_SUPPORTED_COMMANDS_COMMAND
+01:15:32.040 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_SUPPORTED_COMMANDS_COMMAND
+  return_parameters:
+    status:             HCI_SUCCESS
+    supported_commands: ffffff03ccffffff3ffffc9ff30fe8fe3fe78fff1c00000061f7ffff7f00e0fff7c007f8ffe38003000000000000000000000000000000000000000000000000
+01:15:32.041 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_READ_LOCAL_SUPPORTED_FEATURES_COMMAND
+01:15:32.042 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_READ_LOCAL_SUPPORTED_FEATURES_COMMAND
+  return_parameters:
+    status:      HCI_SUCCESS
+    le_features: bd5f660000000000
+01:15:32.042 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_VERSION_INFORMATION_COMMAND
+01:15:32.045 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_VERSION_INFORMATION_COMMAND
+  return_parameters:
+    status:             HCI_SUCCESS
+    hci_version:        10
+    hci_subversion:     57286
+    lmp_version:        10
+    company_identifier: 93
+    lmp_subversion:     55586
+01:15:32.045 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND:
+  page_number: 0
+01:15:32.049 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND
+  return_parameters:
+    status:                HCI_SUCCESS
+    page_number:           0
+    maximum_page_number:   2
+    extended_lmp_features: fffffffedbfd7b87
+01:15:32.049 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND:
+  page_number: 1
+01:15:32.052 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND
+  return_parameters:
+    status:                HCI_SUCCESS
+    page_number:           1
+    maximum_page_number:   2
+    extended_lmp_features: 0000000000000000
+01:15:32.053 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND:
+  page_number: 2
+01:15:32.055 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_LOCAL_EXTENDED_FEATURES_COMMAND
+  return_parameters:
+    status:                HCI_SUCCESS
+    page_number:           2
+    maximum_page_number:   2
+    extended_lmp_features: 5f02000000000000
+01:15:32.056 D bumble.host: ### HOST -> CONTROLLER: HCI_SET_EVENT_MASK_COMMAND:
+  event_mask: ff9ffbbf07f8bf3d
+01:15:32.057 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_SET_EVENT_MASK_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.057 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_SET_EVENT_MASK_COMMAND:
+  le_event_mask: fffff7ff07e90300
+01:15:32.060 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_SET_EVENT_MASK_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.060 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_BUFFER_SIZE_COMMAND
+01:15:32.063 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_BUFFER_SIZE_COMMAND
+  return_parameters:
+    status:                                HCI_SUCCESS
+    hc_acl_data_packet_length:             1021
+    hc_synchronous_data_packet_length:     255
+    hc_total_num_acl_data_packets:         6
+    hc_total_num_synchronous_data_packets: 12
+01:15:32.063 D bumble.host: HCI ACL flow control: hc_acl_data_packet_length=1021,hc_total_num_acl_data_packets=6
+01:15:32.064 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_READ_BUFFER_SIZE_COMMAND
+01:15:32.066 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_READ_BUFFER_SIZE_COMMAND
+  return_parameters:
+    status:                        HCI_SUCCESS
+    le_acl_data_packet_length:     27
+    total_num_le_acl_data_packets: 8
+01:15:32.066 D bumble.host: HCI LE ACL flow control: le_acl_data_packet_length=27,total_num_le_acl_data_packets=8
+01:15:32.067 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH_COMMAND
+01:15:32.069 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH_COMMAND
+  return_parameters:
+    status:                  HCI_SUCCESS
+    suggested_max_tx_octets: 251
+    suggested_max_tx_time:   17040
+01:15:32.070 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH_COMMAND:
+  suggested_max_tx_octets: 251
+  suggested_max_tx_time:   2120
+01:15:32.072 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.072 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS_COMMAND
+01:15:32.075 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS_COMMAND
+  return_parameters:
+    status:                         HCI_SUCCESS
+    num_supported_advertising_sets: 4
+01:15:32.075 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH_COMMAND
+01:15:32.078 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH_COMMAND
+  return_parameters:
+    status:                      HCI_SUCCESS
+    max_advertising_data_length: 1024
+01:15:32.078 D bumble.host: ### HOST -> CONTROLLER: HCI_READ_BD_ADDR_COMMAND
+01:15:32.081 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_READ_BD_ADDR_COMMAND
+  return_parameters:
+    status:  HCI_SUCCESS
+    bd_addr: 98:B6:E9:12:34:56/P
+01:15:32.081 D bumble.device: BD_ADDR: 98:B6:E9:12:34:56/P
+01:15:32.086 D bumble.keys: JSON keystore: C:\Users\Joshua\AppData\Local\Google\Bumble\Pairing\98-b6-e9-12-34-56-p.json
+01:15:32.086 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_LE_HOST_SUPPORT_COMMAND:
+  le_supported_host:    1
+  simultaneous_le_host: 0
+01:15:32.088 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_LE_HOST_SUPPORT_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.088 D bumble.device: LE Random Address: BC:07:1D:B0:92:D7
+01:15:32.089 D bumble.host: ### HOST -> CONTROLLER: HCI_LE_SET_RANDOM_ADDRESS_COMMAND:
+  random_address: BC:07:1D:B0:92:D7
+01:15:32.091 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_LE_SET_RANDOM_ADDRESS_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.092 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_LOCAL_NAME_COMMAND:
+  local_name: Pro Controller
+01:15:32.094 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_LOCAL_NAME_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.095 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_CLASS_OF_DEVICE_COMMAND:
+  class_of_device: [002508] Services(Limited Discoverable Mode),Class(Peripheral|Gamepad)
+01:15:32.097 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_CLASS_OF_DEVICE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.097 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SIMPLE_PAIRING_MODE_COMMAND:
+  simple_pairing_mode: 1
+01:15:32.100 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SIMPLE_PAIRING_MODE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.100 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SECURE_CONNECTIONS_HOST_SUPPORT_COMMAND:
+  secure_connections_host_support: 1
+01:15:32.103 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SECURE_CONNECTIONS_HOST_SUPPORT_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.104 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SCAN_ENABLE_COMMAND:
+  scan_enable: 3
+01:15:32.106 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SCAN_ENABLE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.107 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_EXTENDED_INQUIRY_RESPONSE_COMMAND:
+  fec_required:              0
+  extended_inquiry_response: 0f0950726f20436f6e74726f6c6c6572
+01:15:32.109 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_EXTENDED_INQUIRY_RESPONSE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.109 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SCAN_ENABLE_COMMAND:
+  scan_enable: 3
+01:15:32.112 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SCAN_ENABLE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.112 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_PAGE_SCAN_TYPE_COMMAND:
+  page_scan_type: 1
+01:15:32.115 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_PAGE_SCAN_TYPE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.116 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_INQUIRY_SCAN_TYPE_COMMAND:
+  scan_type: 1
+01:15:32.118 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_INQUIRY_SCAN_TYPE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.119 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_EXTENDED_INQUIRY_RESPONSE_COMMAND:
+  fec_required:              0
+  extended_inquiry_response: 0f0950726f20436f6e74726f6c6c6572
+01:15:32.121 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_EXTENDED_INQUIRY_RESPONSE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.122 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SCAN_ENABLE_COMMAND:
+  scan_enable: 3
+01:15:32.124 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SCAN_ENABLE_COMMAND
+  return_parameters:       HCI_SUCCESS
+01:15:32.125 D bumble.host: ### HOST -> CONTROLLER: HCI_WRITE_SCAN_ENABLE_COMMAND:
+  scan_enable: 3
+01:15:32.127 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_WRITE_SCAN_ENABLE_COMMAND
+  return_parameters:       HCI_SUCCESS
+Executing in Web mode
+01:15:32.137 I websockets.server: server listening on [::1]:8989
+01:15:32.137 I websockets.server: server listening on 127.0.0.1:8989
+01:15:43.672 D bumble.host: ### CONTROLLER -> HOST: HCI_CONNECTION_REQUEST_EVENT:
+  bd_addr:         74:84:69:67:0D:BB/P
+  class_of_device: 525372
+  link_type:       ACL
+01:15:43.673 D bumble.device: *** Connection request: 74:84:69:67:0D:BB/P
+01:15:43.673 D bumble.host: ### HOST -> CONTROLLER: HCI_ACCEPT_CONNECTION_REQUEST_COMMAND:
+  bd_addr: 74:84:69:67:0D:BB/P
+  role:    1
+01:15:43.676 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_STATUS_EVENT:
+  status:                  PENDING
+  num_hci_command_packets: 2
+  command_opcode:          HCI_ACCEPT_CONNECTION_REQUEST_COMMAND
+01:15:43.687 D bumble.host: ### CONTROLLER -> HOST: HCI_CONNECTION_COMPLETE_EVENT:
+  status:             HCI_SUCCESS
+  connection_handle:  1
+  bd_addr:            74:84:69:67:0D:BB/P
+  link_type:          ACL
+  encryption_enabled: 0
+01:15:43.687 D bumble.host: ### BR/EDR CONNECTION: [0x0001] 74:84:69:67:0D:BB/P
+01:15:43.687 D bumble.device: *** Connection(transport=BR/EDR, handle=0x0001, role=PERIPHERAL, self_address=98:B6:E9:12:34:56/P, peer_address=74:84:69:67:0D:BB/P)
+01:15:43.690 D bumble.host: ### CONTROLLER -> HOST: HCI_MAX_SLOTS_CHANGE_EVENT:
+  connection_handle: 1
+  lmp_max_slots:     5
+01:15:43.693 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=10, data=060001000a0202000200
+01:15:43.693 D bumble.hci: <<< ACL PDU: 060001000a0202000200
+01:15:43.694 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_INFORMATION_REQUEST [ID=2]:
+  info_type: EXTENDED_FEATURES_SUPPORTED
+01:15:43.694 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_INFORMATION_RESPONSE [ID=2]:
+  info_type: EXTENDED_FEATURES_SUPPORTED
+  result:    SUCCESS
+  data:      80000000
+01:15:43.694 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c0001000b0208000200000080000000
+01:15:43.694 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c0001000b0208000200000080000000
+01:15:43.696 D bumble.host: ### CONTROLLER -> HOST: HCI_MAX_SLOTS_CHANGE_EVENT:
+  connection_handle: 1
+  lmp_max_slots:     5
+01:15:43.700 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:43.701 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=10, data=060001000a0302000300
+01:15:43.701 D bumble.hci: <<< ACL PDU: 060001000a0302000300
+01:15:43.701 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_INFORMATION_REQUEST [ID=3]:
+  info_type: FIXED_CHANNELS_SUPPORTED
+01:15:43.701 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_INFORMATION_RESPONSE [ID=3]:
+  info_type: FIXED_CHANNELS_SUPPORTED
+  result:    SUCCESS
+  data:      f200000000000000
+01:15:43.701 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=20, data=100001000b030c0003000000f200000000000000
+01:15:43.702 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=20, data=100001000b030c0003000000f200000000000000
+01:15:43.706 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:43.708 D bumble.host: ### CONTROLLER -> HOST: HCI_LINK_SUPERVISION_TIMEOUT_CHANGED_EVENT:
+  connection_handle:        1
+  link_supervision_timeout: 8000
+01:15:43.713 D bumble.host: ### CONTROLLER -> HOST: HCI_IO_CAPABILITY_RESPONSE_EVENT:
+  bd_addr:                     74:84:69:67:0D:BB/P
+  io_capability:               NO_INPUT_NO_OUTPUT
+  oob_data_present:            0
+  authentication_requirements: MITM_NOT_REQUIRED_DEDICATED_BONDING
+01:15:43.714 D bumble.host: ### CONTROLLER -> HOST: HCI_IO_CAPABILITY_REQUEST_EVENT:
+  bd_addr: 74:84:69:67:0D:BB/P
+01:15:43.714 D bumble.host: ### HOST -> CONTROLLER: HCI_IO_CAPABILITY_REQUEST_REPLY_COMMAND:
+  bd_addr:                     74:84:69:67:0D:BB/P
+  io_capability:               NO_INPUT_NO_OUTPUT
+  oob_data_present:            0
+  authentication_requirements: MITM_REQUIRED_GENERAL_BONDING
+01:15:43.716 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_IO_CAPABILITY_REQUEST_REPLY_COMMAND
+  return_parameters:
+    status:  HCI_SUCCESS
+    bd_addr: 74:84:69:67:0D:BB/P
+01:15:43.833 D bumble.host: ### CONTROLLER -> HOST: HCI_USER_CONFIRMATION_REQUEST_EVENT:
+  bd_addr:       74:84:69:67:0D:BB/P
+  numeric_value: 134853
+01:15:43.834 D bumble.host: ### HOST -> CONTROLLER: HCI_USER_CONFIRMATION_REQUEST_REPLY_COMMAND:
+  bd_addr: 74:84:69:67:0D:BB/P
+01:15:44.133 D bumble.host: ### CONTROLLER -> HOST: HCI_COMMAND_COMPLETE_EVENT:
+  num_hci_command_packets: 2
+  command_opcode:          HCI_USER_CONFIRMATION_REQUEST_REPLY_COMMAND
+  return_parameters:
+    status:  HCI_SUCCESS
+    bd_addr: 74:84:69:67:0D:BB/P
+01:15:44.154 D bumble.host: ### CONTROLLER -> HOST: HCI_SIMPLE_PAIRING_COMPLETE_EVENT:
+  status:  HCI_SUCCESS
+  bd_addr: 74:84:69:67:0D:BB/P
+01:15:44.154 D bumble.host: simple pairing complete for 74:84:69:67:0D:BB/P: status=HCI_SUCCESS
+01:15:44.191 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=12, data=080001000204040001005300
+01:15:44.191 D bumble.hci: <<< ACL PDU: 080001000204040001005300
+01:15:44.192 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONNECTION_REQUEST [ID=4]:
+  psm:        1
+  source_cid: 83
+01:15:44.192 D bumble.l2cap: creating server channel with cid=64 for psm 1
+01:15:44.192 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/48, state=CLOSED) state change -> WAIT_CONNECT
+01:15:44.192 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONNECTION_RESPONSE [ID=4]:
+  destination_cid: 64
+  source_cid:      83
+  result:          CONNECTION_SUCCESSFUL
+  status:          0
+01:15:44.192 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100030408004000530000000000
+01:15:44.192 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100030408004000530000000000
+01:15:44.192 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/48, state=WAIT_CONNECT) state change -> WAIT_CONFIG
+01:15:44.193 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_REQUEST [ID=1]:
+  destination_cid: 83
+  flags:           0
+  options:         01020008
+01:15:44.193 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100040108005300000001020008
+01:15:44.193 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100040108005300000001020008
+01:15:44.193 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/48, state=WAIT_CONFIG) state change -> WAIT_CONFIG_REQ_RSP
+01:15:44.193 D bumble.host: ### CONTROLLER -> HOST: HCI_LINK_KEY_NOTIFICATION_EVENT:
+  bd_addr:  74:84:69:67:0D:BB/P
+  link_key: fd7d2da936e51998dec296445096a1c0
+  key_type: UNAUTHENTICATED_COMBINATION_KEY_GENERATED_FROM_P_192
+01:15:44.193 D bumble.host: link key for 74:84:69:67:0D:BB/P: fd7d2da936e51998dec296445096a1c0, type=UNAUTHENTICATED_COMBINATION_KEY_GENERATED_FROM_P_192
+01:15:44.204 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.204 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=16, data=0c000100040508004000000001024c06
+01:15:44.204 D bumble.hci: <<< ACL PDU: 0c000100040508004000000001024c06
+01:15:44.205 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_REQUEST [ID=5]:
+  destination_cid: 64
+  flags:           0
+  options:         01024c06
+01:15:44.205 D bumble.l2cap: peer MTU = 1612
+01:15:44.205 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_RESPONSE [ID=5]:
+  source_cid: 83
+  flags:      0
+  result:     SUCCESS
+  options:    01024c06
+01:15:44.205 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e00010005050a0053000000000001024c06
+01:15:44.205 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e00010005050a0053000000000001024c06
+01:15:44.205 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/1612, state=WAIT_CONFIG_REQ_RSP) state change -> WAIT_CONFIG_RSP
+01:15:44.230 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.231 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=14, data=0a00010005010600400000000000
+01:15:44.231 D bumble.hci: <<< ACL PDU: 0a00010005010600400000000000
+01:15:44.231 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_RESPONSE [ID=1]:
+  source_cid: 64
+  flags:      0
+  result:     SUCCESS
+  options:
+01:15:44.231 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/1612, state=WAIT_CONFIG_RSP) state change -> OPEN
+01:15:44.232 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.232 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=17, data=0d00400002000000083503191200001500
+01:15:44.232 D bumble.hci: <<< ACL PDU: 0d00400002000000083503191200001500
+01:15:44.233 D bumble.sdp: <<< Received SDP Request: SDP_SERVICE_SEARCH_REQUEST [TID=0]:
+  service_search_pattern:       SEQUENCE([UUID(UUID-16:1200 (PnPInformation))])
+  maximum_service_record_count: 21
+  continuation_state:           00
+01:15:44.233 D bumble.sdp: Service Record Handles: []
+01:15:44.233 D bumble.sdp: >>> Sending SDP Response: SDP_SERVICE_SEARCH_RESPONSE [TID=0]:
+  total_service_record_count:   0
+  current_service_record_count: 0
+  service_record_handle_list:
+  continuation_state:           00
+01:15:44.233 D bumble.l2cap: >>> Sending L2CAP PDU on connection [0x0001] (CID=83) 74:84:69:67:0D:BB/P: 10 bytes, SDP_SERVICE_SEARCH_RESPONSE [TID=0]:
+  total_service_record_count:   0
+  current_service_record_count: 0
+  service_record_handle_list:
+  continuation_state:           00
+01:15:44.233 D bumble.host: >>> ACL packet enqueue: (CID=83) ACL: handle=0x0001, pb=0, bc=0, data_total_length=14, data=0a00530003000000050000000000
+01:15:44.233 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=14, data=0a00530003000000050000000000
+01:15:44.236 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.238 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=12, data=080001000606040040005300
+01:15:44.239 D bumble.hci: <<< ACL PDU: 080001000606040040005300
+01:15:44.239 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_DISCONNECTION_REQUEST [ID=6]:
+  destination_cid: 64
+  source_cid:      83
+01:15:44.239 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_DISCONNECTION_RESPONSE [ID=6]:
+  destination_cid: 64
+  source_cid:      83
+01:15:44.239 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=12, data=080001000706040040005300
+01:15:44.239 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=12, data=080001000706040040005300
+01:15:44.239 D bumble.l2cap: Channel(64->83, PSM=1, MTU=2048/1612, state=OPEN) state change -> CLOSED
+01:15:44.242 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.243 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=12, data=080001000207040001004100
+01:15:44.243 D bumble.hci: <<< ACL PDU: 080001000207040001004100
+01:15:44.243 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONNECTION_REQUEST [ID=7]:
+  psm:        1
+  source_cid: 65
+01:15:44.244 D bumble.l2cap: creating server channel with cid=64 for psm 1
+01:15:44.244 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/48, state=CLOSED) state change -> WAIT_CONNECT
+01:15:44.244 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONNECTION_RESPONSE [ID=7]:
+  destination_cid: 64
+  source_cid:      65
+  result:          CONNECTION_SUCCESSFUL
+  status:          0
+01:15:44.244 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100030708004000410000000000
+01:15:44.244 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100030708004000410000000000
+01:15:44.244 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/48, state=WAIT_CONNECT) state change -> WAIT_CONFIG
+01:15:44.244 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_REQUEST [ID=2]:
+  destination_cid: 65
+  flags:           0
+  options:         01020008
+01:15:44.244 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100040208004100000001020008
+01:15:44.245 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=16, data=0c000100040208004100000001020008
+01:15:44.245 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/48, state=WAIT_CONFIG) state change -> WAIT_CONFIG_REQ_RSP
+01:15:44.249 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.250 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=16, data=0c000100040808004000000001024c06
+01:15:44.250 D bumble.hci: <<< ACL PDU: 0c000100040808004000000001024c06
+01:15:44.250 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_REQUEST [ID=8]:
+  destination_cid: 64
+  flags:           0
+  options:         01024c06
+01:15:44.250 D bumble.l2cap: peer MTU = 1612
+01:15:44.250 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_RESPONSE [ID=8]:
+  source_cid: 65
+  flags:      0
+  result:     SUCCESS
+  options:    01024c06
+01:15:44.250 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e00010005080a0041000000000001024c06
+01:15:44.250 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e00010005080a0041000000000001024c06
+01:15:44.250 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/1612, state=WAIT_CONFIG_REQ_RSP) state change -> WAIT_CONFIG_RSP
+01:15:44.251 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=14, data=0a00010005020600400000000000
+01:15:44.251 D bumble.hci: <<< ACL PDU: 0a00010005020600400000000000
+01:15:44.251 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_CONFIGURE_RESPONSE [ID=2]:
+  source_cid: 64
+  flags:      0
+  result:     SUCCESS
+  options:
+01:15:44.251 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/1612, state=WAIT_CONFIG_RSP) state change -> OPEN
+01:15:44.251 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.254 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.255 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=17, data=0d00400002000000083503191124001500
+01:15:44.255 D bumble.hci: <<< ACL PDU: 0d00400002000000083503191124001500
+01:15:44.255 D bumble.sdp: <<< Received SDP Request: SDP_SERVICE_SEARCH_REQUEST [TID=0]:
+  service_search_pattern:       SEQUENCE([UUID(UUID-16:1124 (HumanInterfaceDeviceService))])
+  maximum_service_record_count: 21
+  continuation_state:           00
+01:15:44.255 D bumble.sdp: Service Record Handles: [65538]
+01:15:44.255 D bumble.sdp: >>> Sending SDP Response: SDP_SERVICE_SEARCH_RESPONSE [TID=0]:
+  total_service_record_count:   1
+  current_service_record_count: 1
+  service_record_handle_list:   00010002
+  continuation_state:           00
+01:15:44.255 D bumble.l2cap: >>> Sending L2CAP PDU on connection [0x0001] (CID=65) 74:84:69:67:0D:BB/P: 14 bytes, SDP_SERVICE_SEARCH_RESPONSE [TID=0]:
+  total_service_record_count:   1
+  current_service_record_count: 1
+  service_record_handle_list:   00010002
+  continuation_state:           00
+01:15:44.255 D bumble.host: >>> ACL packet enqueue: (CID=65) ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e0041000300000009000100010001000200
+01:15:44.255 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=18, data=0e0041000300000009000100010001000200
+01:15:44.260 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.261 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=23, data=13004000040001000e00010002063c35050a0000ffff00
+01:15:44.261 D bumble.hci: <<< ACL PDU: 13004000040001000e00010002063c35050a0000ffff00
+01:15:44.261 D bumble.sdp: <<< Received SDP Request: SDP_SERVICE_ATTRIBUTE_REQUEST [TID=1]:
+  service_record_handle:        65538
+  maximum_attribute_byte_count: 1596
+  attribute_id_list:            SEQUENCE([UNSIGNED_INTEGER(65535#4)])
+  continuation_state:           00
+01:15:44.261 D bumble.sdp: Attributes: SEQUENCE([UNSIGNED_INTEGER(0#2),SEQUENCE([UUID(UUID-16:1124 (HumanInterfaceDeviceService))]),UNSIGNED_INTEGER(4#2),SEQUENCE([SEQUENCE([UUID(UUID-16:0100 (L2CAP)),UNSIGNED_INTEGER(17#2)]),SEQUENCE([UUID(UUID-16:0011 (HIDP))])]),UNSIGNED_INTEGER(5#2),SEQUENCE([UUID(UUID-16:1002 (PublicBrowseRoot))]),UNSIGNED_INTEGER(6#2),SEQUENCE([UNSIGNED_INTEGER(25966#2),UNSIGNED_INTEGER(106#2),UNSIGNED_INTEGER(256#2)]),UNSIGNED_INTEGER(9#2),SEQUENCE([SEQUENCE([UUID(UUID-16:1124 (HumanInterfaceDeviceService)),UNSIGNED_INTEGER(257#2)])]),UNSIGNED_INTEGER(13#2),SEQUENCE([SEQUENCE([SEQUENCE([UUID(UUID-16:0100 (L2CAP)),UNSIGNED_INTEGER(19#2)]),SEQUENCE([UUID(UUID-16:0011 (HIDP))])])]),UNSIGNED_INTEGER(256#2),TEXT_STRING(b'Wireless Gamepad'),UNSIGNED_INTEGER(257#2),TEXT_STRING(b'Gamepad'),UNSIGNED_INTEGER(258#2),TEXT_STRING(b'Nintendo'),UNSIGNED_INTEGER(513#2),UNSIGNED_INTEGER(273#2),UNSIGNED_INTEGER(514#2),UNSIGNED_INTEGER(8#1),UNSIGNED_INTEGER(515#2),UNSIGNED_INTEGER(33#1),UNSIGNED_INTEGER(516#2),BOOLEAN(True),UNSIGNED_INTEGER(517#2),BOOLEAN(True),UNSIGNED_INTEGER(518#2),SEQUENCE([SEQUENCE([UNSIGNED_INTEGER(34#1),TEXT_STRING(b'\x05\x01\t\x05\xa1\x01\x06\x01\xff\x85!\t!u\x08\x950\x81\x02\x850\t0u\x08\x950\x81\x02\x851\t1u\x08\x95f\x81\x02\x852\t2u\x08\x95f\x81\x02\x853\t3u\x08\x95f\x81\x02\x85?\x05\t\x19\x01)\x10\x15\x00%\x01u\x01\x95\x10\x81\x02\x05\x01\t9\x15\x00%\x07u\x04\x95\x01\x81B\x05\tu\x04\x95\x01\x81\x01\x05\x01\t0\t1\t3\t4\x16\x00\x00&\xff\xffu\x10\x95\x04\x81\x02\x06\x01\xff\x85\x01\t\x01u\x08\x950\x91\x02\x85\x10\t\x10u\x08\x950\x91\x02\x85\x11\t\x11u\x08\x950\x91\x02\x85\x12\t\x12u\x08\x950\x91\x02\xc0')])]),UNSIGNED_INTEGER(519#2),SEQUENCE([SEQUENCE([UNSIGNED_INTEGER(1033#2),UNSIGNED_INTEGER(1033#2)])]),UNSIGNED_INTEGER(521#2),BOOLEAN(True),UNSIGNED_INTEGER(522#2),BOOLEAN(True),UNSIGNED_INTEGER(524#2),UNSIGNED_INTEGER(3200#2),UNSIGNED_INTEGER(525#2),BOOLEAN(False),UNSIGNED_INTEGER(526#2),BOOLEAN(False)])
+01:15:44.261 D bumble.sdp: >>> Sending SDP Response: SDP_SERVICE_ATTRIBUTE_RESPONSE [TID=1]:
+  attribute_list_byte_count: 371
+  attribute_list:            3601700900003503191124090004350d350619010009001135031900110900053503191002090006350909656e09006a0901000900093508350619112409010109000d350f350d350619010009001335031900110901002510576972656c6573732047616d65706164090101250747616d6570616409010225084e696e74656e646f090201090111090202080809020308210902042801090205280109020635ab35a9082225a505010905a1010601ff8521092175089530810285300930750895308102853109317508956681028532093275089566810285330933750895668102853f05091901291015002501750195108102050109391500250775049501814205097504950181010501093009310933093416000026ffff7510950481020601ff85010901750895309102851009107508953091028511091175089530910285120912750895309102c009020735083506090409090409090209280109020a280109020c090c8009020d280009020e2800
+  continuation_state:        00
+01:15:44.261 D bumble.l2cap: >>> Sending L2CAP PDU on connection [0x0001] (CID=65) 74:84:69:67:0D:BB/P: 379 bytes, SDP_SERVICE_ATTRIBUTE_RESPONSE [TID=1]:
+  attribute_list_byte_count: 371
+  attribute_list:            3601700900003503191124090004350d350619010009001135031900110900053503191002090006350909656e09006a0901000900093508350619112409010109000d350f350d350619010009001335031900110901002510576972656c6573732047616d65706164090101250747616d6570616409010225084e696e74656e646f090201090111090202080809020308210902042801090205280109020635ab35a9082225a505010905a1010601ff8521092175089530810285300930750895308102853109317508956681028532093275089566810285330933750895668102853f05091901291015002501750195108102050109391500250775049501814205097504950181010501093009310933093416000026ffff7510950481020601ff85010901750895309102851009107508953091028511091175089530910285120912750895309102c009020735083506090409090409090209280109020a280109020c090c8009020d280009020e2800
+  continuation_state:        00
+01:15:44.262 D bumble.host: >>> ACL packet enqueue: (CID=65) ACL: handle=0x0001, pb=0, bc=0, data_total_length=383, data=7b014100050001017601733601700900003503191124090004350d350619010009001135031900110900053503191002090006350909656e09006a0901000900093508350619112409010109000d350f350d350619010009001335031900110901002510576972656c6573732047616d65706164090101250747616d6570616409010225084e696e74656e646f090201090111090202080809020308210902042801090205280109020635ab35a9082225a505010905a1010601ff8521092175089530810285300930750895308102853109317508956681028532093275089566810285330933750895668102853f05091901291015002501750195108102050109391500250775049501814205097504950181010501093009310933093416000026ffff7510950481020601ff85010901750895309102851009107508953091028511091175089530910285120912750895309102c009020735083506090409090409090209280109020a280109020c090c8009020d280009020e280000
+01:15:44.262 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=383, data=7b014100050001017601733601700900003503191124090004350d350619010009001135031900110900053503191002090006350909656e09006a0901000900093508350619112409010109000d350f350d350619010009001335031900110901002510576972656c6573732047616d65706164090101250747616d6570616409010225084e696e74656e646f090201090111090202080809020308210902042801090205280109020635ab35a9082225a505010905a1010601ff8521092175089530810285300930750895308102853109317508956681028532093275089566810285330933750895668102853f05091901291015002501750195108102050109391500250775049501814205097504950181010501093009310933093416000026ffff7510950481020601ff85010901750895309102851009107508953091028511091175089530910285120912750895309102c009020735083506090409090409090209280109020a280109020c090c8009020d280009020e280000
+01:15:44.266 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.268 D bumble.host: ### CONTROLLER -> HOST: ACL: handle=0x0001, pb=2, bc=0, data_total_length=12, data=080001000609040040004100
+01:15:44.268 D bumble.hci: <<< ACL PDU: 080001000609040040004100
+01:15:44.269 D bumble.l2cap: <<< Received L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_DISCONNECTION_REQUEST [ID=9]:
+  destination_cid: 64
+  source_cid:      65
+01:15:44.269 D bumble.l2cap: >>> Sending L2CAP Signaling Control Frame on connection [0x0001] (CID=1) 74:84:69:67:0D:BB/P:
+L2CAP_DISCONNECTION_RESPONSE [ID=9]:
+  destination_cid: 64
+  source_cid:      65
+01:15:44.269 D bumble.host: >>> ACL packet enqueue: (CID=1) ACL: handle=0x0001, pb=0, bc=0, data_total_length=12, data=080001000709040040004100
+01:15:44.269 D bumble.host: ### HOST -> CONTROLLER: ACL: handle=0x0001, pb=0, bc=0, data_total_length=12, data=080001000709040040004100
+01:15:44.269 D bumble.l2cap: Channel(64->65, PSM=1, MTU=2048/1612, state=OPEN) state change -> CLOSED
+01:15:44.272 D bumble.host: ### CONTROLLER -> HOST: HCI_NUMBER_OF_COMPLETED_PACKETS_EVENT:
+  connection_handles[0]:    1
+  num_completed_packets[0]: 1
+01:15:44.340 D bumble.host: ### CONTROLLER -> HOST: HCI_DISCONNECTION_COMPLETE_EVENT:
+  status:            HCI_SUCCESS
+  connection_handle: 1
+  reason:            HCI_REMOTE_USER_TERMINATED_CONNECTION_ERROR
+01:15:44.341 D bumble.host: ### DISCONNECTION: Connection(transport=0, peer_address=74:84:69:67:0D:BB/P), reason=19
+01:15:44.341 D bumble.device: *** Disconnection: [0x0001] 74:84:69:67:0D:BB/P as PERIPHERAL, reason=19
+01:15:44.341 D bumble.l2cap: disconnection from 1, cleaning up channels
+01:15:50.244 D bumble.transport.usb: waiting for IN[4] transfer cancellation to be done...
+01:15:50.244 D bumble.transport.usb: IN[4] transfer cancellation done
+01:15:50.245 D bumble.transport.usb: waiting for IN[2] transfer cancellation to be done...
+01:15:50.245 D bumble.transport.usb: IN[2] transfer cancellation done
+01:15:50.245 D bumble.transport.usb: USB event loop done
+Traceback (most recent call last):
+  File "C:\Users\Joshua\AppData\Roaming\uv\python\cpython-3.14.0-windows-x86_64-none\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\Joshua\AppData\Roaming\uv\python\cpython-3.14.0-windows-x86_64-none\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "D:\Repos\win-bc-controller\main.py", line 768, in main
+    await keyboard_device(hid_device)
+  File "D:\Repos\win-bc-controller\main.py", line 510, in keyboard_device
+    await asyncio.get_event_loop().create_future()
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Repos\win-bc-controller\main.py", line 775, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\Joshua\AppData\Roaming\uv\python\cpython-3.14.0-windows-x86_64-none\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\Joshua\AppData\Roaming\uv\python\cpython-3.14.0-windows-x86_64-none\Lib\asyncio\runners.py", line 132, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+PS D:\Repos\win-bc-controller>
+2026-01-06 01:26:41,802 - Transport: usb:2357:0604
+2026-01-06 01:26:41,803 - Device address: BC:07:1D:B0:92:D7
+2026-01-06 01:26:41,803 - Device class: 0x2508
+2026-01-06 01:26:41,803 - Device name: Pro Controller
+2026-01-06 01:26:41,922 - Set discoverable to True, connectable to True
+2026-01-06 01:26:41,922 - Device class after discoverable: 0x2508
+2026-01-06 01:26:54,773 - Connection from: 74:84:69:67:0D:BB/P
+2026-01-06 01:26:54,793 - Auth/Encrypt failed: HCI_Error(hci/HCI_PIN_OR_KEY_MISSING_ERROR [0x6])
+2026-01-06 01:27:10,269 - Connection from: 74:84:69:67:0D:BB/P
+2026-01-06 01:27:10,291 - Auth/Encrypt failed: HCI_Error(hci/HCI_PIN_OR_KEY_MISSING_ERROR [0x6])

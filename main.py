@@ -318,7 +318,7 @@ def sdp_records():
                         DataElement.sequence(
                             [
                                 DataElement.unsigned_integer_8(
-                                    0x022
+                                    0x22
                                 ),  # Report Descriptor Type
                                 DataElement(DataElement.TEXT_STRING, HID_REPORT_MAP),
                             ]
