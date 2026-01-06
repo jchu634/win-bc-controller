@@ -28,7 +28,8 @@ from bumble.sdp import (
 )
 from bumble.transport import open_transport
 
-from switch_protocol import SwitchProtocol
+from controller import ControllerTypes
+from switch_protocol import ControllerProtocol
 
 SDP_HID_SERVICE_NAME_ATTRIBUTE_ID = 0x0100
 SDP_HID_SERVICE_DESCRIPTION_ATTRIBUTE_ID = 0x0101
@@ -398,7 +399,7 @@ async def main() -> None:
     else:
         bt_address = "98:b6:e9:12:34:57"
 
-    protocol = SwitchProtocol("PRO_CONTROLLER", bt_address)
+    protocol = ControllerProtocol(ControllerTypes.PRO_CONTROLLER, bt_address)
 
     def on_hid_data_cb(pdu: bytes):
         packet_log = format_switch_msg(pdu, "RX")
@@ -466,18 +467,6 @@ async def main() -> None:
 
         return retValue
 
-    def on_get_protocol_cb() -> HID_Device.GetSetStatus:
-        return HID_Device.GetSetStatus(
-            data=bytes([protocol_mode]),
-            status=hid_device.GetSetReturn.SUCCESS,
-        )
-
-    def on_set_protocol_cb(protocol_mode_arg: int) -> HID_Device.GetSetStatus:
-        logger.info(f"SET_PROTOCOL: {protocol_mode_arg}")
-        return HID_Device.GetSetStatus(
-            status=hid_device.GetSetReturn.ERR_UNSUPPORTED_REQUEST
-        )
-
     def on_virtual_cable_unplug_cb():
         print("\n! Virtual cable unplug received")
         logger.warning("Virtual cable unplug received")
@@ -502,14 +491,14 @@ async def main() -> None:
         async def on_connection(connection):
             logger.info(f"Connection from: {connection.peer_address}")
 
-            try:
-                await connection.authenticate()
-                logger.info("Authentication successful")
+            # try:
+            #     await connection.authenticate()
+            #     logger.info("Authentication successful")
 
-                await connection.encrypt()
-                logger.info("Encryption enabled")
-            except Exception as e:
-                logger.error(f"Auth/Encrypt failed: {e}")
+            #     await connection.encrypt()
+            #     logger.info("Encryption enabled")
+            # except Exception as e:
+            #     logger.error(f"Auth/Encrypt failed: {e}")
 
         device.on("connection", on_connection)
 
@@ -518,8 +507,7 @@ async def main() -> None:
 
         hid_device.register_get_report_cb(on_get_report_cb)
         hid_device.register_set_report_cb(on_set_report_cb)
-        hid_device.register_get_protocol_cb(on_get_protocol_cb)
-        hid_device.register_set_protocol_cb(on_set_protocol_cb)
+        # hid_device.register_set_protocol_cb(on_set_protocol_cb)
 
         # Register for virtual cable unplug call back
         hid_device.on("virtual_cable_unplug", on_virtual_cable_unplug_cb)
