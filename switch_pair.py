@@ -53,7 +53,8 @@ SDP_HID_BOOT_DEVICE_ATTRIBUTE_ID = 0x020E
 LANGUAGE = 0x656E
 ENCODING = 0x6A
 PRIMARY_LANGUAGE_BASE_ID = 0x100
-HID_COUNTRY_CODE = 0x21
+# HID_COUNTRY_CODE = 0x21
+HID_COUNTRY_CODE = 0x00
 HID_VIRTUAL_CABLE = True
 HID_RECONNECT_INITIATE = True
 HID_BATTERY_POWER = True
@@ -172,72 +173,87 @@ def sdp_records():
     service_record_handle = 0x00010002
     return {
         service_record_handle: [
+            # 0x0000: ServiceRecordHandle
             ServiceAttribute(
                 SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,
+                DataElement.unsigned_integer_32(service_record_handle),
+            ),
+            ServiceAttribute(
+                SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,  # 0x0001
                 DataElement.sequence(
-                    [DataElement.uuid(BT_HUMAN_INTERFACE_DEVICE_SERVICE)]
+                    [DataElement.uuid(BT_HUMAN_INTERFACE_DEVICE_SERVICE)]  # 0x1124
                 ),
             ),
             ServiceAttribute(
-                SDP_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
+                SDP_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,  # 0x0004
                 DataElement.sequence(
                     [
                         DataElement.sequence(
                             [
-                                DataElement.uuid(BT_L2CAP_PROTOCOL_ID),
-                                DataElement.unsigned_integer_16(17),
+                                DataElement.uuid(BT_L2CAP_PROTOCOL_ID),  # 0x0100
+                                DataElement.unsigned_integer_16(0x0011),  # 0x0011
                             ]
                         ),
                         DataElement.sequence(
                             [
-                                DataElement.uuid(BT_HIDP_PROTOCOL_ID),
+                                DataElement.uuid(BT_HIDP_PROTOCOL_ID),  # 0x0011
                             ]
                         ),
                     ]
                 ),
             ),
             ServiceAttribute(
-                SDP_BROWSE_GROUP_LIST_ATTRIBUTE_ID,
-                DataElement.sequence([DataElement.uuid(SDP_PUBLIC_BROWSE_ROOT)]),
+                SDP_BROWSE_GROUP_LIST_ATTRIBUTE_ID,  # 0x0005
+                DataElement.sequence(
+                    [DataElement.uuid(SDP_PUBLIC_BROWSE_ROOT)]
+                ),  # 0x1002
             ),
             ServiceAttribute(
-                SDP_LANGUAGE_BASE_ATTRIBUTE_ID_LIST_ATTRIBUTE_ID,
+                SDP_LANGUAGE_BASE_ATTRIBUTE_ID_LIST_ATTRIBUTE_ID,  # 0x0006
                 DataElement.sequence(
                     [
-                        DataElement.unsigned_integer_16(LANGUAGE),
-                        DataElement.unsigned_integer_16(ENCODING),
-                        DataElement.unsigned_integer_16(PRIMARY_LANGUAGE_BASE_ID),
+                        DataElement.unsigned_integer_16(LANGUAGE),  # 0x656E
+                        DataElement.unsigned_integer_16(ENCODING),  # 0x006a
+                        DataElement.unsigned_integer_16(
+                            PRIMARY_LANGUAGE_BASE_ID
+                        ),  # 0x0100
                     ]
                 ),
             ),
             ServiceAttribute(
-                SDP_BLUETOOTH_PROFILE_DESCRIPTOR_LIST_ATTRIBUTE_ID,
+                SDP_BLUETOOTH_PROFILE_DESCRIPTOR_LIST_ATTRIBUTE_ID,  # 0x0009
                 DataElement.sequence(
                     [
                         DataElement.sequence(
                             [
-                                DataElement.uuid(BT_HUMAN_INTERFACE_DEVICE_SERVICE),
-                                DataElement.unsigned_integer_16(0x0101),
+                                DataElement.uuid(
+                                    BT_HUMAN_INTERFACE_DEVICE_SERVICE
+                                ),  # 0x1124
+                                DataElement.unsigned_integer_16(0x0101),  # 0x0101
                             ]
                         )
                     ]
                 ),
             ),
             ServiceAttribute(
-                SDP_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
+                SDP_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,  # 0x000D
                 DataElement.sequence(
                     [
                         DataElement.sequence(
                             [
                                 DataElement.sequence(
                                     [
-                                        DataElement.uuid(BT_L2CAP_PROTOCOL_ID),
-                                        DataElement.unsigned_integer_16(0x0013),
+                                        DataElement.uuid(
+                                            BT_L2CAP_PROTOCOL_ID
+                                        ),  # 0x0100
+                                        DataElement.unsigned_integer_16(
+                                            0x0013
+                                        ),  # 0x0013
                                     ]
                                 ),
                                 DataElement.sequence(
                                     [
-                                        DataElement.uuid(BT_HIDP_PROTOCOL_ID),
+                                        DataElement.uuid(BT_HIDP_PROTOCOL_ID),  # 0x0011
                                     ]
                                 ),
                             ]
@@ -245,45 +261,48 @@ def sdp_records():
                     ]
                 ),
             ),
+            # ------------- HID SDP Atrribute Values See HID v1.1.1 "5.3 Service Discovery Protocol (SDP)" --------------
             ServiceAttribute(
-                SDP_HID_SERVICE_NAME_ATTRIBUTE_ID,
+                SDP_HID_SERVICE_NAME_ATTRIBUTE_ID,  # 0x0100
                 DataElement(DataElement.TEXT_STRING, b"Wireless Gamepad"),
             ),
             ServiceAttribute(
-                SDP_HID_SERVICE_DESCRIPTION_ATTRIBUTE_ID,
+                SDP_HID_SERVICE_DESCRIPTION_ATTRIBUTE_ID,  # 0x0101
                 DataElement(DataElement.TEXT_STRING, b"Gamepad"),
             ),
             ServiceAttribute(
-                SDP_HID_PROVIDER_NAME_ATTRIBUTE_ID,
+                SDP_HID_PROVIDER_NAME_ATTRIBUTE_ID,  # 0x0102
                 DataElement(DataElement.TEXT_STRING, b"Nintendo"),
             ),
             ServiceAttribute(
-                SDP_HID_PARSER_VERSION_ATTRIBUTE_ID,
+                SDP_HID_PARSER_VERSION_ATTRIBUTE_ID,  # 0x0201
                 DataElement.unsigned_integer_16(0x0111),
             ),
             ServiceAttribute(
-                SDP_HID_DEVICE_SUBCLASS_ATTRIBUTE_ID,
+                SDP_HID_DEVICE_SUBCLASS_ATTRIBUTE_ID,  # 0x0202
                 DataElement.unsigned_integer_8(0x08),
             ),
             ServiceAttribute(
-                SDP_HID_COUNTRY_CODE_ATTRIBUTE_ID,
+                SDP_HID_COUNTRY_CODE_ATTRIBUTE_ID,  # 0x0203
                 DataElement.unsigned_integer_8(HID_COUNTRY_CODE),
             ),
             ServiceAttribute(
-                SDP_HID_VIRTUAL_CABLE_ATTRIBUTE_ID,
+                SDP_HID_VIRTUAL_CABLE_ATTRIBUTE_ID,  # 0x0204
                 DataElement(DataElement.BOOLEAN, HID_VIRTUAL_CABLE),
             ),
             ServiceAttribute(
-                SDP_HID_RECONNECT_INITIATE_ATTRIBUTE_ID,
+                SDP_HID_RECONNECT_INITIATE_ATTRIBUTE_ID,  # 0x0205
                 DataElement(DataElement.BOOLEAN, HID_VIRTUAL_CABLE),
             ),
             ServiceAttribute(
-                SDP_HID_DESCRIPTOR_LIST_ATTRIBUTE_ID,
+                SDP_HID_DESCRIPTOR_LIST_ATTRIBUTE_ID,  # 0x0206
                 DataElement.sequence(
                     [
                         DataElement.sequence(
                             [
-                                DataElement.unsigned_integer_8(0x022),
+                                DataElement.unsigned_integer_8(
+                                    0x22
+                                ),  # Report Descriptor Type
                                 DataElement(DataElement.TEXT_STRING, HID_REPORT_MAP),
                             ]
                         ),
@@ -291,36 +310,38 @@ def sdp_records():
                 ),
             ),
             ServiceAttribute(
-                SDP_HID_LANGID_BASE_LIST_ATTRIBUTE_ID,
+                SDP_HID_LANGID_BASE_LIST_ATTRIBUTE_ID,  # 0x0207
                 DataElement.sequence(
                     [
                         DataElement.sequence(
                             [
-                                DataElement.unsigned_integer_16(0x0409),
-                                DataElement.unsigned_integer_16(0x0409),
+                                DataElement.unsigned_integer_16(
+                                    0x0409
+                                ),  # English (United States)
+                                DataElement.unsigned_integer_16(0x0100),
                             ]
                         ),
                     ]
                 ),
             ),
             ServiceAttribute(
-                SDP_HID_BATTERY_POWER_ATTRIBUTE_ID,
+                SDP_HID_BATTERY_POWER_ATTRIBUTE_ID,  # 0x0209
                 DataElement(DataElement.BOOLEAN, HID_BATTERY_POWER),
             ),
             ServiceAttribute(
-                SDP_HID_REMOTE_WAKE_ATTRIBUTE_ID,
+                SDP_HID_REMOTE_WAKE_ATTRIBUTE_ID,  # 0x020A
                 DataElement(DataElement.BOOLEAN, HID_REMOTE_WAKE),
             ),
             ServiceAttribute(
-                SDP_HID_SUPERVISION_TIMEOUT_ATTRIBUTE_ID,
+                SDP_HID_SUPERVISION_TIMEOUT_ATTRIBUTE_ID,  # 0x020C
                 DataElement.unsigned_integer_16(HID_SUPERVISION_TIMEOUT),
             ),
             ServiceAttribute(
-                SDP_HID_NORMALLY_CONNECTABLE_ATTRIBUTE_ID,
+                SDP_HID_NORMALLY_CONNECTABLE_ATTRIBUTE_ID,  # 0x020D
                 DataElement(DataElement.BOOLEAN, HID_NORMALLY_CONNECTABLE),
             ),
             ServiceAttribute(
-                SDP_HID_BOOT_DEVICE_ATTRIBUTE_ID,
+                SDP_HID_BOOT_DEVICE_ATTRIBUTE_ID,  # 0x020E
                 DataElement(DataElement.BOOLEAN, HID_BOOT_DEVICE),
             ),
         ]
@@ -399,16 +420,30 @@ async def main() -> None:
     else:
         bt_address = "98:b6:e9:12:34:57"
 
+    # Pairing state tracking
+    pairing_event = asyncio.Event()
+    received_first_message = False
+    packet_count = 0
+
     protocol = ControllerProtocol(ControllerTypes.PRO_CONTROLLER, bt_address)
 
     def on_hid_data_cb(pdu: bytes):
+        nonlocal received_first_message
+
         packet_log = format_switch_msg(pdu, "RX")
         logger.debug(packet_log)
+
+        # Track when we receive first actual Switch message
+        if pdu is not None:
+            print("RECEIVED SWITCH MESSAGE")
+            received_first_message = True
+
         if len(pdu) > 40:
             print(f"  [RX] Switch command: 0x{pdu[11]:02X}")
 
+        # Process Switch command and generate immediate response
         protocol.process_commands(pdu)
-        report = protocol.get_report()
+        report = protocol.get_report_no_clear()
 
         if len(report) > 1:
             tx_log = format_switch_msg(report, "TX")
@@ -430,12 +465,12 @@ async def main() -> None:
         if report_type == Message.ReportType.INPUT_REPORT:
             if report_id == 0x21:
                 protocol.set_subcommand_reply()
-                retValue.data = bytes(protocol.get_report()[1:])
+                retValue.data = bytes(protocol.get_report_no_clear()[1:])
                 retValue.status = hid_device.GetSetReturn.SUCCESS
                 print(f"  [GET] Subcommand reply (0x21)")
             elif report_id == 0x30:
                 protocol.set_full_input_report()
-                retValue.data = bytes(protocol.get_report()[1:])
+                retValue.data = bytes(protocol.get_report_no_clear()[1:])
                 retValue.status = hid_device.GetSetReturn.SUCCESS
                 print(f"  [GET] Full input report (0x30)")
             else:
@@ -478,8 +513,10 @@ async def main() -> None:
         device = Device.from_config_file_with_hci(
             sys.argv[1], hci_transport.source, hci_transport.sink
         )
+
         device.classic_enabled = True
         device.public_address = Address(bt_address)
+        device.keystore = None
 
         logger.info(f"Device address: {device.public_address}")
         logger.info(f"Device class: 0x{device.class_of_device:04X}")
@@ -514,6 +551,7 @@ async def main() -> None:
 
         # Setup the SDP to advertise HID Device service
         device.sdp_service_records = sdp_records()
+
         logging.debug(f"Device class: 0x{device.class_of_device:04X}")
         logging.debug(f"Device name: {device.name}")
 
@@ -530,62 +568,82 @@ async def main() -> None:
         print("  On Switch, go to: Controllers > Change Grip/Order")
         print("")
         print("-" * 60)
-        print("  [STATUS] Pairing loop started (15Hz)")
+        print("  [STATUS] Starting background report task")
         print("-" * 60)
 
-        pairing_complete = False
-        packet_count = 0
+        async def send_reports_task():
+            nonlocal packet_count
+            nonlocal received_first_message
 
-        while not pairing_complete:
-            try:
-                protocol.process_commands(None)
-                report = protocol.get_report()
-
-                hid_device.send_data(report)
-
-                if protocol.is_pairing_complete():
-                    print("")
-                    print("=" * 60)
-                    print("✓ PAIRING COMPLETE!")
-                    print("=" * 60)
-                    print(f"  Player Number: {protocol.player_number}")
-                    print(
-                        f"  Vibration: {'Enabled' if protocol.vibration_enabled else 'Disabled'}"
-                    )
-                    print(f"  Packets Exchanged: {packet_count}")
-                    print("=" * 60)
-                    pairing_complete = True
-                else:
-                    if packet_count % 30 == 0 and packet_count > 0:
-                        print(f"  [STATUS] Waiting... ({packet_count} packets sent)")
-                    packet_count += 1
-
-                await asyncio.sleep(1 / 15)
-
-            except Exception as e:
-                print(f"\n✗ Error during pairing: {e}")
-                logger.error(f"Pairing error: {e}")
-                print("  [STATUS] Waiting for Switch connection...")
-                await asyncio.sleep(1)
-                continue
-
-        print("")
-        print("✓ Pairing complete - keeping connection alive")
-        print("  [STATUS] Press Ctrl+C to exit")
-        print("")
-
-        try:
-            while True:
-                if protocol.device_info_queried:
-                    protocol.set_full_input_report()
+            while not pairing_event.is_set():
+                try:
+                    protocol.process_commands(None)
                     report = protocol.get_report()
                     hid_device.send_data(report)
 
-                await asyncio.sleep(1 / 132)
-        except KeyboardInterrupt:
-            print("\n\n✓ Exiting gracefully...")
-            logger.info("User requested exit")
+                    packet_count += 1
+
+                    if (
+                        received_first_message
+                        and protocol.vibration_enabled
+                        and protocol.player_number is not None
+                    ):
+                        print("")
+                        print("=" * 60)
+                        print("✓ PAIRING COMPLETE!")
+                        print("=" * 60)
+                        print(f"  Player Number: {protocol.player_number}")
+                        print(
+                            f"  Vibration: {'Enabled' if protocol.vibration_enabled else 'Disabled'}"
+                        )
+                        print(f"  Packets Exchanged: {packet_count}")
+                        print("=" * 60)
+                        pairing_event.set()
+                        break
+                    else:
+                        if packet_count % 30 == 0 and packet_count > 0:
+                            print(
+                                f"  [STATUS] Waiting... ({packet_count} packets sent)"
+                            )
+
+                    if not received_first_message:
+                        await asyncio.sleep(1)
+                    else:
+                        await asyncio.sleep(1 / 15)
+
+                except Exception as e:
+                    print(f"\n✗ Error in send_reports_task: {e}")
+                    logger.error(f"Send reports task error: {e}")
+                    await asyncio.sleep(1)
+
+        send_task = asyncio.create_task(send_reports_task())
+
+        try:
+            await pairing_event.wait()
+            print("")
+            print("✓ Pairing complete - keeping connection alive")
+            print("  [STATUS] Press Ctrl+C to exit")
+            print("")
+
+            try:
+                while True:
+                    if protocol.device_info_queried:
+                        protocol.set_full_input_report()
+                        report = protocol.get_report()
+                        hid_device.send_data(report)
+
+                    await asyncio.sleep(1 / 132)
+            except KeyboardInterrupt:
+                print("\n\n✓ Exiting gracefully...")
+                logger.info("User requested exit")
+        finally:
+            if not send_task.done():
+                send_task.cancel()
+                try:
+                    await send_task
+                except asyncio.CancelledError:
+                    pass
 
 
-bumble.logging.setup_basic_logging("INFO")
+bumble.logging.setup_basic_logging("DEBUG")
 asyncio.run(main())

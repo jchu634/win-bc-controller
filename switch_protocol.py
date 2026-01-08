@@ -142,6 +142,15 @@ class ControllerProtocol:
         self.set_empty_report()
         return report
 
+    def get_report_no_clear(self):
+        """Get report WITHOUT clearing internal state.
+
+        This is used by on_hid_data_cb to send immediate responses
+        to Switch commands without clearing protocol state that is
+        needed by background send_reports_task for heartbeats.
+        """
+        return bytes(self.report)
+
     def process_commands(self, data):
         # Parsing the Switch's message
         message = SwitchReportParser(data)
