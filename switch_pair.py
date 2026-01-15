@@ -241,21 +241,13 @@ def sdp_records():
                     [
                         DataElement.sequence(
                             [
-                                DataElement.sequence(
-                                    [
-                                        DataElement.uuid(
-                                            BT_L2CAP_PROTOCOL_ID
-                                        ),  # 0x0100
-                                        DataElement.unsigned_integer_16(
-                                            0x0013
-                                        ),  # 0x0013
-                                    ]
-                                ),
-                                DataElement.sequence(
-                                    [
-                                        DataElement.uuid(BT_HIDP_PROTOCOL_ID),  # 0x0011
-                                    ]
-                                ),
+                                DataElement.uuid(BT_L2CAP_PROTOCOL_ID),  # 0x0100
+                                DataElement.unsigned_integer_16(0x0013),  # 0x0013
+                            ]
+                        ),
+                        DataElement.sequence(
+                            [
+                                DataElement.uuid(BT_HIDP_PROTOCOL_ID),  # 0x0011
                             ]
                         ),
                     ]
