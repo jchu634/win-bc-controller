@@ -12,7 +12,7 @@ from bumble.transport import open_transport
 from controller import ControllerTypes
 from sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
 from switch_hid import SwitchHIDSession
-from switch_protocol import ControllerProtocol
+from switch_protocol import ControllerProtocol, build_empty_switch_input_payload
 
 
 def setup_logging():
@@ -35,32 +35,6 @@ def setup_logging():
     return logger
 
 
-def format_switch_msg(data: bytes, direction: str) -> str:
-    """Format Switch packet for logging"""
-    if len(data) < 11:
-        return f"{direction}: Too short ({len(data)} bytes)"
-
-    payload = " ".join(f"{b:02X}" for b in data[:11])
-    subcmd = ""
-
-    if len(data) > 11:
-        subcmd_id = data[11]
-        subcmd = f"| Sub: {subcmd_id:02X}"
-        if len(data) > 12:
-            subcmd_data = " ".join(f"{b:02X}" for b in data[12:])
-            subcmd += f" {subcmd_data}"
-
-    return f"[{direction}] Payload: {payload} {subcmd}"
-
-
-def reverse_mac_to_little_endian(mac: str) -> str:
-    parts = mac.split(":")
-    if len(parts) != 6:
-        raise ValueError("Invalid MAC address format")
-
-    return ":".join(reversed(parts))
-
-
 async def main() -> None:
     if len(sys.argv) < 3:
         print("Usage: python switch_pair.py <device-config> <transport-spec>")
@@ -81,39 +55,7 @@ async def main() -> None:
     else:
         bt_address = "98:b6:e9:12:34:57"
 
-    protocol = ControllerProtocol(
-        ControllerTypes.PRO_CONTROLLER, reverse_mac_to_little_endian(bt_address)
-    )
-    # session = SwitchHIDSession(protocol)
-
-    received_first_message = False
-
-    def on_hid_data_callback(pdu: bytes):
-        nonlocal received_first_message
-
-        packet_log = format_switch_msg(pdu, "RX")
-        logger.debug(packet_log)
-
-        # Track when we receive first actual Switch message
-        if pdu is not None:
-            print("RECEIVED SWITCH MESSAGE")
-            received_first_message = True
-
-        if len(pdu) > 40:
-            print(
-                f" [RX] Switch command: {' '.join((f'{b:02x}' for b in pdu)).upper()}"
-            )
-
-        # Process Switch command and generate immediate response
-        protocol.process_commands(pdu)
-        report = protocol.get_report_no_clear()
-
-        if len(report) > 1:
-            tx_log = format_switch_msg(report, "TX")
-            hid_device.send_data(report)
-            logger.debug(tx_log)
-            if len(report) > 20:
-                print(f"  [TX] Response sent ({len(report)} bytes)")
+    protocol = ControllerProtocol(ControllerTypes.PRO_CONTROLLER, bt_address)
 
     async with await open_transport(sys.argv[2]) as hci_transport:
         device = Device.from_config_file_with_hci(
@@ -133,11 +75,20 @@ async def main() -> None:
         async def on_connection(connection):
             nonlocal connected
             logger.info(f"Connected to {connection.peer_address}")
-            connected = True
+            await hid_device.connect_control_channel()  # Channel 11
+            await hid_device.connect_interrupt_channel()  # Channel 13
+            logging.info("Connected HID Control + Interrupt Channels")
+            await send_spam_reports()
 
         device.on("connection", on_connection)
 
         device.sdp_service_records = sdp_record()
+
+        hid_device = HID_Device(device)
+
+        async def send_spam_reports():
+            for i in range(60):
+                hid_device.send_data(build_empty_switch_input_payload())
 
         await device.power_on()
         logging.info("Device powered on + SDP Records registered")
@@ -145,46 +96,8 @@ async def main() -> None:
         await device.set_discoverable(True)
         await device.set_connectable(True)
 
-        async def send_reports_task():
-            nonlocal received_first_message
-            nonlocal connected
-
-            # while not pairing_event.is_set():
-            while True:
-                try:
-                    if not connected:
-                        await asyncio.sleep(0.01)
-                        continue
-                    else:
-                        report = protocol.get_report()
-                        hid_device.send_data(report)
-
-                    if (
-                        received_first_message
-                        and protocol.vibration_enabled
-                        and protocol.player_number is not None
-                    ):
-                        print("")
-                        print("=" * 60)
-                        print("✓ PAIRING COMPLETE!")
-                        print("=" * 60)
-                        print(f"  Player Number: {protocol.player_number}")
-                        print(
-                            f"  Vibration: {'Enabled' if protocol.vibration_enabled else 'Disabled'}"
-                        )
-                        print("=" * 60)
-                        break
-
-                    await asyncio.sleep(1 / 15)
-
-                except Exception as e:
-                    print(f"\n✗ Error in send_reports_task: {e}")
-                    logger.error(f"Send reports task error: {e}")
-                    await asyncio.sleep(1)
-
-        send_task = asyncio.create_task(send_reports_task())
-
         # Block forever (until manual termination)
+
         await asyncio.Event().wait()
 
 

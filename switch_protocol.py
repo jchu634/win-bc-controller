@@ -18,6 +18,19 @@ def replace_subarray(arr, start_idx, length, value=None, replace_arr=None):
             arr[start_idx + i] = replace_arr[i]
 
 
+def build_empty_switch_input_payload() -> bytes:
+    payload = bytearray(49)
+
+    payload[0] = 0x30  # Standard input report
+    payload[1] = 0x00  # Timer
+    payload[2] = 0x60  # Battery + connection (required)
+
+    # Buttons, sticks = 0
+    payload[12] = 0x80  # Vibrator byte (must be non-zero)
+
+    return bytes(payload)
+
+
 class SwitchResponses(Enum):
     NO_DATA = -1
     MALFORMED = -2
