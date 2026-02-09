@@ -64,16 +64,18 @@ async def main() -> None:
         device.classic_enabled = True
         device.public_address = Address(bt_address)
         device.class_of_device = DEVICE_CLASS_GAMEPAD
-
-        hid_device = HID_Device(device)
-        hid_device.on("interrupt_data", on_hid_data_callback)
-        connected = False
+        device.pairing_config_factory = lambda connection: PairingConfig(
+            mitm=True,
+            bonding=True,
+            delegate=PairingDelegate(
+                io_capability=PairingDelegate.DISPLAY_OUTPUT_AND_YES_NO_INPUT,
+            ),
+        )
 
         logger.info(f"Device address: {device.public_address}")
         logger.info(f"Device name: {device.name}")
 
         async def on_connection(connection):
-            nonlocal connected
             logger.info(f"Connected to {connection.peer_address}")
             await hid_device.connect_control_channel()  # Channel 11
             await hid_device.connect_interrupt_channel()  # Channel 13
