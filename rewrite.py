@@ -4,9 +4,11 @@ import sys
 
 import bumble.logging
 from bumble.device import Device
-from bumble.hci import Address
+from bumble.hci import HCI_RESET_COMMAND, Address
 from bumble.hid import Device as HID_Device
 from bumble.l2cap import ClassicChannelSpec
+from bumble.pairing import PairingConfig, PairingDelegate
+from bumble.smp import SMP_DISPLAY_YES_NO_IO_CAPABILITY
 from bumble.transport import open_transport
 
 from controller import ControllerTypes
@@ -61,24 +63,35 @@ async def main() -> None:
         device = Device.from_config_file_with_hci(
             sys.argv[1], hci_transport.source, hci_transport.sink
         )
+        encrypted = False
         device.classic_enabled = True
+        # device.classic_ssp_enabled = True
         device.public_address = Address(bt_address)
+
         device.class_of_device = DEVICE_CLASS_GAMEPAD
-        device.pairing_config_factory = lambda connection: PairingConfig(
-            mitm=True,
-            bonding=True,
-            delegate=PairingDelegate(
-                io_capability=PairingDelegate.DISPLAY_OUTPUT_AND_YES_NO_INPUT,
-            ),
-        )
+        # device.pairing_config_factory = lambda connection: PairingConfig(
+        #     mitm=True,
+        #     bonding=True,
+        #     delegate=PairingDelegate(
+        #         # io_capability=PairingDelegate.DISPLAY_OUTPUT_AND_YES_NO_INPUT,
+        #         io_capability=PairingDelegate.NO_OUTPUT_NO_INPUT,
+        #     ),
+        # )
 
         logger.info(f"Device address: {device.public_address}")
         logger.info(f"Device name: {device.name}")
 
         async def on_connection(connection):
             logger.info(f"Connected to {connection.peer_address}")
-            await hid_device.connect_control_channel()  # Channel 11
-            await hid_device.connect_interrupt_channel()  # Channel 13
+            await connection.encrypt()
+
+            while not connection.is_encrypted:
+                await asyncio.sleep(0.1)
+
+            logger.info("Encryption established, channels now available")
+
+            # await hid_device.connect_control_channel()  # Channel 11
+            # await hid_device.connect_interrupt_channel()  # Channel 13
             logging.info("Connected HID Control + Interrupt Channels")
             await send_spam_reports()
 
@@ -93,6 +106,7 @@ async def main() -> None:
                 hid_device.send_data(build_empty_switch_input_payload())
 
         await device.power_on()
+
         logging.info("Device powered on + SDP Records registered")
 
         await device.set_discoverable(True)
