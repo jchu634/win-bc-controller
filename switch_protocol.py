@@ -106,7 +106,7 @@ class ControllerProtocol:
         # Standard Input Report Properties
         # Timestamp to generate timer byte ticks
         self.timer = 0
-        self.timestamp = None
+        self.timestamp = perf_counter()
 
         # High/Low Nibble
         self.battery_level = 0x90

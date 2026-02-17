@@ -4,16 +4,15 @@ import sys
 
 import bumble.logging
 from bumble.device import Device
-from bumble.hci import HCI_RESET_COMMAND, Address
+from bumble.hci import Address
+from bumble.hid import HID_CONTROL_PSM
 from bumble.hid import Device as HID_Device
 from bumble.l2cap import ClassicChannelSpec
 from bumble.pairing import PairingConfig, PairingDelegate
-from bumble.smp import SMP_DISPLAY_YES_NO_IO_CAPABILITY
 from bumble.transport import open_transport
 
 from controller import ControllerTypes
 from sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
-from switch_hid import SwitchHIDSession
 from switch_protocol import ControllerProtocol, build_empty_switch_input_payload
 
 
@@ -91,9 +90,9 @@ async def main() -> None:
             logger.info("Encryption established, channels now available")
 
             # await hid_device.connect_control_channel()  # Channel 11
-            # await hid_device.connect_interrupt_channel()  # Channel 13
-            logging.info("Connected HID Control + Interrupt Channels")
-            await send_spam_reports()
+            # await hid_device.connect_interrupt_channel(   )  # Channel 13
+            # logging.info("Connected HID Control + Interrupt Channels")
+            # await send_spam_reports()
 
         device.on("connection", on_connection)
 
@@ -101,9 +100,9 @@ async def main() -> None:
 
         hid_device = HID_Device(device)
 
-        async def send_spam_reports():
-            for i in range(60):
-                hid_device.send_data(build_empty_switch_input_payload())
+        # async def send_spam_reports():
+        #     for i in range(60):
+        #         hid_device.send_data(build_empty_switch_input_payload())
 
         await device.power_on()
 
