@@ -5,7 +5,6 @@ import sys
 import bumble.logging
 from bumble.device import Device
 from bumble.hci import Address
-from bumble.hid import HID_CONTROL_PSM
 from bumble.hid import Device as HID_Device
 from bumble.l2cap import ClassicChannelSpec
 from bumble.pairing import PairingConfig, PairingDelegate
@@ -58,16 +57,26 @@ async def main() -> None:
 
     protocol = ControllerProtocol(ControllerTypes.PRO_CONTROLLER, bt_address)
 
+    ctrl_ready = asyncio.Event()
+    intr_ready = asyncio.Event()
+
+    def on_ctrl_channel_open():
+        logger.info("HID Control channel opened")
+        ctrl_ready.set()
+
+    def on_intr_channel_open():
+        logger.info("HID Interrupt channel opened")
+        intr_ready.set()
+
     async with await open_transport(sys.argv[2]) as hci_transport:
         device = Device.from_config_file_with_hci(
             sys.argv[1], hci_transport.source, hci_transport.sink
         )
-        encrypted = False
         device.classic_enabled = True
-        # device.classic_ssp_enabled = True
         device.public_address = Address(bt_address)
 
         device.class_of_device = DEVICE_CLASS_GAMEPAD
+        # device.classic_ssp_enabled = True
         # device.pairing_config_factory = lambda connection: PairingConfig(
         #     mitm=True,
         #     bonding=True,
@@ -87,22 +96,27 @@ async def main() -> None:
             while not connection.is_encrypted:
                 await asyncio.sleep(0.1)
 
-            logger.info("Encryption established, channels now available")
+            logger.info("Encryption established, waiting for HID Channels")
 
-            # await hid_device.connect_control_channel()  # Channel 11
-            # await hid_device.connect_interrupt_channel(   )  # Channel 13
-            # logging.info("Connected HID Control + Interrupt Channels")
-            # await send_spam_reports()
+            asyncio.create_task(wait_for_channels_and_send())
 
         device.on("connection", on_connection)
 
         device.sdp_service_records = sdp_record()
 
         hid_device = HID_Device(device)
+        hid_device.on("control_channel_open", on_ctrl_channel_open)
+        hid_device.on("interrupt_channel_open", on_intr_channel_open)
 
-        # async def send_spam_reports():
-        #     for i in range(60):
-        #         hid_device.send_data(build_empty_switch_input_payload())
+        async def wait_for_channels_and_send():
+            await ctrl_ready.wait()
+            await intr_ready.wait()
+            logger.info("Both HID channels ready, sending spam reports...")
+
+            # Spam Reports
+            for i in range(60):
+                hid_device.send_data(build_empty_switch_input_payload())
+                await asyncio.sleep(0.01)  # Small delay between reports
 
         await device.power_on()
 
