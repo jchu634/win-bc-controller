@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "bumble @ git+https://github.com/XenoKovah/bumble.git@3de16a3f9f42b983944a4b93af7d11cf908f8511",
+    "bumble @ git+https://github.com/jchu634/bumble.git@345b0b6db4c571fb81d18279c02c02813f7a23ff",
     "inputs>=0.5",
     "pygame-ce>=2.5.6",
     "websockets>=15.0.1",
