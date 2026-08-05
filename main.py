@@ -10,9 +10,9 @@ from bumble.l2cap import ClassicChannelSpec
 from bumble.pairing import PairingConfig, PairingDelegate
 from bumble.transport import open_transport
 
-from controller import ControllerTypes
-from sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
-from switch_protocol import ControllerProtocol, build_empty_switch_input_payload
+from lib.controller import ControllerTypes
+from lib.sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
+from lib.switch_protocol import ControllerProtocol, build_empty_switch_input_payload
 
 
 def setup_logging():
