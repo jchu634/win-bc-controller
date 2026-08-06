@@ -2,7 +2,7 @@ import random
 from enum import Enum
 from time import perf_counter
 
-from controller import ControllerTypes
+from lib.controller import ControllerTypes
 
 
 def replace_subarray(arr, start_idx, length, value=None, replace_arr=None):
