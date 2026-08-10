@@ -1,14 +1,37 @@
+# ==============================================================================
+# This code is adapted from the NXBT project (https://github.com/Brikwerk/nxbt).
+#
+# Copyright (c) 2019 Reece Walsh
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# ==============================================================================
+
 import random
 from enum import Enum
 from time import perf_counter
 
-from controller import ControllerTypes
+from lib.controller import ControllerTypes
 
 
 def replace_subarray(arr, start_idx, length, value=None, replace_arr=None):
     """
     Replace a slice of arr with either a value or array.
-    Copied from nxbt utils.
     """
     if value is not None:
         for i in range(start_idx, start_idx + length):
@@ -16,6 +39,19 @@ def replace_subarray(arr, start_idx, length, value=None, replace_arr=None):
     elif replace_arr is not None:
         for i in range(min(length, len(replace_arr))):
             arr[start_idx + i] = replace_arr[i]
+
+
+def build_empty_switch_input_payload() -> bytes:
+    payload = bytearray(49)
+
+    payload[0] = 0x30  # Standard input report
+    payload[1] = 0x00  # Timer
+    payload[2] = 0x60  # Battery + connection (required)
+
+    # Buttons, sticks = 0
+    payload[12] = 0x80  # Vibrator byte (must be non-zero)
+
+    return bytes(payload)
 
 
 class SwitchResponses(Enum):
@@ -93,7 +129,7 @@ class ControllerProtocol:
         # Standard Input Report Properties
         # Timestamp to generate timer byte ticks
         self.timer = 0
-        self.timestamp = None
+        self.timestamp = perf_counter()
 
         # High/Low Nibble
         self.battery_level = 0x90
@@ -154,65 +190,68 @@ class ControllerProtocol:
     def process_commands(self, data):
         # Parsing the Switch's message
         message = SwitchReportParser(data)
+        if message.response != SwitchResponses.NO_DATA:
+            print(f"Parsed Message as {message.response}")
 
         # Responding to the parsed message
-        if message.response == SwitchResponses.REQUEST_DEVICE_INFO:
-            self.device_info_queried = True
-            self.set_subcommand_reply()
-            self.set_device_info()
+        match message.response:
+            case SwitchResponses.REQUEST_DEVICE_INFO:
+                self.device_info_queried = True
+                self.set_subcommand_reply()
+                self.set_device_info()
 
-        elif message.response == SwitchResponses.SET_SHIPMENT:
-            self.set_subcommand_reply()
-            self.set_shipment()
+            case SwitchResponses.SET_SHIPMENT:
+                self.set_subcommand_reply()
+                self.set_shipment()
 
-        elif message.response == SwitchResponses.SPI_READ:
-            self.set_subcommand_reply()
-            self.spi_read(message)
+            case SwitchResponses.SPI_READ:
+                self.set_subcommand_reply()
+                self.spi_read(message)
 
-        elif message.response == SwitchResponses.SET_MODE:
-            self.set_subcommand_reply()
-            self.set_mode(message)
+            case SwitchResponses.SET_MODE:
+                self.set_subcommand_reply()
+                self.set_mode(message)
 
-        elif message.response == SwitchResponses.TRIGGER_BUTTONS:
-            self.set_subcommand_reply()
-            self.set_trigger_buttons()
+            case SwitchResponses.TRIGGER_BUTTONS:
+                self.set_subcommand_reply()
+                self.set_trigger_buttons()
 
-        elif message.response == SwitchResponses.TOGGLE_IMU:
-            self.set_subcommand_reply()
-            self.toggle_imu(message)
+            case SwitchResponses.TOGGLE_IMU:
+                self.set_subcommand_reply()
+                self.toggle_imu(message)
 
-        elif message.response == SwitchResponses.ENABLE_VIBRATION:
-            self.set_subcommand_reply()
-            self.enable_vibration()
+            case SwitchResponses.ENABLE_VIBRATION:
+                self.set_subcommand_reply()
+                self.enable_vibration()
 
-        elif message.response == SwitchResponses.SET_PLAYER:
-            self.set_subcommand_reply()
-            self.set_player_lights(message)
+            case SwitchResponses.SET_PLAYER:
+                self.set_subcommand_reply()
+                self.set_player_lights(message)
 
-        elif message.response == SwitchResponses.SET_NFC_IR_STATE:
-            self.set_subcommand_reply()
-            self.set_nfc_ir_state()
+            case SwitchResponses.SET_NFC_IR_STATE:
+                self.set_subcommand_reply()
+                self.set_nfc_ir_state()
 
-        elif message.response == SwitchResponses.SET_NFC_IR_CONFIG:
-            self.set_subcommand_reply()
-            self.set_nfc_ir_config()
+            case SwitchResponses.SET_NFC_IR_CONFIG:
+                self.set_subcommand_reply()
+                self.set_nfc_ir_config()
 
-        # Bad Packet handling statements
-        elif message.response == SwitchResponses.UNKNOWN_SUBCOMMAND:
-            # Currently set so that the controller ignores any unknown
-            # subcommands. This is better than sending a NACK response
-            # since we'd just get stuck in an infinite loop arguing
-            # with the Switch.
-            self.set_full_input_report()
+            # Bad Packet handling statements
+            case SwitchResponses.UNKNOWN_SUBCOMMAND:
+                # Currently set so that the controller ignores any unknown
+                # subcommands. This is better than sending a NACK response
+                # since we'd just get stuck in an infinite loop arguing
+                # with the Switch.
+                self.set_full_input_report()
 
-        elif message.response == SwitchResponses.NO_DATA:
-            self.set_full_input_report()
+            case SwitchResponses.NO_DATA:
+                self.set_full_input_report()
 
-        elif message.response == SwitchResponses.TOO_SHORT:
-            self.set_full_input_report()
+            case SwitchResponses.TOO_SHORT:
+                self.set_full_input_report()
 
-        elif message.response == SwitchResponses.MALFORMED:
-            self.set_full_input_report()
+            case SwitchResponses.MALFORMED:
+                self.set_full_input_report()
 
     def set_empty_report(self):
         empty_report = [0] * self.report_size

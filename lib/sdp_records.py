@@ -1,20 +1,8 @@
-# Pro Controller Pairing POC for Nintendo Switch
-# Ported from nxbt for Bumble framework
-
-import asyncio
-import logging
-import sys
-
-import bumble.logging
 from bumble.core import (
     BT_HIDP_PROTOCOL_ID,
     BT_HUMAN_INTERFACE_DEVICE_SERVICE,
     BT_L2CAP_PROTOCOL_ID,
 )
-from bumble.device import Device
-from bumble.hci import Address
-from bumble.hid import Device as HID_Device
-from bumble.hid import Message
 from bumble.sdp import (
     SDP_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
     SDP_BLUETOOTH_PROFILE_DESCRIPTOR_LIST_ATTRIBUTE_ID,
@@ -22,14 +10,11 @@ from bumble.sdp import (
     SDP_LANGUAGE_BASE_ATTRIBUTE_ID_LIST_ATTRIBUTE_ID,
     SDP_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
     SDP_PUBLIC_BROWSE_ROOT,
+    SDP_SERVICE_CLASS_ID_LIST_ATTRIBUTE_ID,
     SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,
     DataElement,
     ServiceAttribute,
 )
-from bumble.transport import open_transport
-
-from controller import ControllerTypes
-from switch_protocol import ControllerProtocol
 
 SDP_HID_SERVICE_NAME_ATTRIBUTE_ID = 0x0100
 SDP_HID_SERVICE_DESCRIPTION_ATTRIBUTE_ID = 0x0101
@@ -62,10 +47,11 @@ HID_REMOTE_WAKE = True
 HID_SUPERVISION_TIMEOUT = 0xC80
 HID_NORMALLY_CONNECTABLE = False
 HID_BOOT_DEVICE = False
+DEVICE_CLASS_GAMEPAD = 0x002508
+
 
 # fmt: off
 # Disable lint for commenting purposes
-# These HID descriptor comments are LLM Generated, remember to check if they are accurate if using for reference.
 HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
     [
         0x05, 0x01,  # Usage Page (Generic Desktop)
@@ -87,15 +73,15 @@ HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
             0x81, 0x02,  # Input (Data,Var,Abs)
 
             0x85, 0x31,  # Report ID (49)
-            0x09, 0x31,  # Usage (0x31)
+            0x09, 0x31,  # Usage (0x30)
             0x75, 0x08,  # Report Size (8)
-            0x95, 0x66,  # Report Count (102)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x96, 0x69,  #
+            0x01, 0x81,  #
 
-            0x85, 0x32,  # Report ID (50)
-            0x09, 0x32,  # Usage (0x32)
+            0x02, 0x30,  # Report ID (50)
+            0x09, 0x30,  # Usage (0x32)
             0x75, 0x08,  # Report Size (8)
-            0x95, 0x66,  # Report Count (102)
+            0x95, 0x30,  # Report Count (102)
             0x81, 0x02,  # Input (Data,Var,Abs)
 
             0x85, 0x33,  # Report ID (51)
@@ -166,20 +152,13 @@ HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
     ])
     # fmt: on
 
-protocol_mode = Message.ProtocolMode.REPORT_PROTOCOL
 
-
-def sdp_records():
+def sdp_record():
     service_record_handle = 0x00010002
     return {
         service_record_handle: [
-            # 0x0000: ServiceRecordHandle
             ServiceAttribute(
-                SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,
-                DataElement.unsigned_integer_32(service_record_handle),
-            ),
-            ServiceAttribute(
-                SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,  # 0x0001
+                SDP_SERVICE_CLASS_ID_LIST_ATTRIBUTE_ID,  # 0x0001
                 DataElement.sequence(
                     [DataElement.uuid(BT_HUMAN_INTERFACE_DEVICE_SERVICE)]  # 0x1124
                 ),
@@ -295,7 +274,12 @@ def sdp_records():
                                 DataElement.unsigned_integer_8(
                                     0x22
                                 ),  # Report Descriptor Type
-                                DataElement(DataElement.TEXT_STRING, HID_REPORT_MAP),
+                                DataElement(
+                                    DataElement.TEXT_STRING,
+                                    bytes.fromhex(
+                                        "05010905a1010601ff8521092175089530810285300930750895308102853109317508966901810285320932750896690181028533093375089669018102853f05091901291015002501750195108102050109391500250775049501814205097504950181010501093009310933093416000027ffff00007510950481020601ff85010901750895309102851009107508953091028511091175089530910285120912750895309102c0"
+                                    ),
+                                ),
                             ]
                         ),
                     ]
@@ -338,304 +322,3 @@ def sdp_records():
             ),
         ]
     }
-
-
-def setup_logging():
-    """Setup logging to console and file"""
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    file_handler = logging.FileHandler("switch_packets.log")
-    file_handler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
-    console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
-
-    logger = logging.getLogger("switch_pair")
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
-    return logger
-
-
-def format_switch_msg(data: bytes, direction: str) -> str:
-    """Format Switch packet for logging"""
-    if len(data) < 11:
-        return f"{direction}: Too short ({len(data)} bytes)"
-
-    payload = " ".join(f"{b:02X}" for b in data[:11])
-    subcmd = ""
-
-    if len(data) > 11:
-        subcmd_id = data[11]
-        subcmd = f"| Sub: 0x{subcmd_id:02X}"
-        if len(data) > 12:
-            subcmd_data = " ".join(f"{b:02X}" for b in data[12:])
-            subcmd += f" {subcmd_data}"
-
-    return f"[{direction}] Payload: {payload} {subcmd}"
-
-
-def handle_virtual_cable_unplug(hid_device: HID_Device, device: Device):
-    async def _handle():
-        hid_host_bd_addr = str(hid_device.remote_device_bd_address)
-        await hid_device.disconnect_interrupt_channel()
-        await hid_device.disconnect_control_channel()
-        if device.keystore:
-            await device.keystore.delete(hid_host_bd_addr)
-        connection = hid_device.connection
-        if connection is not None:
-            await connection.disconnect()
-
-    return _handle()
-
-
-async def main() -> None:
-    if len(sys.argv) < 3:
-        print("Usage: python switch_pair.py <device-config> <transport-spec>")
-        print("example: python switch_pair.py pro_controller.json usb:0")
-        print("")
-        print("Press Ctrl+C to exit")
-        return
-
-    logger = setup_logging()
-
-    print("=" * 60)
-    print("Pro Controller Switch Pairing POC")
-    print("=" * 60)
-    print("")
-
-    if len(sys.argv) == 4:
-        bt_address = sys.argv[3]
-    else:
-        bt_address = "98:b6:e9:12:34:57"
-
-    # Pairing state tracking
-    pairing_event = asyncio.Event()
-    received_first_message = False
-    packet_count = 0
-
-    protocol = ControllerProtocol(ControllerTypes.PRO_CONTROLLER, bt_address)
-
-    def on_hid_data_cb(pdu: bytes):
-        nonlocal received_first_message
-
-        packet_log = format_switch_msg(pdu, "RX")
-        logger.debug(packet_log)
-
-        # Track when we receive first actual Switch message
-        if pdu is not None:
-            print("RECEIVED SWITCH MESSAGE")
-            received_first_message = True
-
-        if len(pdu) > 40:
-            print(f"  [RX] Switch command: 0x{pdu[11]:02X}")
-
-        # Process Switch command and generate immediate response
-        protocol.process_commands(pdu)
-        report = protocol.get_report_no_clear()
-
-        if len(report) > 1:
-            tx_log = format_switch_msg(report, "TX")
-            logger.debug(tx_log)
-            if len(report) > 20:
-                print(f"  [TX] Response sent ({len(report)} bytes)")
-
-            hid_device.send_data(report)
-
-    def on_get_report_cb(
-        report_id: int, report_type: int, buffer_size: int
-    ) -> HID_Device.GetSetStatus:
-        retValue = hid_device.GetSetStatus()
-
-        logger.info(
-            f"GET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={buffer_size}"
-        )
-
-        if report_type == Message.ReportType.INPUT_REPORT:
-            if report_id == 0x21:
-                protocol.set_subcommand_reply()
-                retValue.data = bytes(protocol.get_report_no_clear()[1:])
-                retValue.status = hid_device.GetSetReturn.SUCCESS
-                print(f"  [GET] Subcommand reply (0x21)")
-            elif report_id == 0x30:
-                protocol.set_full_input_report()
-                retValue.data = bytes(protocol.get_report_no_clear()[1:])
-                retValue.status = hid_device.GetSetReturn.SUCCESS
-                print(f"  [GET] Full input report (0x30)")
-            else:
-                retValue.status = hid_device.GetSetReturn.REPORT_ID_NOT_FOUND
-
-            if buffer_size:
-                data_len = buffer_size - 1
-                retValue.data = retValue.data[:data_len]
-        else:
-            retValue.status = hid_device.GetSetReturn.ERR_INVALID_PARAMETER
-
-        return retValue
-
-    def on_set_report_cb(
-        report_id: int, report_type: int, report_size: int, data: bytes
-    ) -> HID_Device.GetSetStatus:
-        logger.info(
-            f"SET_REPORT: ID=0x{report_id:02X}, Type={report_type}, Size={report_size}"
-        )
-
-        if report_type == Message.ReportType.OUTPUT_REPORT:
-            retValue = hid_device.GetSetStatus(status=hid_device.GetSetReturn.SUCCESS)
-        elif report_type == Message.ReportType.FEATURE_REPORT:
-            retValue = hid_device.GetSetStatus(
-                status=hid_device.GetSetReturn.ERR_INVALID_PARAMETER
-            )
-        else:
-            retValue = hid_device.GetSetStatus(status=hid_device.GetSetReturn.SUCCESS)
-
-        return retValue
-
-    def on_virtual_cable_unplug_cb():
-        print("\n! Virtual cable unplug received")
-        logger.warning("Virtual cable unplug received")
-
-    async with await open_transport(sys.argv[2]) as hci_transport:
-        logger.info(f"Transport: {sys.argv[2]}")
-
-        # Create a device
-        device = Device.from_config_file_with_hci(
-            sys.argv[1], hci_transport.source, hci_transport.sink
-        )
-
-        device.classic_enabled = True
-        device.public_address = Address(bt_address)
-        device.keystore = None
-
-        logger.info(f"Device address: {device.public_address}")
-        logger.info(f"Device class: 0x{device.class_of_device:04X}")
-        logger.info(f"Device name: {device.name}")
-
-        # Create and register HID Device
-        hid_device = HID_Device(device)
-
-        async def on_connection(connection):
-            logger.info(f"Connection from: {connection.peer_address}")
-
-            # try:
-            #     await connection.authenticate()
-            #     logger.info("Authentication successful")
-
-            #     await connection.encrypt()
-            #     logger.info("Encryption enabled")
-            # except Exception as e:
-            #     logger.error(f"Auth/Encrypt failed: {e}")
-
-        device.on("connection", on_connection)
-
-        # Register for call backs
-        hid_device.on("interrupt_data", on_hid_data_cb)
-
-        hid_device.register_get_report_cb(on_get_report_cb)
-        hid_device.register_set_report_cb(on_set_report_cb)
-        # hid_device.register_set_protocol_cb(on_set_protocol_cb)
-
-        # Register for virtual cable unplug call back
-        hid_device.on("virtual_cable_unplug", on_virtual_cable_unplug_cb)
-
-        # Setup the SDP to advertise HID Device service
-        device.sdp_service_records = sdp_records()
-
-        logging.debug(f"Device class: 0x{device.class_of_device:04X}")
-        logging.debug(f"Device name: {device.name}")
-
-        # Start the controller
-        await device.power_on()
-        logging.info("Device powered on + SDP Records registered")
-
-        # Start being discoverable and connectable
-        await device.set_discoverable(True)
-        await device.set_connectable(True)
-
-        print("")
-        print("Waiting for Switch connection...")
-        print("  On Switch, go to: Controllers > Change Grip/Order")
-        print("")
-        print("-" * 60)
-        print("  [STATUS] Starting background report task")
-        print("-" * 60)
-
-        async def send_reports_task():
-            nonlocal packet_count
-            nonlocal received_first_message
-
-            while not pairing_event.is_set():
-                try:
-                    protocol.process_commands(None)
-                    report = protocol.get_report()
-                    hid_device.send_data(report)
-
-                    packet_count += 1
-
-                    if (
-                        received_first_message
-                        and protocol.vibration_enabled
-                        and protocol.player_number is not None
-                    ):
-                        print("")
-                        print("=" * 60)
-                        print("✓ PAIRING COMPLETE!")
-                        print("=" * 60)
-                        print(f"  Player Number: {protocol.player_number}")
-                        print(
-                            f"  Vibration: {'Enabled' if protocol.vibration_enabled else 'Disabled'}"
-                        )
-                        print(f"  Packets Exchanged: {packet_count}")
-                        print("=" * 60)
-                        pairing_event.set()
-                        break
-                    else:
-                        if packet_count % 30 == 0 and packet_count > 0:
-                            print(
-                                f"  [STATUS] Waiting... ({packet_count} packets sent)"
-                            )
-
-                    if not received_first_message:
-                        await asyncio.sleep(1)
-                    else:
-                        await asyncio.sleep(1 / 15)
-
-                except Exception as e:
-                    print(f"\n✗ Error in send_reports_task: {e}")
-                    logger.error(f"Send reports task error: {e}")
-                    await asyncio.sleep(1)
-
-        send_task = asyncio.create_task(send_reports_task())
-
-        try:
-            await pairing_event.wait()
-            print("")
-            print("✓ Pairing complete - keeping connection alive")
-            print("  [STATUS] Press Ctrl+C to exit")
-            print("")
-
-            try:
-                while True:
-                    if protocol.device_info_queried:
-                        protocol.set_full_input_report()
-                        report = protocol.get_report()
-                        hid_device.send_data(report)
-
-                    await asyncio.sleep(1 / 132)
-            except KeyboardInterrupt:
-                print("\n\n✓ Exiting gracefully...")
-                logger.info("User requested exit")
-        finally:
-            if not send_task.done():
-                send_task.cancel()
-                try:
-                    await send_task
-                except asyncio.CancelledError:
-                    pass
-
-
-bumble.logging.setup_basic_logging("DEBUG")
-asyncio.run(main())
