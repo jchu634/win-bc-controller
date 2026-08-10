@@ -52,7 +52,6 @@ DEVICE_CLASS_GAMEPAD = 0x002508
 
 # fmt: off
 # Disable lint for commenting purposes
-# These HID descriptor comments are LLM Generated, remember to check if they are accurate if using for reference.
 HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
     [
         0x05, 0x01,  # Usage Page (Generic Desktop)
