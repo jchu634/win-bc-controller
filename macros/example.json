@@ -1,0 +1,13 @@
+{
+  "name": "press-a-three-times",
+  "repeat": 0,
+  "actions": [
+    { "do": "loop", "count": 3, "actions": [
+      { "do": "press",   "button": "A" },
+      { "do": "wait",    "ms": 60 },
+      { "do": "release", "button": "A" },
+      { "do": "wait",    "ms": 240 }
+    ] },
+    { "do": "wait", "ms": 1000 }
+  ]
+}
