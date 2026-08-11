@@ -28,9 +28,9 @@ DEFAULT_BUTTON_MAP: dict[int, Button] = {
     5: Button.R,  # RB
     6: Button.MINUS,  # Back
     7: Button.PLUS,  # Start
-    8: Button.HOME,  # Guide
-    9: Button.STICK_L,  # Left stick click
-    10: Button.STICK_R,  # Right stick click
+    8: Button.STICK_L,  # Left stick click
+    9: Button.STICK_R,  # Right stick click
+    10: Button.HOME,  # Guide
 }
 
 # Analog trigger axes treated as digital above ``trigger_threshold``.
@@ -77,7 +77,7 @@ class PygameInputThread(threading.Thread):
             self._right_stick = DEFAULT_RIGHT_STICK
             self._dpad_hat = DEFAULT_DPAD_HAT
         self._stop = threading.Event()
-        # Set = running, cleared = paused. 
+        # Set = running, cleared = paused.
         # While paused we keep pumping pygame events but skip enqueuing snapshots
         self._pause = threading.Event()
         self._pause.set()
@@ -99,7 +99,8 @@ class PygameInputThread(threading.Thread):
     def run(self):
         try:
             pygame_init()
-        except Exception:
+        except Exception as e1:
+            logger.error(f"pygame init failed, falling back to joystick init: {e1}")
             # Headless / no-display environments: fall back to joystick-only.
             try:
                 joystick.init()
@@ -115,7 +116,7 @@ class PygameInputThread(threading.Thread):
                 )
                 return
             stick = joystick.Joystick(self._device_index)
-            stick.init()
+            # stick.init()
             logger.info(
                 f"Pygame input following '{stick.get_name()}' "
                 f"({stick.get_numaxes()} axes, {stick.get_numbuttons()} "
