@@ -8,8 +8,8 @@ import {
   VideoCameraSlashIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from "@/src/components/ui/button";
+import { cn } from "cnfast";
 import {
   type CameraDevice,
   type CameraError,
@@ -17,7 +17,7 @@ import {
   describeError,
   enumerateCameras,
   releaseStream,
-} from "@/lib/webcam";
+} from "@/src/lib/webcam";
 
 export function WebcamViewer() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -70,7 +70,7 @@ export function WebcamViewer() {
   useEffect(() => {
     Effect.runPromise(enumerateCameras)
       .then(setCameras)
-      .catch(() => {});
+      .catch(() => {});                  
   }, []);
 
   // react to cameras being plugged / unplugged

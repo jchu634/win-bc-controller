@@ -1,0 +1,25 @@
+{
+  "name": "Xbox",
+  "description": "Xbox 360 / One / Series controller (pygame 2.x raw button/axis indices). Nintendo labels sit in the positions Xbox uses for the other letter, so A/B and X/Y are swapped to keep physical placement. The D-pad is exposed as an SDL hat (hat 0).",
+  "rumble_enabled": true,
+  "buttons": {
+    "0": "B",
+    "1": "A",
+    "2": "Y",
+    "3": "X",
+    "4": "L",
+    "5": "R",
+    "6": "MINUS",
+    "7": "PLUS",
+    "8": "STICK_L",
+    "9": "STICK_R",
+    "10": "HOME"
+  },
+  "triggers": {
+    "2": "ZL",
+    "5": "ZR"
+  },
+  "left_stick": { "x_axis": 0, "y_axis": 1 },
+  "right_stick": { "x_axis": 3, "y_axis": 4 },
+  "dpad": { "hat": 0 }
+}

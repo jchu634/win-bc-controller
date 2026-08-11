@@ -8,6 +8,7 @@ import time
 from pygame import event, joystick
 from pygame import init as pygame_init
 
+from lib.input.presets import PresetConfig
 from lib.input.state import Button, ControllerState
 
 logger = logging.getLogger("switch_pair")
@@ -16,7 +17,8 @@ logger = logging.getLogger("switch_pair")
 # Default mapping from an Xbox/SDL-style gamepad (pygame button indices)
 # to Switch buttons. Nintendo labels sit in the *positions* Xbox uses for
 # the other letter, so we swap A/B and X/Y to keep physical placement
-# (bottom = primary action). Override via ``button_map`` to customise.
+# (bottom = primary action). These values are used when no ``preset`` is
+# supplied; a :class:`PresetConfig` overrides every map below at once.
 DEFAULT_BUTTON_MAP: dict[int, Button] = {
     0: Button.B,  # Xbox A  -> Nintendo B (bottom)
     1: Button.A,  # Xbox B  -> Nintendo A (right)
@@ -30,6 +32,12 @@ DEFAULT_BUTTON_MAP: dict[int, Button] = {
     9: Button.STICK_L,  # Left stick click
     10: Button.STICK_R,  # Right stick click
 }
+
+# Analog trigger axes treated as digital above ``trigger_threshold``.
+DEFAULT_TRIGGER_MAP: dict[int, Button] = {4: Button.ZL, 5: Button.ZR}
+DEFAULT_LEFT_STICK: tuple[int, int] = (0, 1)
+DEFAULT_RIGHT_STICK: tuple[int, int] = (2, 3)
+DEFAULT_DPAD_HAT: int | None = 0
 
 
 class PygameInputThread(threading.Thread):
@@ -45,6 +53,7 @@ class PygameInputThread(threading.Thread):
         deadzone: float = 0.12,
         trigger_threshold: float = 0.30,
         button_map: dict[int, Button] | None = None,
+        preset: PresetConfig | None = None,
     ):
         super().__init__(name="pygame-input", daemon=True)
         self._queue = command_queue
@@ -52,11 +61,40 @@ class PygameInputThread(threading.Thread):
         self._period = 1.0 / rate_hz
         self._deadzone = deadzone
         self._trigger_threshold = trigger_threshold
-        self._button_map = button_map or DEFAULT_BUTTON_MAP
+        # A preset, when supplied, is the single source of truth for every
+        # mapping. Falling back to per-field defaults preserves backward
+        # compatibility for callers that pass ``button_map`` directly.
+        if preset is not None:
+            self._button_map = preset.button_map
+            self._trigger_map = preset.trigger_map
+            self._left_stick = preset.left_stick
+            self._right_stick = preset.right_stick
+            self._dpad_hat = preset.dpad_hat
+        else:
+            self._button_map = button_map or DEFAULT_BUTTON_MAP
+            self._trigger_map = DEFAULT_TRIGGER_MAP
+            self._left_stick = DEFAULT_LEFT_STICK
+            self._right_stick = DEFAULT_RIGHT_STICK
+            self._dpad_hat = DEFAULT_DPAD_HAT
         self._stop = threading.Event()
+        # Set = running, cleared = paused. 
+        # While paused we keep pumping pygame events but skip enqueuing snapshots
+        self._pause = threading.Event()
+        self._pause.set()
 
     def stop(self):
         self._stop.set()
+        # Release a paused thread so it can observe _stop and exit.
+        self._pause.set()
+
+    def pause(self):
+        self._pause.clear()
+
+    def resume(self):
+        self._pause.set()
+
+    def is_paused(self) -> bool:
+        return not self._pause.is_set() and not self._stop.is_set()
 
     def run(self):
         try:
@@ -95,7 +133,13 @@ class PygameInputThread(threading.Thread):
         n_hats = stick.get_numhats()
 
         while not self._stop.is_set():
+            # Always pump, even when paused: some SDL drivers accumulate
+            # state internally and can stall if event.pump() stops being
+            # called. We just skip the enqueue when paused.
             event.pump()
+            if not self._pause.is_set():
+                time.sleep(self._period)
+                continue
 
             buttons = Button(0)
 
@@ -105,24 +149,20 @@ class PygameInputThread(threading.Thread):
                 if stick.get_button(i):
                     buttons |= self._button_map[i]
 
-            # Analog triggers (axes 4/5 on most XInput pads). Treat as
-            # digital above a threshold; index varies, so we probe.
-            for i in (4, 5):
+            # Analog triggers — treat as digital above a threshold.
+            for i, btn in self._trigger_map.items():
                 if i >= n_axes:
                     continue
                 v = stick.get_axis(i)
                 if v >= self._trigger_threshold:
-                    if i == 4:
-                        buttons |= Button.ZL
-                    elif i == 5:
-                        buttons |= Button.ZR
+                    buttons |= btn
 
-            lx, ly = self._axis(stick, 0, 1, n_axes)
-            rx, ry = self._axis(stick, 2, 3, n_axes)
+            lx, ly = self._axis(stick, *self._left_stick, n_axes)
+            rx, ry = self._axis(stick, *self._right_stick, n_axes)
 
-            # D-pad from hat 0.
-            if n_hats > 0:
-                hx, hy = stick.get_hat(0)
+            # D-pad from the configured hat (if any).
+            if self._dpad_hat is not None and self._dpad_hat < n_hats:
+                hx, hy = stick.get_hat(self._dpad_hat)
                 if hx < 0:
                     buttons |= Button.LEFT
                 elif hx > 0:

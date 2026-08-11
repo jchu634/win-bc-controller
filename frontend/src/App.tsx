@@ -1,4 +1,4 @@
-import { WebcamViewer } from "@/components/webcam-viewer";
+import { WebcamViewer } from "@/src/components/webcam-viewer";
 import "./App.css";
 
 function App() {
@@ -8,9 +8,6 @@ function App() {
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
           Capture Card Preview
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Select a capture device and preview the live signal.
-        </p>
       </header>
       <WebcamViewer />
     </div>

@@ -2,21 +2,27 @@ import argparse
 import asyncio
 import logging
 import queue
+from pathlib import Path
 from time import perf_counter
 
 import bumble.logging
+import uvicorn
 from bumble.device import Device
 from bumble.hci import Address, HCI_Write_Default_Link_Policy_Settings_Command
 from bumble.l2cap import ClassicChannelSpec
 from bumble.pairing import PairingConfig, PairingDelegate
 from bumble.transport import open_transport
 
+from lib.config import Config, ConfigStore, config_path
 from lib.controller import ControllerTypes
 from lib.input import NEUTRAL, apply_to_protocol, parse_rumble
 from lib.input.macro_source import MacroPlayerThread, load_macro
+from lib.input.manager import InputManager
+from lib.input.presets import PresetConfig, load_preset
 from lib.input.pygame_source import PygameInputThread
 from lib.input.state import ControllerState
 from lib.sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
+from lib.server import build_app
 from lib.switch_protocol import ControllerProtocol
 
 HID_CONTROL_PSM = 0x0011
@@ -42,13 +48,16 @@ def setup_logging():
     logger.addHandler(file_handler)
 
 
-def build_input_sources(specs, command_queue):
+def build_input_sources(specs, command_queue, preset: PresetConfig | None = None):
     """Construct (not yet start) the daemon input threads for each --input spec.
 
     Spec formats:
       * ``controller``              -> pygame gamepad reader
       * ``controller:<index>``      -> pygame gamepad at a specific index
       * ``macro:<path>``            -> JSON macro player
+
+    ``preset``, when given, configures every pygame gamepad reader's
+    button/trigger/stick/dpad mapping and rumble flag.
     """
     threads = []
     for spec in specs:
@@ -58,7 +67,7 @@ def build_input_sources(specs, command_queue):
             if ":" in spec:
                 idx = int(spec.split(":", 1)[1])
             threads.append(
-                PygameInputThread(command_queue, device_index=idx)
+                PygameInputThread(command_queue, device_index=idx, preset=preset)
             )
         elif spec.startswith("macro:"):
             path = spec.split(":", 1)[1]
@@ -113,7 +122,12 @@ async def run_pairing_handshake(protocol, interrupt_channel, incoming):
 
 
 async def run_mainloop(
-    protocol, interrupt_channel, incoming, stop_event, command_queue
+    protocol,
+    interrupt_channel,
+    incoming,
+    stop_event,
+    command_queue,
+    rumble_enabled: bool = True,
 ):
     """Steady-state loop: apply the latest controller input, process one
     Switch PDU per tick, decode rumble, and emit reports.
@@ -121,6 +135,9 @@ async def run_mainloop(
     Caches the last report payload so we don't flood the Switch with
     identical packets (important on the "Change Grip/Order" menu), and
     sends a keepalive every 132 ticks (~1 s) regardless.
+
+    When ``rumble_enabled`` is False the rumble block is skipped entirely
+    (no decoding, no logging) — e.g. for presets that disable rumble.
     """
     tick = 0
     cached = None
@@ -157,7 +174,7 @@ async def run_mainloop(
         report = protocol.get_report()
 
         # Decode rumble from the Switch packet and log changes only.
-        if reply:
+        if reply and rumble_enabled:
             rumble = parse_rumble(reply)
             if rumble is not None:
                 sig = (
@@ -262,24 +279,78 @@ def make_l2cap_handler(psm, state):
     return handler
 
 
+async def serve_web(app, host: str, port: int) -> None:
+    """Run the Starlette app under uvicorn until cancelled.
+
+    Shutdown is driven by task cancellation; ``should_exit`` is set on
+    cancel so uvicorn finishes in-flight requests cleanly.
+    """
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="info",
+        lifespan="off",
+    )
+    server = uvicorn.Server(config)
+    try:
+        await server.serve()
+    except asyncio.CancelledError:
+        server.should_exit = True
+        raise
+
+
 async def main():
     parser = argparse.ArgumentParser(
         description="Pro Controller (Bumble) for Nintendo Switch"
     )
-    parser.add_argument("device_config", help="Bumble device config JSON")
-    parser.add_argument("transport_spec", help="e.g. usb:0")
+    parser.add_argument(
+        "device_config",
+        nargs="?",
+        default=None,
+        help="Bumble device config JSON (defaults to config.json or pro_controller.json)",
+    )
+    parser.add_argument(
+        "transport_spec",
+        nargs="?",
+        default=None,
+        help="e.g. usb:0 (defaults to config.json)",
+    )
     parser.add_argument(
         "bt_address",
         nargs="?",
-        default="98:b6:e9:12:34:57",
-        help="controller Bluetooth address",
+        default=None,
+        help="controller Bluetooth address (defaults to config.json)",
     )
     parser.add_argument(
         "--input",
         action="append",
-        default=[],
+        default=None,
         metavar="controller|controller:<idx>|macro:<path>",
-        help="enable an input source (may be repeated)",
+        help="enable an input source (may be repeated). Overrides config.input_specs.",
+    )
+    parser.add_argument(
+        "--web-host",
+        default=None,
+        help="web server bind host (default: from config, or 127.0.0.1)",
+    )
+    parser.add_argument(
+        "--web-port",
+        type=int,
+        default=None,
+        help="web server bind port (default: from config, or 8000)",
+    )
+    parser.add_argument(
+        "--no-web",
+        action="store_true",
+        help="do not launch the web server / WebSocket",
+    )
+    parser.add_argument(
+        "--preset",
+        default=None,
+        metavar="xbox|playstation|switch_pro|<path.json>",
+        help="controller mapping preset name or path to a JSON preset file "
+        "(default: from config, or xbox)",
     )
     args = parser.parse_args()
 
@@ -289,19 +360,94 @@ async def main():
     logger.info("Pro Controller (Bumble) - Switch pairing")
     logger.info("=" * 60)
 
-    # Shared, thread-safe command queue. Input-source threads are producers;
-    # the asyncio main loop is the consumer.
-    command_queue: queue.Queue[ControllerState] = queue.Queue()
-    input_threads = build_input_sources(args.input, command_queue)
+    # Load persistent config (under %APPDATA%), override with CLI flags.
+    # CLI flags are session-only and do not write back; use the
+    # ``/api/config`` endpoint to persist changes.
+    overrides: dict = {}
+    if args.device_config is not None:
+        overrides["device_config"] = args.device_config
+    if args.transport_spec is not None:
+        overrides["transport_spec"] = args.transport_spec
+    if args.bt_address is not None:
+        overrides["bt_address"] = args.bt_address
+    if args.input is not None:
+        overrides["input_specs"] = list(args.input)
+    if args.web_host is not None:
+        overrides["web_host"] = args.web_host
+    if args.web_port is not None:
+        overrides["web_port"] = args.web_port
+    if args.preset is not None:
+        overrides["preset"] = args.preset
 
-    async with await open_transport(args.transport_spec) as hci_transport:
+    config = Config.load(overrides or None)
+    config_store = ConfigStore(config)
+    logger.info(f"Config path: {config_path()}")
+    logger.info(f"Config: {config_store.snapshot()}")
+
+    if not config.transport_spec:
+        parser.error(
+            "transport_spec is required (provide it as the second positional "
+            "argument or set transport_spec in config.json)"
+        )
+
+    # Shared, thread-safe command queue. Input-source threads are producers;
+    # the asyncio main loop is the consumer. The InputManager arbitrates
+    # between physical / WebSocket input and macro playback.
+    command_queue: queue.Queue[ControllerState] = queue.Queue()
+    project_root = Path(__file__).resolve().parent
+    macros_dir = project_root / "macros"
+    manager = InputManager(
+        command_queue,
+        macros_dir,
+        macro_rate_hz=config.macro_rate_hz,
+    )
+    manager.bind_loop(asyncio.get_running_loop())
+
+    # Resolve the controller mapping preset. The preset name comes from the
+    # config store (persistable via PATCH /api/config); ``--preset`` overrides
+    # it for the session. On failure we fall back to the built-in defaults so
+    # the controller stays usable.
+    try:
+        preset = load_preset(config.preset)
+    except (FileNotFoundError, ValueError, TypeError) as e:
+        logger.warning(
+            f"Could not load preset {config.preset!r}: {e}; using defaults"
+        )
+        preset = PresetConfig.default()
+    logger.info(
+        f"Controller preset: {preset.name} "
+        f"(rumble {'on' if preset.rumble_enabled else 'off'})"
+    )
+
+    input_threads = build_input_sources(
+        config.input_specs, command_queue, preset=preset
+    )
+    manager.attach_pygame_threads(input_threads)
+
+    # Launch the web server (Starlette + uvicorn) on the same loop so the
+    # WS endpoint can submit states directly to ``command_queue``.
+    web_task: asyncio.Task | None = None
+    if not args.no_web:
+        frontend_dist = project_root / "frontend" / "dist"
+        app = build_app(manager, config_store, frontend_dist)
+        web_task = asyncio.create_task(
+            serve_web(app, config.web_host, config.web_port)
+        )
+        logger.info(
+            f"Web UI: http://{config.web_host}:{config.web_port} "
+            f"(ws://{config.web_host}:{config.web_port}/ws)"
+        )
+    else:
+        logger.info("Web server disabled (--no-web)")
+
+    async with await open_transport(config.transport_spec) as hci_transport:
         device = Device.from_config_file_with_hci(
-            args.device_config, hci_transport.source, hci_transport.sink
+            config.device_config, hci_transport.source, hci_transport.sink
         )
 
         # Classic / HID service configuration
         device.classic_enabled = True
-        device.public_address = Address(args.bt_address)
+        device.public_address = Address(config.bt_address)
         device.class_of_device = DEVICE_CLASS_GAMEPAD
         device.discoverable = True
         device.connectable = True
@@ -345,6 +491,7 @@ async def main():
         # Start input sources now that the radio is up. They are daemon
         # threads; they keep producing states whether or not a session
         # is active, and the main loop drains stale entries per session.
+        # ``InputManager`` may pause them when a macro is running.
         for t in input_threads:
             t.start()
             logger.info(f"Started input source: {t.name}")
@@ -371,7 +518,7 @@ async def main():
 
                 logger.info("Both HID channels open; starting controller session.")
                 protocol = ControllerProtocol(
-                    ControllerTypes.PRO_CONTROLLER, args.bt_address
+                    ControllerTypes.PRO_CONTROLLER, config.bt_address
                 )
 
                 try:
@@ -384,6 +531,7 @@ async def main():
                         state.incoming,
                         state.session_stop,
                         command_queue,
+                        rumble_enabled=preset.rumble_enabled,
                     )
                 except asyncio.CancelledError:
                     raise
@@ -394,8 +542,13 @@ async def main():
 
                 logger.info("Re-listening for a new Switch connection...")
         finally:
-            for t in input_threads:
-                t.stop()
+            manager.shutdown()
+            if web_task is not None:
+                web_task.cancel()
+                try:
+                    await web_task
+                except asyncio.CancelledError:
+                    pass
 
 
 bumble.logging.setup_basic_logging("info")

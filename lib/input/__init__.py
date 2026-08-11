@@ -6,25 +6,37 @@ that produce them. Sources run as daemon threads pushing onto a shared
 ``queue.Queue`` consumed by the main asyncio loop.
 """
 
+from lib.input.presets import (
+    BUILTIN_PRESETS,
+    PRESETS_DIR,
+    PresetConfig,
+    list_presets,
+    load_preset,
+)
+from lib.input.rumble import MotorRumble, RumbleData, parse_rumble
 from lib.input.state import (
     NEUTRAL,
     Button,
     ControllerState,
     apply_to_protocol,
 )
-from lib.input.rumble import MotorRumble, RumbleData, parse_rumble
 from lib.input.stick import PRO_LEFT, PRO_RIGHT, StickCalibration, calibrate_stick
 
 __all__ = [
-    "Button",
-    "ControllerState",
+    "BUILTIN_PRESETS",
     "NEUTRAL",
-    "apply_to_protocol",
-    "RumbleData",
-    "MotorRumble",
-    "parse_rumble",
-    "StickCalibration",
-    "calibrate_stick",
+    "PRESETS_DIR",
     "PRO_LEFT",
     "PRO_RIGHT",
+    "Button",
+    "ControllerState",
+    "MotorRumble",
+    "PresetConfig",
+    "RumbleData",
+    "StickCalibration",
+    "apply_to_protocol",
+    "calibrate_stick",
+    "list_presets",
+    "load_preset",
+    "parse_rumble",
 ]

@@ -24,6 +24,7 @@
 
 from enum import Enum
 
+
 class ControllerTypes(Enum):
     """Controller type enumerations for initializing the controller server."""
 

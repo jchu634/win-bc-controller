@@ -1,4 +1,3 @@
-import os
 import random
 
 NINTENDO_OUI = [0x98, 0xB6, 0xE9]

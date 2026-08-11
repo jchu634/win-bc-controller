@@ -4,12 +4,16 @@ import json
 import logging
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from lib.input.state import Button, ControllerState
 
 logger = logging.getLogger("switch_pair")
+
+
+SLICE_SECONDS = 0.005
 
 
 def load_macro(path: str | Path) -> dict:
@@ -57,18 +61,37 @@ class MacroPlayerThread(threading.Thread):
         macro: dict,
         command_queue,
         rate_hz: int = 120,
+        on_finish: Callable[[], None] | None = None,
     ):
         super().__init__(name="macro-player", daemon=True)
         self._macro = macro
         self._queue = command_queue
         self._period = 1.0 / rate_hz
         self._stop = threading.Event()
+        # Set = running, cleared = paused. Pause freezes the macro in its
+        # current (possibly held) state; the steady-state snapshots are
+        # not enqueued while paused, but held buttons stay held on the
+        # Switch until something else enqueues a fresh state.
+        self._pause = threading.Event()
+        self._pause.set()
         self._buttons: set[Button] = set()
         self._left: tuple[float, float] = (0.0, 0.0)
         self._right: tuple[float, float] = (0.0, 0.0)
+        self._on_finish = on_finish
 
     def stop(self):
         self._stop.set()
+        # Make sure a paused macro can actually exit.
+        self._pause.set()
+
+    def pause(self):
+        self._pause.clear()
+
+    def resume(self):
+        self._pause.set()
+
+    def is_paused(self) -> bool:
+        return not self._pause.is_set() and not self._stop.is_set()
 
     def run(self):
         repeat = int(self._macro.get("repeat", 1))
@@ -92,6 +115,11 @@ class MacroPlayerThread(threading.Thread):
             self._right = (0.0, 0.0)
             self._queue.put(ControllerState())
             logger.info(f"Macro '{name}' finished")
+            if self._on_finish is not None:
+                try:
+                    self._on_finish()
+                except Exception:
+                    logger.exception("macro on_finish callback raised")
 
     def _execute(self, actions: list[dict]) -> bool:
         """Execute a block of actions. Returns False if stopped."""
@@ -136,12 +164,18 @@ class MacroPlayerThread(threading.Thread):
         if seconds <= 0:
             return
         end = time.perf_counter() + seconds
-        while not self._stop.is_set():
+        while True:
+            if self._stop.is_set():
+                return
+            # Block while paused (no enqueue, no countdown progress).
+            if not self._pause.wait(timeout=SLICE_SECONDS):
+                # Timed out waiting for run signal; loop and re-check stop.
+                continue
             remaining = end - time.perf_counter()
             if remaining <= 0:
-                break
+                return
             self._queue.put(self._snapshot())
-            time.sleep(min(self._period, remaining))
+            time.sleep(min(self._period, remaining, SLICE_SECONDS))
 
     def _emit(self):
         self._queue.put(self._snapshot())

@@ -43,6 +43,9 @@ export const describeError = (err: CameraError): string => {
 
 export const enumerateCameras = Effect.gen(function* () {
   const md = navigator.mediaDevices;
+
+  console.log(permission.state);
+
   if (!md?.enumerateDevices) {
     return yield* new CameraError({ reason: "unsupported", cause: null });
   }
@@ -50,6 +53,7 @@ export const enumerateCameras = Effect.gen(function* () {
     try: () => md.enumerateDevices(),
     catch: (e) => toCameraError(e),
   });
+  console.log(devices);
   return devices
     .filter((d) => d.kind === "videoinput")
     .map((d, i) => ({

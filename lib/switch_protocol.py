@@ -1,5 +1,5 @@
 # ==============================================================================
-# This code is adapted from the NXBT project (https://github.com/Brikwerk/nxbt).
+# This code is adapted from the NXBT project whose original license is included below (https://github.com/Brikwerk/nxbt).
 #
 # Copyright (c) 2019 Reece Walsh
 #
@@ -25,6 +25,7 @@
 import random
 from enum import Enum
 from time import perf_counter
+from typing import ClassVar
 
 from lib.controller import ControllerTypes
 
@@ -72,12 +73,12 @@ class SwitchResponses(Enum):
 
 
 class ControllerProtocol:
-    CONTROLLER_INFO = {
+    CONTROLLER_INFO: ClassVar[dict] = {
         ControllerTypes.JOYCON_L: {"id": 0x01, "connection_info": 0x0E},
         ControllerTypes.JOYCON_R: {"id": 0x02, "connection_info": 0x0E},
         ControllerTypes.PRO_CONTROLLER: {"id": 0x03, "connection_info": 0x00},
     }
-    VIBRATOR_BYTES = [0xA0, 0xB0, 0xC0, 0x90]
+    VIBRATOR_BYTES = (0xA0, 0xB0, 0xC0, 0x90)
 
     def __init__(
         self,
@@ -107,7 +108,7 @@ class ControllerProtocol:
 
         self.bt_address = bt_address
 
-        if controller_type in self.CONTROLLER_INFO.keys():
+        if controller_type in self.CONTROLLER_INFO:
             self.controller_type = controller_type
         else:
             raise ValueError("Unknown controller type specified")
@@ -476,8 +477,9 @@ class ControllerProtocol:
             0x36,
             0x63,
         ]  # X/Y ?
+
         # Adjusting deadzone for Joy-Cons
-        if not self.controller_type == ControllerTypes.PRO_CONTROLLER:
+        if self.controller_type != ControllerTypes.PRO_CONTROLLER:
             params[3] = 0xAE
 
         # Serial Number read
@@ -537,14 +539,14 @@ class ControllerProtocol:
 
             # Left stick calibration
             # If null, fill with 0xFF
-            if not self.controller_type == ControllerTypes.JOYCON_R:
+            if self.controller_type != ControllerTypes.JOYCON_R:
                 replace_subarray(self.report, 21, 9, replace_arr=l_calibration)
             else:
                 replace_subarray(self.report, 21, 9, value=0xFF)
 
             # Right stick calibration
             # If null, fill with 0xFF
-            if not self.controller_type == ControllerTypes.JOYCON_L:
+            if self.controller_type != ControllerTypes.JOYCON_L:
                 replace_subarray(self.report, 30, 9, replace_arr=r_calibration)
             else:
                 replace_subarray(self.report, 30, 9, value=0xFF)
@@ -662,7 +664,7 @@ class ControllerProtocol:
 
 
 class SwitchReportParser:
-    SUBCOMMANDS = {
+    SUBCOMMANDS: ClassVar[dict] = {
         0x02: SwitchResponses.REQUEST_DEVICE_INFO,
         0x08: SwitchResponses.SET_SHIPMENT,
         0x10: SwitchResponses.SPI_READ,
@@ -697,7 +699,7 @@ class SwitchReportParser:
         self.subcommand_id = self.subcommand[0]
 
         # Parsing the subcommand
-        if self.subcommand[0] in self.SUBCOMMANDS.keys():
+        if self.subcommand[0] in self.SUBCOMMANDS:
             self.response = self.SUBCOMMANDS[self.subcommand[0]]
         else:
             self.response = SwitchResponses.UNKNOWN_SUBCOMMAND

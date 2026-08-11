@@ -11,7 +11,6 @@ from bumble.sdp import (
     SDP_PROTOCOL_DESCRIPTOR_LIST_ATTRIBUTE_ID,
     SDP_PUBLIC_BROWSE_ROOT,
     SDP_SERVICE_CLASS_ID_LIST_ATTRIBUTE_ID,
-    SDP_SERVICE_RECORD_HANDLE_ATTRIBUTE_ID,
     DataElement,
     ServiceAttribute,
 )
@@ -64,31 +63,31 @@ HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
             0x09, 0x21,  # Usage (0x21)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x85, 0x30,  # Report ID (48)
             0x09, 0x30,  # Usage (0x30)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x85, 0x31,  # Report ID (49)
             0x09, 0x31,  # Usage (0x30)
             0x75, 0x08,  # Report Size (8)
-            0x96, 0x69,  #
-            0x01, 0x81,  #
+            0x96, 0x69,
+            0x01, 0x81,
 
             0x02, 0x30,  # Report ID (50)
             0x09, 0x30,  # Usage (0x32)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (102)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x85, 0x33,  # Report ID (51)
             0x09, 0x33,  # Usage (0x33)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x66,  # Report Count (102)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x85, 0x3F,  # Report ID (63)
             0x05, 0x09,  # Usage Page (Button)
@@ -98,7 +97,7 @@ HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
             0x25, 0x01,  # Logical Maximum (1)
             0x75, 0x01,  # Report Size (1)
             0x95, 0x10,  # Report Count (16)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x05, 0x01,  # Usage Page (Generic Desktop)
             0x09, 0x39,  # Usage (Hat switch)
@@ -121,32 +120,32 @@ HID_REPORT_MAP = bytes(  # Text String, 50 Octet Report Descriptor
             0x26, 0xFF, 0xFF,  # Logical Maximum (65535)
             0x75, 0x10,  # Report Size (16)
             0x95, 0x04,  # Report Count (4)
-            0x81, 0x02,  # Input (Data,Var,Abs)
+            0x81, 0x02,  # Input (Data, Var, Abs)
 
             0x06, 0x01, 0xFF,  # Usage Page (Vendor Defined 0xFF01)
             0x85, 0x01,  # Report ID (1)
             0x09, 0x01,  # Usage (0x01)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x91, 0x02,  # Output (Data,Var,Abs)
+            0x91, 0x02,  # Output (Data, Var, Abs)
 
             0x85, 0x10,  # Report ID (16)
             0x09, 0x10,  # Usage (0x10)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x91, 0x02,  # Output (Data,Var,Abs)
+            0x91, 0x02,  # Output (Data, Var, Abs)
 
             0x85, 0x11,  # Report ID (17)
             0x09, 0x11,  # Usage (0x11)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x91, 0x02,  # Output (Data,Var,Abs)
+            0x91, 0x02,  # Output (Data, Var, Abs)
 
             0x85, 0x12,  # Report ID (18)
             0x09, 0x12,  # Usage (0x12)
             0x75, 0x08,  # Report Size (8)
             0x95, 0x30,  # Report Count (48)
-            0x91, 0x02,  # Output (Data,Var,Abs)
+            0x91, 0x02,  # Output (Data, Var, Abs)
 
         0xC0  # End Collection
     ])

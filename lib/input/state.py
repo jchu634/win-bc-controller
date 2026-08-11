@@ -47,7 +47,8 @@ class Button(IntFlag):
 
     NONE = 0
 
-    def by_name(self, name: str) -> Button:
+    @staticmethod
+    def by_name(name: str) -> Button:
         """Look up a button by its enum name (case-insensitive)."""
         return Button[name.strip().upper()]
 
@@ -61,7 +62,7 @@ class ControllerState:
     convention: X positive = right, Y positive = up.
     """
 
-    buttons = Button(0)
+    buttons: Button = Button.NONE
     left: tuple[float, float] = (0.0, 0.0)
     right: tuple[float, float] = (0.0, 0.0)
 
