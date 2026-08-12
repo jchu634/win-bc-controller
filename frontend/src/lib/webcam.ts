@@ -41,10 +41,26 @@ export const describeError = (err: CameraError): string => {
   }
 };
 
+export type CameraPermissionState =
+  | "granted"
+  | "denied"
+  | "prompt"
+  | "unsupported";
+
+export const requestPermission = Effect.gen(function* () {
+  const md = navigator.mediaDevices;
+  if (!md?.getUserMedia) {
+    return yield* new CameraError({ reason: "unsupported", cause: null });
+  }
+  const stream = yield* Effect.tryPromise({
+    try: () => md.getUserMedia({ video: true, audio: false }),
+    catch: (e) => toCameraError(e),
+  });
+  yield* Effect.sync(() => stream.getTracks().forEach((t) => t.stop()));
+});
+
 export const enumerateCameras = Effect.gen(function* () {
   const md = navigator.mediaDevices;
-
-  console.log(permission.state);
 
   if (!md?.enumerateDevices) {
     return yield* new CameraError({ reason: "unsupported", cause: null });
@@ -53,7 +69,6 @@ export const enumerateCameras = Effect.gen(function* () {
     try: () => md.enumerateDevices(),
     catch: (e) => toCameraError(e),
   });
-  console.log(devices);
   return devices
     .filter((d) => d.kind === "videoinput")
     .map((d, i) => ({

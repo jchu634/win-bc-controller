@@ -5,6 +5,7 @@ import {
   PlayIcon,
   SpinnerGapIcon,
   StopIcon,
+  VideoCameraIcon,
   VideoCameraSlashIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
@@ -13,10 +14,12 @@ import { cn } from "cnfast";
 import {
   type CameraDevice,
   type CameraError,
+  type CameraPermissionState,
   acquireStream,
   describeError,
   enumerateCameras,
   releaseStream,
+  requestPermission,
 } from "@/src/lib/webcam";
 
 export function WebcamViewer() {
@@ -27,7 +30,12 @@ export function WebcamViewer() {
   const [selectedId, setSelectedId] = useState<string>("");
   const [streaming, setStreaming] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [permission, setPermission] = useState<CameraPermissionState>("prompt");
   const [error, setError] = useState<string | null>(null);
+
+  const permissionGranted =
+    permission === "granted" || permission === "unsupported";
 
   const stop = useCallback(() => {
     const current = streamRef.current;
@@ -66,15 +74,60 @@ export function WebcamViewer() {
     }
   }, []);
 
+  const request = useCallback(async () => {
+    setError(null);
+    setRequesting(true);
+    try {
+      await Effect.runPromise(requestPermission);
+      setPermission("granted");
+      const cams = await Effect.runPromise(enumerateCameras).catch(
+        (): readonly CameraDevice[] => [],
+      );
+      setCameras(cams);
+    } catch (err) {
+      const reason = (err as CameraError)?.reason;
+      setError(describeError(err as CameraError));
+      setPermission(reason === "unsupported" ? "unsupported" : "denied");
+    } finally {
+      setRequesting(false);
+    }
+  }, []);
+
+  // check permission on mount, auto-request if prompted, subscribe to changes
+  useEffect(() => {
+    let status: PermissionStatus | null = null;
+    const perms = navigator.permissions;
+    if (!perms?.query) {
+      setPermission("unsupported");
+      return;
+    }
+    perms
+      .query({ name: "camera" as PermissionName })
+      .then((s) => {
+        status = s;
+        setPermission(s.state as CameraPermissionState);
+        // surface the browser permission prompt as soon as the component mounts
+        if (s.state === "prompt") void request();
+        s.onchange = () =>
+          setPermission(s.state as CameraPermissionState);
+      })
+      .catch(() => setPermission("unsupported"));
+    return () => {
+      if (status) status.onchange = null;
+    };
+  }, [request]);
+
   // enumerate on mount (labels may be blank until permission is granted)
   useEffect(() => {
+    if (!permissionGranted) return;
     Effect.runPromise(enumerateCameras)
       .then(setCameras)
-      .catch(() => {});                  
-  }, []);
+      .catch(() => {});
+  }, [permissionGranted]);
 
   // react to cameras being plugged / unplugged
   useEffect(() => {
+    if (!permissionGranted) return;
     const handler = () => {
       Effect.runPromise(enumerateCameras)
         .then(setCameras)
@@ -84,7 +137,7 @@ export function WebcamViewer() {
     return () => {
       navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
     };
-  }, []);
+  }, [permissionGranted]);
 
   // release the stream when unmounted
   useEffect(() => {
@@ -125,6 +178,19 @@ export function WebcamViewer() {
                 <WarningIcon size={36} weight="duotone" />
                 <p className="px-6 text-center text-sm">{error}</p>
               </>
+            ) : permission === "denied" ? (
+              <>
+                <VideoCameraSlashIcon size={36} weight="duotone" />
+                <p className="px-6 text-center text-sm">
+                  Camera access is blocked. Enable it in your browser's site
+                  settings to continue.
+                </p>
+              </>
+            ) : !permissionGranted ? (
+              <>
+                <VideoCameraIcon size={36} weight="duotone" />
+                <p className="text-sm">Camera access required to begin</p>
+              </>
             ) : (
               <>
                 <VideoCameraSlashIcon size={36} weight="duotone" />
@@ -138,52 +204,73 @@ export function WebcamViewer() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-50 flex-1">
-          <select
-            value={selectedId}
-            onChange={(e) => handleSelect(e.target.value)}
-            disabled={isEmpty}
-            aria-label="Select capture device"
-            className={cn(
-              "h-9 w-full appearance-none rounded-4xl border border-border bg-background px-3 pe-9 text-sm",
-              "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30",
-              "disabled:opacity-50",
-            )}
-          >
-            {isEmpty ? (
-              <option value="">No capture devices detected</option>
-            ) : (
-              <>
-                <option value="">Default device</option>
-                {cameras.map((c) => (
-                  <option key={c.deviceId} value={c.deviceId}>
-                    {c.label}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-          <CaretDownIcon
-            size={16}
-            weight="bold"
-            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
-          />
-        </div>
+        {permissionGranted ? (
+          <>
+            <div className="relative min-w-50 flex-1">
+              <select
+                value={selectedId}
+                onChange={(e) => handleSelect(e.target.value)}
+                disabled={isEmpty}
+                aria-label="Select capture device"
+                className={cn(
+                  "h-9 w-full appearance-none rounded-4xl border border-border bg-background px-3 pe-9 text-sm",
+                  "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30",
+                  "disabled:opacity-50",
+                )}
+              >
+                {isEmpty ? (
+                  <option value="">No capture devices detected</option>
+                ) : (
+                  <>
+                    <option value="">Default device</option>
+                    {cameras.map((c) => (
+                      <option key={c.deviceId} value={c.deviceId}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+              <CaretDownIcon
+                size={16}
+                weight="bold"
+                className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
+              />
+            </div>
 
-        <Button
-          onClick={toggle}
-          variant={streaming ? "destructive" : "default"}
-          disabled={starting}
-        >
-          {starting ? (
-            <SpinnerGapIcon size={16} weight="bold" className="animate-spin" />
-          ) : streaming ? (
-            <StopIcon size={16} weight="fill" />
-          ) : (
-            <PlayIcon size={16} weight="fill" />
-          )}
-          {streaming ? "Stop" : "Start"}
-        </Button>
+            <Button
+              onClick={toggle}
+              variant={streaming ? "destructive" : "default"}
+              disabled={starting}
+            >
+              {starting ? (
+                <SpinnerGapIcon
+                  size={16}
+                  weight="bold"
+                  className="animate-spin"
+                />
+              ) : streaming ? (
+                <StopIcon size={16} weight="fill" />
+              ) : (
+                <PlayIcon size={16} weight="fill" />
+              )}
+              {streaming ? "Stop" : "Start"}
+            </Button>
+          </>
+        ) : (
+          <Button onClick={request} disabled={requesting}>
+            {requesting ? (
+              <SpinnerGapIcon
+                size={16}
+                weight="bold"
+                className="animate-spin"
+              />
+            ) : (
+              <VideoCameraIcon size={16} weight="fill" />
+            )}
+            Request camera access
+          </Button>
+        )}
       </div>
     </div>
   );
