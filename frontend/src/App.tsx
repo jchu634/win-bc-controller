@@ -1,17 +1,20 @@
-import { WebcamViewer } from "@/src/components/webcam-viewer";
-import "./App.css";
+import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { routeTree } from "./routeTree.gen";
 
-function App() {
-  return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 px-4 py-10">
-      <header className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Capture Card Preview
-        </h1>
-      </header>
-      <WebcamViewer />
-    </div>
-  );
+// Set up a Router instance
+const router = createRouter({
+  routeTree,
+  defaultPreload: "intent",
+  scrollRestoration: true,
+});
+
+// Register things for typesafety
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
 }
 
-export default App;
+export default function App() {
+  return <RouterProvider router={router} />;
+}
