@@ -47,6 +47,7 @@ class Config:
     tick_rate_hz: int = 132
     macro_rate_hz: int = 120
     preset: str = "xbox"
+    controller_guid: str = ""
 
     @classmethod
     def _valid_keys(cls) -> set[str]:

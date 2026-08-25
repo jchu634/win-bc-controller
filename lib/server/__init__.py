@@ -1,17 +1,27 @@
 """
-Starlette application hosting the built frontend and the macro
-WebSocke.
+Starlette application hosting the built frontend, the macro WebSocket
+and the REST API.
 
 Routes (ordered WS/REST before static so the catch-all SPA mount doesn't
 shadow them)::
 
-    /ws                       WebSocket: macro command channel
-    GET  /api/config          current config as JSON
-    PATCH /api/config         merge-update config (persists)
-    GET  /api/control-mode    {"mode": ..., "macro": {...}|null}
-    PUT  /api/control-mode    {"mode": "manual"|"macro"}
-    GET  /api/macros          {"names": [...]}
-    /                        StaticFiles(frontend/dist, html=True)
+    /ws                                WebSocket: runtime channel
+    GET  /api/config                   current config as JSON
+    PATCH /api/config                  merge-update config (persists)
+    GET  /api/control-mode             {"mode": ..., "macro": {...}|null}
+    PUT  /api/control-mode             {"mode": "manual"|"macro"}
+    GET  /api/macros                   {"names": [...]}
+    GET  /api/macros/{name}            {"name": ..., "contents": "<raw json>"}
+    PUT  /api/macros/{name}            {"contents": "<raw json>"} (validated)
+    DELETE /api/macros/{name}          409 while that macro is running
+    GET  /api/controllers              device list + active + preset
+    PUT  /api/controllers/active       {"guid"|"name"|"index": ...}
+    GET  /api/presets                  {"presets": [{name, builtin, ...}]}
+    GET  /api/presets/{name}           {"name": ..., "contents": "<raw json>"}
+    PUT  /api/presets/{name}           custom presets only (validated)
+    DELETE /api/presets/{name}         custom presets only; 409 when active
+    POST /api/presets/{name}/activate  select + persist + apply
+    /                                  StaticFiles(frontend/dist, html=True)
 """
 
 from __future__ import annotations
@@ -21,14 +31,31 @@ import logging
 from pathlib import Path
 
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
-from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from lib.config import ConfigStore
-from lib.input.manager import InputManager, state_from_event
+from lib.input.macro_source import MacroValidationError, validate_macro
+from lib.input.manager import InputManager, MacroActiveError, state_from_event
+from lib.input.presets import (
+    PresetValidationError,
+    delete_preset,
+    list_preset_infos,
+    preset_name_is_builtin,
+    read_preset_text,
+    save_preset_text,
+    validate_preset,
+)
+from lib.server.files import (
+    DocError,
+    JsonDocStore,
+    UnsafeNameError,
+    parse_json_text,
+)
 from lib.server.protocol import (
     MacroCancel,
     MacroPause,
@@ -37,6 +64,7 @@ from lib.server.protocol import (
     MacroStartInline,
     ProtocolError,
     error_frame,
+    frame_text,
     parse_message,
     status_frame,
 )
@@ -44,44 +72,66 @@ from lib.server.protocol import (
 logger = logging.getLogger("switch_pair")
 
 
-# ----------------------------------------------------------- WebSocket route
+def _error(message: str, detail: str | None = None, status: int = 400) -> JSONResponse:
+    body: dict = {"error": message}
+    if detail is not None:
+        body["detail"] = detail
+    return JSONResponse(body, status_code=status)
+
 
 
 async def macro_ws_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     manager: InputManager = websocket.app.state.manager
+    # Guarantee thread-safe broadcasts even when the manager was built
+    # without a bound loop (tests / library embedding).
+    manager.ensure_loop(asyncio.get_running_loop())
     status_q = manager.subscribe()
 
+    # Exactly one outstanding websocket.receive() at any time (multiple
+    # concurrent receive() calls race disconnects and raise).
+    incoming: asyncio.Queue[str | None] = asyncio.Queue()
+
+    async def reader() -> None:
+        try:
+            while True:
+                event = await websocket.receive()
+                text = event.get("text") or ""
+                if text:
+                    incoming.put_nowait(text)
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            incoming.put_nowait(None)  # disconnect sentinel
+
+    reader_task = asyncio.create_task(reader())
+
     initial = manager.status()
-    await websocket.send_text(status_frame(initial["mode"], initial["macro"]))
+    try:
+        await websocket.send_text(status_frame(initial["mode"], initial["macro"]))
+        await websocket.send_text(frame_text(manager.controllers_payload()))
+    except WebSocketDisconnect:
+        reader_task.cancel()
+        await asyncio.gather(reader_task, return_exceptions=True)
+        manager.unsubscribe(status_q)
+        return
 
     try:
+        # Persistent get-tasks, renewed immediately after consumption so
+        # no frame is ever stranded in an abandoned task.
+        incoming_task = asyncio.create_task(incoming.get())
+        status_task = asyncio.create_task(status_q.get())
         while True:
-            # If a previous iteration observed a disconnect (e.g. via a
-            # failed send), stop now -- ``receive()`` would raise
-            # RuntimeError on an already-disconnected socket.
-            if websocket.application_state != WebSocketState.CONNECTED:
-                break
-            receive_task = asyncio.create_task(websocket.receive())
-            status_task = asyncio.create_task(status_q.get())
-            done, pending = await asyncio.wait(
-                {receive_task, status_task},
+            done, _pending = await asyncio.wait(
+                {incoming_task, status_task},
                 return_when=asyncio.FIRST_COMPLETED,
             )
-            for task in pending:
-                task.cancel()
-            if pending:
-                # Await cancellations so the tasks don't warn on GC.
-                await asyncio.gather(*pending, return_exceptions=True)
 
-            if receive_task in done:
-                try:
-                    event = receive_task.result()
-                except WebSocketDisconnect:
+            if incoming_task in done:
+                text = incoming_task.result()
+                if text is None:
                     break
-                text = event.get("text") or ""
-                if not text:
-                    continue
+                incoming_task = asyncio.create_task(incoming.get())
                 try:
                     await _dispatch_ws(text, websocket, manager)
                 except ProtocolError as e:
@@ -99,15 +149,20 @@ async def macro_ws_endpoint(websocket: WebSocket) -> None:
 
             if status_task in done:
                 payload = status_task.result()
+                status_task = asyncio.create_task(status_q.get())
                 try:
-                    await websocket.send_text(
-                        status_frame(payload["mode"], payload["macro"])
-                    )
+                    await websocket.send_text(frame_text(payload))
                 except WebSocketDisconnect:
                     break
     except WebSocketDisconnect:
         pass
     finally:
+        # Sync-only teardown: awaiting here gives the test-client/portal
+        # cancellation a window to strike mid-cleanup and leave the app
+        # task in a half-cancelled state. The cancelled tasks unwind on
+        # their own (reader swallows its own disconnect errors).
+        for task in (incoming_task, status_task, reader_task):
+            task.cancel()
         manager.unsubscribe(status_q)
 
 
@@ -131,7 +186,15 @@ async def _dispatch_ws(text: str, websocket: WebSocket, manager: InputManager) -
         return
 
     if isinstance(msg, MacroStartInline):
-        manager.start_macro(msg.macro)
+        try:
+            manager.start_macro(msg.macro)
+        except MacroValidationError as e:
+            await websocket.send_text(
+                error_frame(
+                    "invalid macro",
+                    detail=str(e),
+                )
+            )
         return
     if isinstance(msg, MacroStartByName):
         try:
@@ -150,7 +213,216 @@ async def _dispatch_ws(text: str, websocket: WebSocket, manager: InputManager) -
         return
 
 
-# -------------------------------------------------------------- REST routes
+
+async def macros_list(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    return JSONResponse({"names": store.list_names()})
+
+
+async def macro_get(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    name = request.path_params["name"]
+    try:
+        contents = store.read_text(name)
+    except UnsafeNameError as e:
+        return _error(str(e))
+    except DocError as e:
+        return _error(str(e), status=404)
+    return JSONResponse({"name": name, "contents": contents})
+
+
+async def macro_put(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    name = request.path_params["name"]
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error("invalid JSON body")
+    contents = body.get("contents") if isinstance(body, dict) else None
+    if not isinstance(contents, str):
+        return _error("expected {'contents': '<macro json text>'}")
+
+    macro, parse_err = parse_json_text(contents, label="macro")
+    if parse_err is not None:
+        return JSONResponse({"error": "invalid JSON", **parse_err}, status_code=400)
+
+    try:
+        validate_macro(macro)
+    except MacroValidationError as e:
+        return JSONResponse(
+            {"error": "invalid macro", "detail": str(e), "path": e.path},
+            status_code=400,
+        )
+
+    try:
+        store.write_text(name, contents)
+    except UnsafeNameError as e:
+        return _error(str(e))
+    logger.info(f"Saved macro '{name}'")
+    return JSONResponse({"name": name, "saved": True})
+
+
+async def macro_delete(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    manager: InputManager = request.app.state.manager
+    name = request.path_params["name"]
+    running = manager.status().get("macro") or {}
+    if running.get("name") == name:
+        return _error(
+            f"macro '{name}' is currently running", status=409
+        )
+    try:
+        store.delete(name)
+    except UnsafeNameError as e:
+        return _error(str(e))
+    except DocError as e:
+        return _error(str(e), status=404)
+    logger.info(f"Deleted macro '{name}'")
+    return JSONResponse({"name": name, "deleted": True})
+
+
+
+async def controllers_get(request: Request) -> Response:
+    manager: InputManager = request.app.state.manager
+    payload = await asyncio.to_thread(manager.controllers_payload)
+    return JSONResponse(payload)
+
+
+async def controller_select(request: Request) -> Response:
+    manager: InputManager = request.app.state.manager
+    store: ConfigStore = request.app.state.config_store
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error("invalid JSON body")
+    if not isinstance(body, dict):
+        return _error("expected a JSON object")
+
+    ident = body.get("guid") or body.get("name")
+    if ident is None and "index" in body:
+        ident = body["index"]
+    if ident is None or ident == "":
+        return _error("provide 'guid', 'name' or 'index'")
+
+    try:
+        info = await asyncio.to_thread(manager.select_controller, ident)
+    except MacroActiveError as e:
+        return _error(str(e), status=409)
+    except ValueError as e:
+        return _error(str(e), status=404)
+    except RuntimeError as e:
+        return _error(str(e), status=503)
+
+    # Persist the selection (GUID) so it survives restarts.
+    if info.get("guid"):
+        store.update({"controller_guid": info["guid"]})
+    payload = await asyncio.to_thread(manager.controllers_payload)
+    return JSONResponse(payload)
+
+
+
+async def presets_list(request: Request) -> Response:
+    store: ConfigStore = request.app.state.config_store
+    active = store.config.preset
+    infos = [
+        {**info, "active": info["name"] == active}
+        for info in list_preset_infos()
+    ]
+    return JSONResponse({"presets": infos, "active": active})
+
+
+async def preset_get(request: Request) -> Response:
+    name = request.path_params["name"]
+    try:
+        contents = read_preset_text(name)
+    except FileNotFoundError:
+        return _error(f"preset '{name}' does not exist", status=404)
+    except ValueError as e:
+        return _error(str(e))
+    return JSONResponse({"name": name, "contents": contents})
+
+
+async def preset_put(request: Request) -> Response:
+    name = request.path_params["name"]
+    if preset_name_is_builtin(name):
+        return _error(
+            f"'{name}' is a built-in preset; duplicate it under a new "
+            f"name to customise",
+            status=403,
+        )
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error("invalid JSON body")
+    contents = body.get("contents") if isinstance(body, dict) else None
+    if not isinstance(contents, str):
+        return _error("expected {'contents': '<preset json text>'}")
+
+    data, parse_err = parse_json_text(contents, label="preset")
+    if parse_err is not None:
+        return JSONResponse({"error": "invalid JSON", **parse_err}, status_code=400)
+
+    try:
+        validate_preset(data)
+    except PresetValidationError as e:
+        return JSONResponse(
+            {"error": "invalid preset", "detail": str(e), "path": e.path},
+            status_code=400,
+        )
+
+    try:
+        save_preset_text(name, contents)
+    except (PermissionError, ValueError) as e:
+        return _error(str(e), status=403)
+    logger.info(f"Saved preset '{name}'")
+    return JSONResponse({"name": name, "saved": True})
+
+
+async def preset_delete(request: Request) -> Response:
+    store: ConfigStore = request.app.state.config_store
+    name = request.path_params["name"]
+    if preset_name_is_builtin(name):
+        return _error(
+            f"'{name}' is a built-in preset and cannot be deleted",
+            status=403,
+        )
+    if store.config.preset == name:
+        return _error(
+            f"preset '{name}' is currently active", status=409
+        )
+    try:
+        delete_preset(name)
+    except FileNotFoundError as e:
+        return _error(str(e), status=404)
+    except PermissionError as e:
+        return _error(str(e), status=403)
+    logger.info(f"Deleted preset '{name}'")
+    return JSONResponse({"name": name, "deleted": True})
+
+
+async def preset_activate(request: Request) -> Response:
+    manager: InputManager = request.app.state.manager
+    store: ConfigStore = request.app.state.config_store
+    name = request.path_params["name"]
+    if name not in [info["name"] for info in list_preset_infos()]:
+        return _error(f"preset '{name}' does not exist", status=404)
+
+    try:
+        preset = await asyncio.to_thread(manager.apply_preset, name)
+    except MacroActiveError as e:
+        return _error(str(e), status=409)
+    except FileNotFoundError as e:
+        return _error(str(e), status=404)
+    except (ValueError, TypeError) as e:
+        return _error(f"could not load preset: {e}")
+
+    # Persist the selection so it survives restarts (and so the config
+    # store stays the single source of truth).
+    store.update({"preset": name})
+    payload = await asyncio.to_thread(manager.controllers_payload)
+    payload["applied"] = preset.name
+    return JSONResponse(payload)
+
 
 
 async def config_get(request: Request) -> Response:
@@ -160,12 +432,25 @@ async def config_get(request: Request) -> Response:
 
 async def config_patch(request: Request) -> Response:
     store: ConfigStore = request.app.state.config_store
+    manager: InputManager = request.app.state.manager
     try:
         body = await request.json()
     except ValueError:
-        return JSONResponse({"error": "invalid JSON body"}, status_code=400)
+        return _error("invalid JSON body")
     if not isinstance(body, dict):
-        return JSONResponse({"error": "expected a JSON object"}, status_code=400)
+        return _error("expected a JSON object")
+    requested_preset = body.get("preset")
+    if requested_preset is not None and requested_preset != store.config.preset:
+        # Apply first: the persisted config must never claim a preset that
+        # the runtime rejected or could not load.
+        try:
+            await asyncio.to_thread(manager.apply_preset, requested_preset)
+        except MacroActiveError as e:
+            return _error(str(e), status=409)
+        except FileNotFoundError as e:
+            return _error(str(e), status=404)
+        except (ValueError, TypeError) as e:
+            return _error(f"could not load preset: {e}")
     changed = store.update(body)
     return JSONResponse({"changed": changed, "config": store.snapshot()})
 
@@ -180,22 +465,26 @@ async def control_mode_put(request: Request) -> Response:
     try:
         body = await request.json()
     except ValueError:
-        return JSONResponse({"error": "invalid JSON body"}, status_code=400)
+        return _error("invalid JSON body")
     mode = body.get("mode") if isinstance(body, dict) else None
     if mode not in ("manual", "macro"):
-        return JSONResponse(
-            {"error": "mode must be 'manual' or 'macro'"}, status_code=400
-        )
+        return _error("mode must be 'manual' or 'macro'")
     manager.set_mode(mode)
     return JSONResponse(manager.status())
 
 
-async def macros_list(request: Request) -> Response:
-    manager: InputManager = request.app.state.manager
-    return JSONResponse({"names": manager.list_macro_files()})
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles with SPA history fallback: unknown paths (client-side
+    routes like /macros) serve index.html so the router can pick them up."""
 
+    async def get_response(self, path: str, scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except HTTPException as e:
+            if e.status_code == 404:
+                return await super().get_response("index.html", scope)
+            raise
 
-# ------------------------------------------------------------------ factory
 
 
 async def _frontend_not_built(request: Request) -> Response:
@@ -212,13 +501,18 @@ def build_app(
     manager: InputManager,
     config_store: ConfigStore,
     frontend_dist: Path,
+    macro_store: JsonDocStore | None = None,
 ) -> Starlette:
     """Construct the Starlette application.
 
     ``frontend_dist`` is the React production build directory. If it
     doesn't exist (frontend not yet built) we fall back to a stub route
     so the WebSocket and REST API remain usable for testing.
+    ``macro_store`` overrides the macro directory (tests).
     """
+    if macro_store is None:
+        macro_store = JsonDocStore(manager.macros_dir)
+
     routes = [
         WebSocketRoute("/ws", macro_ws_endpoint),
         Route("/api/config", config_get, methods=["GET"]),
@@ -226,13 +520,25 @@ def build_app(
         Route("/api/control-mode", control_mode_get, methods=["GET"]),
         Route("/api/control-mode", control_mode_put, methods=["PUT"]),
         Route("/api/macros", macros_list, methods=["GET"]),
+        Route("/api/macros/{name}", macro_get, methods=["GET"]),
+        Route("/api/macros/{name}", macro_put, methods=["PUT"]),
+        Route("/api/macros/{name}", macro_delete, methods=["DELETE"]),
+        Route("/api/controllers", controllers_get, methods=["GET"]),
+        Route("/api/controllers/active", controller_select, methods=["PUT"]),
+        Route("/api/presets", presets_list, methods=["GET"]),
+        Route("/api/presets/{name}", preset_get, methods=["GET"]),
+        Route("/api/presets/{name}", preset_put, methods=["PUT"]),
+        Route("/api/presets/{name}", preset_delete, methods=["DELETE"]),
+        Route(
+            "/api/presets/{name}/activate", preset_activate, methods=["POST"]
+        ),
     ]
 
     if frontend_dist.exists() and (frontend_dist / "index.html").exists():
         routes.append(
             Mount(
                 "/",
-                app=StaticFiles(directory=str(frontend_dist), html=True),
+                app=SPAStaticFiles(directory=str(frontend_dist), html=True),
                 name="frontend",
             )
         )
@@ -247,4 +553,5 @@ def build_app(
     app = Starlette(routes=routes)
     app.state.manager = manager
     app.state.config_store = config_store
+    app.state.macro_store = macro_store
     return app

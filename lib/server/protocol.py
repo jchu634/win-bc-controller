@@ -17,6 +17,7 @@ Inbound envelope (client -> server)::
 Outbound envelope (server -> client)::
 
     {"type": "status", "mode": "manual"|"macro", "macro": {"name": "...", "state": "..."}|null}
+    {"type": "controllers", "controllers": [{...}], "active": "<guid>"|null, "preset": "xbox"|null}
     {"type": "error",  "message": "..."}
 """
 from __future__ import annotations
@@ -30,8 +31,6 @@ from lib.input.state import Button, ControllerState
 class ProtocolError(ValueError):
     """Raised when an inbound frame fails validation."""
 
-
-# ------------------------------------------------------------ inbound types
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,8 +90,6 @@ InboundMessage = (
     | MacroResume
 )
 
-
-# ------------------------------------------------------------ parsing
 
 
 _VALID_EVENT_ACTIONS = {"press", "release", "stick"}
@@ -178,8 +175,6 @@ def _parse_xy(value) -> tuple[float, float]:
     return (float(x), float(y))
 
 
-# ------------------------------------------------------------ outbound frames
-
 
 def status_frame(mode: str, macro: dict | None) -> str:
     payload: dict = {"type": "status", "mode": mode}
@@ -196,3 +191,9 @@ def error_frame(message: str, detail: str | None = None) -> str:
 
 def macros_frame(names: list[str]) -> str:
     return json.dumps({"type": "macros", "names": names})
+
+
+def frame_text(payload: dict) -> str:
+    """Serialise a typed broadcast payload (``status`` / ``controllers``)
+    produced by the InputManager subscriber queues."""
+    return json.dumps(payload)

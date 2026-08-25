@@ -16,10 +16,10 @@ from bumble.transport import open_transport
 from lib.config import Config, ConfigStore, config_path
 from lib.controller import ControllerTypes
 from lib.input import NEUTRAL, apply_to_protocol, parse_rumble
+from lib.input.controller_service import ControllerService
 from lib.input.macro_source import MacroPlayerThread, load_macro
 from lib.input.manager import InputManager
 from lib.input.presets import PresetConfig, load_preset
-from lib.input.pygame_source import PygameInputThread
 from lib.input.state import ControllerState
 from lib.sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
 from lib.server import build_app
@@ -48,27 +48,38 @@ def setup_logging():
     logger.addHandler(file_handler)
 
 
-def build_input_sources(specs, command_queue, preset: PresetConfig | None = None):
+def controller_spec_info(specs) -> tuple[bool, int | None]:
+    """Scan input specs for controller entries.
+
+    Returns ``(enabled, index_hint)`` where ``enabled`` is True when any
+    ``controller[:idx]`` spec is present and ``index_hint`` is the first
+    explicit index (None otherwise).
+    """
+    for spec in specs:
+        spec = spec.strip()
+        if spec == "controller":
+            return True, None
+        if spec.startswith("controller:"):
+            try:
+                return True, int(spec.split(":", 1)[1])
+            except ValueError:
+                return True, None
+    return False, None
+
+
+def build_input_sources(specs, command_queue):
     """Construct (not yet start) the daemon input threads for each --input spec.
 
     Spec formats:
-      * ``controller``              -> pygame gamepad reader
-      * ``controller:<index>``      -> pygame gamepad at a specific index
-      * ``macro:<path>``            -> JSON macro player
-
-    ``preset``, when given, configures every pygame gamepad reader's
-    button/trigger/stick/dpad mapping and rumble flag.
+      * ``controller`` / ``controller:<index>``  -> handled by the
+        ControllerService (created in ``main``); skipped here
+      * ``macro:<path>``                         -> JSON macro player
     """
     threads = []
     for spec in specs:
         spec = spec.strip()
         if spec == "controller" or spec.startswith("controller:"):
-            idx = 0
-            if ":" in spec:
-                idx = int(spec.split(":", 1)[1])
-            threads.append(
-                PygameInputThread(command_queue, device_index=idx, preset=preset)
-            )
+            continue  # owned by the ControllerService
         elif spec.startswith("macro:"):
             path = spec.split(":", 1)[1]
             macro = load_macro(path)
@@ -152,11 +163,9 @@ async def run_mainloop(
 
         # Pull the latest input state from the command queue (latest-wins).
         # Held buttons/sticks persist across ticks when no new state arrives.
-        drained = False
         while True:
             try:
                 latest_state = command_queue.get_nowait()
-                drained = True
             except queue.Empty:
                 break
 
@@ -404,9 +413,10 @@ async def main():
     manager.bind_loop(asyncio.get_running_loop())
 
     # Resolve the controller mapping preset. The preset name comes from the
-    # config store (persistable via PATCH /api/config); ``--preset`` overrides
-    # it for the session. On failure we fall back to the built-in defaults so
-    # the controller stays usable.
+    # config store (persistable via PATCH /api/config or POST
+    # /api/presets/{name}/activate); ``--preset`` overrides it for the
+    # session. On failure we fall back to the built-in defaults so the
+    # controller stays usable.
     try:
         preset = load_preset(config.preset)
     except (FileNotFoundError, ValueError, TypeError) as e:
@@ -414,14 +424,30 @@ async def main():
             f"Could not load preset {config.preset!r}: {e}; using defaults"
         )
         preset = PresetConfig.default()
+    manager.set_preset(preset, config.preset)
     logger.info(
         f"Controller preset: {preset.name} "
         f"(rumble {'on' if preset.rumble_enabled else 'off'})"
     )
 
-    input_threads = build_input_sources(
-        config.input_specs, command_queue, preset=preset
-    )
+    # Physical gamepads are owned by the ControllerService (single pygame
+    # thread: enumeration, selection, hotplug). Macro specs still become
+    # standalone MacroPlayerThreads.
+    controllers_enabled, controller_index = controller_spec_info(config.input_specs)
+    controller_service: ControllerService | None = None
+    if controllers_enabled:
+        initial_ident = config.controller_guid or controller_index
+        controller_service = ControllerService(
+            command_queue,
+            preset=preset,
+            initial_ident=initial_ident,
+            on_change=manager.on_controllers_changed,
+        )
+        manager.set_controller_service(controller_service)
+
+    input_threads = build_input_sources(config.input_specs, command_queue)
+    if controller_service is not None:
+        input_threads.append(controller_service)
     manager.attach_pygame_threads(input_threads)
 
     # Launch the web server (Starlette + uvicorn) on the same loop so the
@@ -525,13 +551,14 @@ async def main():
                     await run_pairing_handshake(
                         protocol, interrupt_channel, state.incoming
                     )
+                    active_preset = manager.current_preset or preset
                     await run_mainloop(
                         protocol,
                         interrupt_channel,
                         state.incoming,
                         state.session_stop,
                         command_queue,
-                        rumble_enabled=preset.rumble_enabled,
+                        rumble_enabled=active_preset.rumble_enabled,
                     )
                 except asyncio.CancelledError:
                     raise

@@ -1,8 +1,15 @@
 """Input policy broker.
 
 Single authority over the controller's input sources.
-Tracks the current "control mode" (``manual`` vs ``macro``)
-Only one mode is active at a time:
+Tracks the current "control mode" (``manual`` vs ``macro``) and the
+currently applied mapping preset; proxies device selection to the
+:class:`~lib.input.controller_service.ControllerService` when one is
+attached. Only one mode is active at a time.
+
+Broadcast frames (sent to every WS subscriber):
+
+* ``{"type": "status", "mode": ..., "macro": {...}|null}``
+* ``{"type": "controllers", "controllers": [...], "active": guid, "preset": name}``
 
 """
 
@@ -13,15 +20,28 @@ import logging
 import queue
 import threading
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from lib.input.macro_source import MacroPlayerThread, load_macro
+from lib.input.macro_source import (
+    MacroPlayerThread,
+    load_macro,
+    validate_macro,
+)
+from lib.input.presets import PresetConfig, load_preset
 from lib.input.pygame_source import PygameInputThread
 from lib.input.state import NEUTRAL, Button, ControllerState
 
+if TYPE_CHECKING:
+    from lib.input.controller_service import ControllerService
+
 logger = logging.getLogger("switch_pair")
 
+
 Mode = Literal["manual", "macro"]
+
+
+class MacroActiveError(RuntimeError):
+    """A controller/preset mutation was refused because a macro runs."""
 
 
 class InputManager:
@@ -43,15 +63,21 @@ class InputManager:
         self._lock = threading.RLock()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._subscribers: list[asyncio.Queue] = []
-
-    # ------------------------------------------------------------------ loop
-
+        self._service: ControllerService | None = None
+        self.current_preset: PresetConfig | None = None
+        self.current_preset_name: str | None = None
     def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Register the running asyncio loop so thread-side transitions can
         marshal broadcasts back onto the loop thread."""
         self._loop = loop
 
-    # ------------------------------------------------------------ subscribers
+    def ensure_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Bind ``loop`` only when none is bound yet (the WS endpoint uses
+        this so broadcasts are always marshalled thread-safely even when
+        the manager was constructed outside a loop, e.g. in tests)."""
+        with self._lock:
+            if self._loop is None:
+                self._loop = loop
 
     def subscribe(self) -> asyncio.Queue:
         """Get a queue that receives a status dict on every transition.
@@ -66,8 +92,7 @@ class InputManager:
         except ValueError:
             pass
 
-    def _emit_status(self) -> None:
-        payload = self.status()
+    def _emit_frame(self, payload: dict) -> None:
         loop = self._loop
         if loop is not None and loop.is_running():
             for q in list(self._subscribers):
@@ -83,7 +108,11 @@ class InputManager:
                 except Exception:
                     logger.exception("status broadcast failed")
 
-    # --------------------------------------------------------------- queries
+    def _emit_status(self) -> None:
+        self._emit_frame({**self.status(), "type": "status"})
+
+    def _emit_controllers(self) -> None:
+        self._emit_frame(self.controllers_payload())
 
     def status(self) -> dict:
         with self._lock:
@@ -99,12 +128,100 @@ class InputManager:
             return []
         return sorted(p.stem for p in self.macros_dir.glob("*.json") if p.is_file())
 
-    # ------------------------------------------------------ pygame registry
-
-    def attach_pygame_threads(self, threads: list[PygameInputThread]) -> None:
+    def attach_pygame_threads(self, threads: list) -> None:
+        """Register input threads (PygameInputThread or ControllerService —
+        anything with ``pause``/``resume``/``stop``)."""
         self.pygame_threads.extend(threads)
 
-    # ----------------------------------------------------- mode transitions
+    def set_controller_service(self, service: ControllerService) -> None:
+        self._service = service
+
+    def set_preset(self, preset: PresetConfig, source: str | None = None) -> None:
+        self.current_preset = preset
+        self.current_preset_name = source
+
+    def controllers_payload(self) -> dict:
+        """Frame payload describing devices, active selection, preset.
+
+        Safe to call from the asyncio thread. Never call this from the
+        service's own ``on_change`` callback (it would deadlock on the
+        mailbox); use :meth:`on_controllers_changed` instead.
+        """
+        controllers: list[dict] = []
+        active: str | None = None
+        available = False
+        if self._service is not None:
+            try:
+                status = self._service.status()
+                controllers = status.get("controllers", [])
+                active = status.get("active")
+                available = bool(status.get("available"))
+            except RuntimeError as e:
+                logger.warning(f"controller service unavailable: {e}")
+        return {
+            "type": "controllers",
+            "controllers": controllers,
+            "active": active,
+            "available": available,
+            "preset": self.current_preset_name,
+        }
+
+    def on_controllers_changed(
+        self, controllers: list[dict], active: str | None
+    ) -> None:
+        """``on_change`` callback for the ControllerService (service thread).
+
+        Builds the frame from the callback arguments rather than querying
+        the service mailbox (which would deadlock).
+        """
+        self._emit_frame(
+            {
+                "type": "controllers",
+                "controllers": controllers,
+                "active": active,
+                "available": True,
+                "preset": self.current_preset_name,
+            }
+        )
+
+    def select_controller(self, ident: str | int) -> dict:
+        """Switch the active physical controller. Returns its info dict.
+
+        Raises :class:`MacroActiveError` while a macro runs and
+        ``ValueError`` when no device matches.
+        """
+        with self._lock:
+            if self.mode == "macro":
+                raise MacroActiveError(
+                    "cannot switch controllers while a macro is running"
+                )
+        if self._service is None:
+            raise ValueError("no controller service is attached")
+        info = self._service.select(ident)
+        try:
+            return info.to_dict()
+        finally:
+            self._emit_controllers()
+
+    def apply_preset(self, source: str) -> PresetConfig:
+        """Load, validate and apply a mapping preset at runtime.
+
+        Raises the same errors as ``load_preset`` plus
+        :class:`MacroActiveError` while a macro runs.
+        """
+        preset = load_preset(source)
+        with self._lock:
+            if self.mode == "macro":
+                raise MacroActiveError(
+                    "cannot switch presets while a macro is running"
+                )
+        self.current_preset = preset
+        self.current_preset_name = source
+        if self._service is not None:
+            self._service.set_preset(preset)
+        logger.info(f"Applied controller preset: {preset.name}")
+        self._emit_controllers()
+        return preset
 
     def set_mode(self, mode: Mode) -> None:
         with self._lock:
@@ -124,12 +241,11 @@ class InputManager:
                 self.mode = "manual"
         self._emit_status()
 
-    # ----------------------------------------------------- macro lifecycle
-
     def start_macro(self, macro: dict) -> None:
-        """Start a fresh macro dict. Cancels any currently running macro
-        first (immediate stop + queue drain + NEUTRAL). Flips mode to
-        ``macro`` and pauses physical input."""
+        """Start a fresh macro dict. Validates it first, cancels any
+        currently running macro (immediate stop + queue drain + NEUTRAL),
+        flips mode to ``macro`` and pauses physical input."""
+        validate_macro(macro)
         with self._lock:
             self._cancel_internal()
             name = macro.get("name", "<unnamed>")
@@ -176,8 +292,6 @@ class InputManager:
                 self._macro.resume()
         self._emit_status()
 
-    # -------------------------------------------------- manual input gate
-
     def submit_state(self, state: ControllerState) -> bool:
         """Enqueue an ad-hoc state. Returns True if accepted, False if the
         manager is in macro mode (caller should emit an error frame)."""
@@ -187,8 +301,6 @@ class InputManager:
         self.command_queue.put_nowait(state)
         return True
 
-    # ----------------------------------------------------------- shutdown
-
     def shutdown(self) -> None:
         with self._lock:
             if self._macro is not None:
@@ -196,8 +308,6 @@ class InputManager:
                 self._clear_macro()
             for t in self.pygame_threads:
                 t.stop()
-
-    # ------------------------------------------------------------- internals
 
     def _cancel_internal(self) -> None:
         """Stop the current macro, drain the queue, push NEUTRAL. Caller
@@ -242,8 +352,6 @@ class InputManager:
         logger.info(f"Macro '{name}' finished; returning to manual mode")
         self._emit_status()
 
-
-# --------------------------------------------------------------------- helpers
 
 
 def state_from_event(action: dict) -> ControllerState:
