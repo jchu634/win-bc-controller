@@ -310,42 +310,51 @@ class ControllerService(threading.Thread):
         return changed
 
     def _pump_and_handle_hotplug(self) -> None:
+        import pygame
         from pygame import event as pyg_event
 
         try:
             pyg_event.pump()
-            added = getattr(pyg_event, _JOY_ADDED, None)
-            removed = getattr(pyg_event, _JOY_REMOVED, None)
+            added = getattr(pygame, _JOY_ADDED, None)
+            removed = getattr(pygame, _JOY_REMOVED, None)
             interesting = tuple(
                 t for t in (added, removed) if t is not None
             )
-            if interesting:
-                pyg_event.get(interesting)
+            hotplug_events = pyg_event.get(interesting) if interesting else []
         except Exception:
             return
 
-        changed = self._refresh_controllers()
-        if not changed:
+        if not hotplug_events:
             return
 
-        active_gone = self._active_guid is not None and not any(
-            c.guid == self._active_guid for c in self._controllers
-        )
-        if active_gone:
+        # Creating and closing a second Joystick object for the active SDL
+        # device can invalidate the object used by the capture thread. Stop
+        # capture while enumeration probes devices, then reopen the selected
+        # controller by its stable GUID.
+        previous_guid = self._active_guid
+        self._stop_capture()
+        changed = self._refresh_controllers()
+        previous = resolve_controller(previous_guid or "", self._controllers)
+        if previous is not None:
+            try:
+                self._do_select(previous.guid)
+            except ValueError:
+                self._active_guid = None
+        elif previous_guid is not None:
             logger.warning(
-                f"Active controller ({self._active_guid}) was removed"
+                f"Active controller ({previous_guid}) was removed"
             )
-            self._stop_capture()
             self._active_guid = None
-            if self._controllers:
-                try:
-                    self._do_select(self._controllers[0].index)
-                    logger.info(
-                        f"Fell back to '{self._controllers[0].name}'"
-                    )
-                except ValueError:
-                    pass
-        self._notify()
+
+        if self._active_guid is None and self._controllers:
+            try:
+                fallback = self._do_select(self._controllers[0].index)
+                logger.info(f"Fell back to '{fallback.name}'")
+            except ValueError:
+                pass
+
+        if changed:
+            self._notify()
 
     def _do_select(self, ident: str | int) -> ControllerInfo:
         match = resolve_controller(ident, self._controllers)

@@ -17,7 +17,6 @@ const NAV_ITEMS = [
   { to: "/controller", label: "Controller" },
   { to: "/macros", label: "Macros" },
   { to: "/presets", label: "Presets" },
-  { to: "/about", label: "About" },
 ] as const;
 
 function ConnectionBadge() {
@@ -59,7 +58,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
-          <Link to="/" className="font-heading text-lg font-semibold text-foreground">
+          <Link
+            to="/"
+            className="font-heading text-lg font-semibold text-foreground"
+          >
             win-bc-controller
           </Link>
           <nav className="flex flex-wrap items-center gap-1" aria-label="Main">
