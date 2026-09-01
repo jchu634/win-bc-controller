@@ -7,11 +7,15 @@ import {
 } from "@phosphor-icons/react";
 import { CapturePreview } from "@/src/components/capture-preview";
 import { Button } from "@/src/components/ui/button";
-import { useCaptureControls } from "@/src/hooks/use-capture";
+import {
+  useCaptureControls,
+  useCaptureInput,
+} from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/ui/settings-dialog";
 import "@/src/App.css";
 
 function App() {
+  const { selectedInputId } = useCaptureInput();
   const {
     permission,
     requestAccess,
@@ -32,9 +36,11 @@ function App() {
         <div className="flex justify-end">
           {permissionGranted ? (
             <Button
-              onClick={streaming ? stop : () => void start()}
+              onClick={
+                streaming ? stop : () => void start(selectedInputId)
+              }
               variant={streaming ? "destructive" : "default"}
-              disabled={starting}
+              disabled={starting || !selectedInputId}
             >
               {starting ? (
                 <SpinnerGapIcon

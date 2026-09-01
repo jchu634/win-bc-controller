@@ -29,7 +29,7 @@ type CaptureContextValue = {
   readonly stream: MediaStream | null;
   readonly selectInput: (deviceId: string) => void;
   readonly requestAccess: () => Promise<void>;
-  readonly start: () => Promise<void>;
+  readonly start: (deviceId: string) => Promise<void>;
   readonly stop: () => void;
 };
 
@@ -43,56 +43,51 @@ function useCaptureContext(): CaptureContextValue {
   return context;
 }
 
-export function CaptureProvider({ children }: { readonly children: ReactNode }) {
-  const streamRef = useRef<MediaStream | null>(null);
-  const selectedInputIdRef = useRef("");
+export function CaptureProvider({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
+  const activeStreamRef = useRef<MediaStream | null>(null);
   const [cameras, setCameras] = useState<readonly CameraDevice[]>([]);
   const [selectedInputId, setSelectedInputId] = useState("");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [starting, setStarting] = useState(false);
   const [requestingPermission, setRequestingPermission] = useState(false);
-  const [permission, setPermission] =
-    useState<CameraPermissionState>("prompt");
+  const [permission, setPermission] = useState<CameraPermissionState>("prompt");
   const [error, setError] = useState<string | null>(null);
+
+  const syncActiveStream = (nextStream: MediaStream | null) => {
+    activeStreamRef.current = nextStream;
+    setStream(nextStream);
+  };
 
   const refreshCameras = useCallback(async () => {
     const devices = await Effect.runPromise(enumerateCameras).catch(
       (): readonly CameraDevice[] => [],
     );
     setCameras(devices);
+    setSelectedInputId((currentId) => currentId || devices[0]?.deviceId || "");
   }, []);
 
-  const stop = useCallback(() => {
-    const current = streamRef.current;
-    streamRef.current = null;
-    setStream(null);
+  const stop = () => {
+    const current = activeStreamRef.current;
+    syncActiveStream(null);
     if (current) void Effect.runPromise(releaseStream(current));
-  }, []);
+  };
 
-  const start = useCallback(async () => {
+  const start = async (deviceId: string) => {
     setError(null);
     setStarting(true);
-    const previous = streamRef.current;
-    streamRef.current = null;
-    setStream(null);
+    const previous = activeStreamRef.current;
+    syncActiveStream(null);
     if (previous) await Effect.runPromise(releaseStream(previous));
 
     try {
-      const nextStream = await Effect.runPromise(
-        acquireStream(selectedInputIdRef.current),
-      );
-      streamRef.current = nextStream;
-      setStream(nextStream);
+      const nextStream = await Effect.runPromise(acquireStream(deviceId));
+      syncActiveStream(nextStream);
       setPermission("granted");
       await refreshCameras();
-
-      if (!selectedInputIdRef.current) {
-        const activeId = nextStream.getVideoTracks()[0]?.getSettings().deviceId;
-        if (activeId) {
-          selectedInputIdRef.current = activeId;
-          setSelectedInputId(activeId);
-        }
-      }
     } catch (cause: unknown) {
       const captureError = cause instanceof CameraError ? cause : null;
       setError(
@@ -102,7 +97,7 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     } finally {
       setStarting(false);
     }
-  }, [refreshCameras]);
+  };
 
   const requestAccess = useCallback(async () => {
     setError(null);
@@ -124,14 +119,10 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     }
   }, [refreshCameras]);
 
-  const selectInput = useCallback(
-    (deviceId: string) => {
-      selectedInputIdRef.current = deviceId;
-      setSelectedInputId(deviceId);
-      if (streamRef.current) void start();
-    },
-    [start],
-  );
+  const selectInput = (deviceId: string) => {
+    setSelectedInputId(deviceId);
+    if (activeStreamRef.current) void start(deviceId);
+  };
 
   useEffect(() => {
     let status: PermissionStatus | null = null;
@@ -172,11 +163,14 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     };
   }, [permission, refreshCameras]);
 
-  useEffect(() => () => {
-    const current = streamRef.current;
-    streamRef.current = null;
-    if (current) current.getTracks().forEach((track) => track.stop());
-  }, []);
+  useEffect(
+    () => () => {
+      const current = activeStreamRef.current;
+      activeStreamRef.current = null;
+      if (current) current.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
 
   return (
     <CaptureContext.Provider
@@ -200,8 +194,16 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
 }
 
 export function useCaptureControls() {
-  const { error, permission, requestAccess, requestingPermission, start, starting, stop, stream } =
-    useCaptureContext();
+  const {
+    error,
+    permission,
+    requestAccess,
+    requestingPermission,
+    start,
+    starting,
+    stop,
+    stream,
+  } = useCaptureContext();
   return {
     error,
     permission,

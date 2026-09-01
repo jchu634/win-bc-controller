@@ -36,6 +36,7 @@ export function SettingsDialog() {
   const selectedInputLabel = cameras.find(
     (camera) => camera.deviceId === selectedInputId,
   )?.label;
+  console.log(selectedInputId);
 
   return (
     <Dialog>
