@@ -48,12 +48,10 @@ function ControllerSettings() {
     <div className="flex min-w-0 flex-col gap-6">
       <ControllerPanel />
 
-      <div>
+      <div className="flex gap-x-4">
         <PresetPicker
           selected={selectedPreset}
-          onSelect={(preset) =>
-            selectPreset(preset.filename, preset.builtin)
-          }
+          onSelect={(preset) => selectPreset(preset.filename, preset.builtin)}
           onDeleted={(name) => {
             if (selectedPreset === name) {
               setSelectedPreset(null);
