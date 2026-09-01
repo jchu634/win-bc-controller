@@ -15,6 +15,16 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { GearSixIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useCaptureInput } from "@/src/hooks/use-capture";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 
 export function SettingsDialog() {
   const [currentTab, setCurrentTab] = useState("general");
@@ -22,6 +32,11 @@ export function SettingsDialog() {
     general: "General Settings.",
     controller: "Controller Mapping Settings",
   };
+  const { cameras, selectedInputId, selectInput } = useCaptureInput();
+  const selectedInputLabel = cameras.find(
+    (camera) => camera.deviceId === selectedInputId,
+  )?.label;
+
   return (
     <Dialog>
       <DialogTrigger>
@@ -49,6 +64,30 @@ export function SettingsDialog() {
           </TabsList>
           <TabsContent className="p-2" value="general">
             Current Video Capture Device
+            <Select
+              value={selectedInputId}
+              onValueChange={(deviceId) => {
+                if (deviceId !== null) {
+                  selectInput(deviceId);
+                }
+              }}
+            >
+              <SelectTrigger className="w-50%">
+                <SelectValue placeholder="Capture Device">
+                  {selectedInputLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Capture Device</SelectLabel>
+                  {cameras.map((camera) => (
+                    <SelectItem key={camera.deviceId} value={camera.deviceId}>
+                      {camera.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </TabsContent>
           <TabsContent value="controller">
             Change your password here.
