@@ -1,6 +1,6 @@
 {
   "name": "Xbox",
-  "description": "Xbox 360 / One / Series controller (pygame 2.x raw button/axis indices). Nintendo labels sit in the positions Xbox uses for the other letter, so A/B and X/Y are swapped to keep physical placement. The D-pad is exposed as an SDL hat (hat 0).",
+  "description": "Default Xbox 360 / One / Series controller mapping",
   "rumble_enabled": true,
   "buttons": {
     "0": "B",

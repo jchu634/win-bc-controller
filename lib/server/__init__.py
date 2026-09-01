@@ -325,7 +325,7 @@ async def presets_list(request: Request) -> Response:
     store: ConfigStore = request.app.state.config_store
     active = store.config.preset
     infos = [
-        {**info, "active": info["name"] == active}
+        {**info, "active": info["filename"] == active}
         for info in list_preset_infos()
     ]
     return JSONResponse({"presets": infos, "active": active})
@@ -404,7 +404,7 @@ async def preset_activate(request: Request) -> Response:
     manager: InputManager = request.app.state.manager
     store: ConfigStore = request.app.state.config_store
     name = request.path_params["name"]
-    if name not in [info["name"] for info in list_preset_infos()]:
+    if name not in [info["filename"] for info in list_preset_infos()]:
         return _error(f"preset '{name}' does not exist", status=404)
 
     try:

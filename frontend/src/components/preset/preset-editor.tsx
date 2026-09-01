@@ -8,17 +8,25 @@ import {
   MagicWandIcon,
   PlayIcon,
   SpinnerGapIcon,
-  TrashIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
 import { errorMessage } from "@/src/lib/errors";
 import { Button } from "@/src/components/ui/button";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
+import {
   JsonEditor,
   type JsonEditorHandle,
   type JsonMarker,
 } from "@/src/components/json-editor/json-editor";
-import { activatePreset, deletePreset, getPreset, putPreset } from "@/src/lib/api";
+import { activatePreset, getPreset, putPreset } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";
 import type { ValidationBody } from "@/src/lib/types";
 import { locatePathLine, positionToLineCol } from "@/src/lib/json-locate";
@@ -26,24 +34,22 @@ import { locatePathLine, positionToLineCol } from "@/src/lib/json-locate";
 export type PresetEditorProps = {
   name: string | null;
   builtin: boolean;
-  /** Request the parent start the duplicate flow for this preset. */
-  onDuplicate: (name: string) => void;
-  onDeleted: (name: string) => void;
   onSaved: (name: string) => void;
 };
 
 export function PresetEditor({
   name,
   builtin,
-  onDuplicate,
-  onDeleted,
   onSaved,
 }: PresetEditorProps) {
   const [value, setValue] = useState("");
   const [savedText, setSavedText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -188,19 +194,36 @@ export function PresetEditor({
     }
   }, [value]);
 
-  const remove = useCallback(async () => {
-    if (name === null) return;
-    if (!window.confirm(`Delete preset '${name}'?`)) return;
-    setDeleting(true);
-    const ok = await Effect.runPromise(deletePreset(name))
+  const duplicate = useCallback(async () => {
+    const targetName = duplicateName.trim();
+    if (name === null || targetName.length === 0) return;
+    setDuplicating(true);
+    setDuplicateError(null);
+    const succeeded = await Effect.runPromise(getPreset(name))
+      .then(({ contents }) => {
+        const document: unknown = JSON.parse(contents);
+        if (
+          typeof document !== "object" ||
+          document === null ||
+          Array.isArray(document)
+        ) {
+          throw new Error("Preset JSON must be an object.");
+        }
+        const duplicateContents = `${JSON.stringify({ ...document, name: targetName }, null, 2)}\n`;
+        return Effect.runPromise(
+          putPreset(`preset-${crypto.randomUUID()}`, duplicateContents),
+        );
+      })
       .then(() => true)
       .catch((error: unknown) => {
-        setError(errorMessage(error));
+        setDuplicateError(errorMessage(error));
         return false;
       });
-    setDeleting(false);
-    if (ok) onDeleted(name);
-  }, [name, onDeleted]);
+    setDuplicating(false);
+    if (!succeeded) return;
+    setDuplicateOpen(false);
+    onSaved(name);
+  }, [duplicateName, name, onSaved]);
 
   if (name === null) {
     return (
@@ -233,7 +256,30 @@ export function PresetEditor({
         )}
         <div className="ms-auto flex flex-wrap items-center gap-2">
           {builtin ? (
-            <Button size="sm" variant="outline" onClick={() => onDuplicate(name)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                let suggestedName = name;
+                try {
+                  const document: unknown = JSON.parse(value);
+                  if (
+                    typeof document === "object" &&
+                    document !== null &&
+                    !Array.isArray(document) &&
+                    "name" in document &&
+                    typeof document.name === "string"
+                  ) {
+                    suggestedName = document.name;
+                  }
+                } catch {
+                  // The duplicate action will report malformed source JSON.
+                }
+                setDuplicateName(`${suggestedName} copy`);
+                setDuplicateError(null);
+                setDuplicateOpen(true);
+              }}
+            >
               <CopyIcon size={14} /> Duplicate…
             </Button>
           ) : (
@@ -291,19 +337,6 @@ export function PresetEditor({
                 )}
                 Save
               </Button>
-              <Button
-                size="icon-sm"
-                variant="destructive"
-                onClick={() => void remove()}
-                disabled={deleting}
-                title="Delete preset"
-              >
-                {deleting ? (
-                  <SpinnerGapIcon size={14} className="animate-spin" />
-                ) : (
-                  <TrashIcon size={14} weight="fill" />
-                )}
-              </Button>
             </>
           )}
         </div>
@@ -347,6 +380,47 @@ export function PresetEditor({
           className="max-h-[60vh] min-h-64"
         />
       )}
+      <Dialog open={duplicateOpen} onOpenChange={setDuplicateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Duplicate preset</DialogTitle>
+            <DialogDescription>
+              Enter the name stored in the duplicated preset. Its filename is
+              generated automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            autoFocus
+            value={duplicateName}
+            onChange={(event) => setDuplicateName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void duplicate();
+            }}
+            placeholder="Preset name"
+            aria-label="Duplicated preset name"
+            className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+          />
+          {duplicateError !== null && (
+            <p role="alert" className="text-sm text-destructive">
+              {duplicateError}
+            </p>
+          )}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              onClick={() => void duplicate()}
+              disabled={duplicating || duplicateName.trim().length === 0}
+            >
+              {duplicating && (
+                <SpinnerGapIcon size={14} className="animate-spin" />
+              )}
+              Duplicate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

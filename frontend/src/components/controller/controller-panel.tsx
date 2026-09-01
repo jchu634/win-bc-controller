@@ -1,19 +1,26 @@
 import { useCallback } from "react";
 import {
-  CaretDownIcon,
   GameControllerIcon,
   SpinnerGapIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 import { useControllers } from "@/src/hooks/use-controllers";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
-import { cn } from "cnfast";
 
 export function ControllerPanel() {
-  const { available, controllers, active, activeInfo, busy, error, select } =
+  const { available, controllers, active, busy, error, select } =
     useControllers();
   const { macroActive } = useMacroRunner();
+  const activeController = controllers.find(
+    (controller) => controller.guid === active,
+  );
 
   const handleChange = useCallback(
     (value: string) => {
@@ -32,6 +39,7 @@ export function ControllerPanel() {
       </div>
 
       {!available ? (
+        // Only shows with frontend development and/or something broke.
         <div className="flex items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
           <GameControllerIcon size={20} className="shrink-0" />
           <p>
@@ -44,32 +52,26 @@ export function ControllerPanel() {
         </div>
       ) : (
         <div className="relative">
-          <select
-            value={active ?? ""}
-            onChange={(e) => handleChange(e.target.value)}
+          <Select
+            value={active}
+            onValueChange={(value) => {
+              if (value !== null) handleChange(value);
+            }}
             disabled={busy || controllers.length === 0 || macroActive}
-            aria-label="Select controller"
-            className={cn(
-              "h-9 w-full appearance-none rounded-4xl border border-border bg-background px-3 pe-9 text-sm",
-              "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30",
-              "disabled:opacity-50",
-            )}
           >
-            {controllers.length === 0 ? (
-              <option value="">No controllers detected</option>
-            ) : (
-              controllers.map((c) => (
-                <option key={c.guid} value={c.guid}>
-                  {c.name} ({c.buttons} buttons, {c.axes} axes)
-                </option>
-              ))
-            )}
-          </select>
-          <CaretDownIcon
-            size={16}
-            weight="bold"
-            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
-          />
+            <SelectTrigger className="w-full" aria-label="Select controller">
+              <SelectValue placeholder="No controllers detected">
+                {activeController ? `${activeController.name}` : null}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {controllers.map((c) => (
+                <SelectItem key={c.guid} value={c.guid}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {busy && (
             <SpinnerGapIcon
               size={16}
@@ -94,31 +96,6 @@ export function ControllerPanel() {
           <p className="flex-1">{error}</p>
         </div>
       )}
-
-      <div className="rounded-xl border border-border p-4 text-sm">
-        <h3 className="mb-2 font-semibold">Active device</h3>
-        {activeInfo ? (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-xs">
-            <dt className="text-muted-foreground">name</dt>
-            <dd>{activeInfo.name}</dd>
-            <dt className="text-muted-foreground">guid</dt>
-            <dd className="break-all">{activeInfo.guid}</dd>
-            <dt className="text-muted-foreground">axes / buttons / hats</dt>
-            <dd>
-              {activeInfo.axes} / {activeInfo.buttons} / {activeInfo.hats}
-            </dd>
-          </dl>
-        ) : (
-          <p className="text-muted-foreground">No device selected.</p>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Button mappings are managed by{" "}
-          <Link to="/presets" className="text-primary hover:underline">
-            presets
-          </Link>
-          .
-        </p>
-      </div>
     </section>
   );
 }

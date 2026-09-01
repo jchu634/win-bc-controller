@@ -35,8 +35,7 @@ function ControllerPage() {
         <div className="mt-4">
           <PresetPicker
             selected={selectedPreset}
-            onSelect={(p) => setSelectedPreset(p.name)}
-            onDuplicate={() => {}}
+            onSelect={(p) => setSelectedPreset(p.filename)}
           />
         </div>
       </details>

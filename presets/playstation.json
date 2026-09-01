@@ -1,6 +1,6 @@
 {
   "name": "PlayStation",
-  "description": "DualShock 4 / DualSense controller (pygame 2.x raw button/axis indices). Face buttons share the same raw indices as Xbox, mapped by physical position: Cross=bottom, Circle=right, Square=left, Triangle=top. D-pad is exposed as buttons (11-14), not a hat.",
+  "description": "Default DualShock 4 / DualSense mapping.",
   "rumble_enabled": true,
   "buttons": {
     "0": "B",

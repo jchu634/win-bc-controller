@@ -139,9 +139,7 @@ def validate_preset(data: dict) -> PresetConfig:
         raise PresetValidationError([], "must be a JSON object")
     if "name" in data and not isinstance(data["name"], str):
         raise PresetValidationError(["name"], "must be a string")
-    if "rumble_enabled" in data and not isinstance(
-        data["rumble_enabled"], bool
-    ):
+    if "rumble_enabled" in data and not isinstance(data["rumble_enabled"], bool):
         raise PresetValidationError(["rumble_enabled"], "must be a boolean")
 
     for key in ("buttons", "triggers"):
@@ -173,11 +171,7 @@ def validate_preset(data: dict) -> PresetConfig:
         for axis in ("x_axis", "y_axis"):
             if axis in raw:
                 value = raw[axis]
-                if (
-                    not isinstance(value, int)
-                    or isinstance(value, bool)
-                    or value < 0
-                ):
+                if not isinstance(value, int) or isinstance(value, bool) or value < 0:
                     raise PresetValidationError(
                         [key, axis], "must be a non-negative integer axis index"
                     )
@@ -238,22 +232,31 @@ def list_preset_infos() -> list[dict]:
         for path in sorted(PRESETS_DIR.glob("*.json")):
             if not path.is_file():
                 continue
-            name = path.stem
+            filename = path.stem
+            name = filename
             description = ""
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
+                    name = str(data.get("name"))
                     description = str(data.get("description", ""))
             except (json.JSONDecodeError, OSError):
                 description = "(unreadable)"
-            infos[name] = {
+            infos[filename] = {
                 "name": name,
-                "builtin": name in BUILTIN_PRESETS,
+                "filename": filename,
+                "builtin": filename in BUILTIN_PRESETS,
                 "description": description,
             }
-    for name in sorted(BUILTIN_PRESETS):
+    for filename in sorted(BUILTIN_PRESETS):
         infos.setdefault(
-            name, {"name": name, "builtin": True, "description": ""}
+            filename,
+            {
+                "name": filename,
+                "filename": filename,
+                "builtin": True,
+                "description": "",
+            },
         )
     return [infos[k] for k in sorted(infos)]
 
@@ -261,7 +264,7 @@ def list_preset_infos() -> list[dict]:
 def list_presets() -> list[str]:
     """Return sorted preset names: builtins plus any extra ``.json`` files
     discovered in the presets directory."""
-    return [info["name"] for info in list_preset_infos()]
+    return [info["filename"] for info in list_preset_infos()]
 
 
 def _resolve_preset_path(source: str | Path) -> Path:

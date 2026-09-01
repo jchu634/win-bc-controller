@@ -16,6 +16,9 @@ import { Button } from "@/src/components/ui/button";
 import { GearSixIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useCaptureInput } from "@/src/hooks/use-capture";
+import { ControllerPanel } from "@/src/components/controller/controller-panel";
+import { PresetEditor } from "@/src/components/preset/preset-editor";
+import { PresetPicker } from "@/src/components/preset/preset-picker";
 import {
   Select,
   SelectContent,
@@ -26,17 +29,56 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 
+const SETTINGS_DESCRIPTIONS: Record<string, string> = {
+  general: "General settings.",
+  controller: "Choose a controller and manage its mapping presets.",
+};
+
+function ControllerSettings() {
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [selectedBuiltin, setSelectedBuiltin] = useState(false);
+  const [presetListVersion, setPresetListVersion] = useState(0);
+
+  function selectPreset(name: string, builtin: boolean) {
+    setSelectedPreset(name);
+    setSelectedBuiltin(builtin);
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      <ControllerPanel />
+
+      <div>
+        <PresetPicker
+          selected={selectedPreset}
+          onSelect={(preset) =>
+            selectPreset(preset.filename, preset.builtin)
+          }
+          onDeleted={(name) => {
+            if (selectedPreset === name) {
+              setSelectedPreset(null);
+              setSelectedBuiltin(false);
+            }
+            setPresetListVersion((version) => version + 1);
+          }}
+          refreshKey={presetListVersion}
+        />
+        <PresetEditor
+          name={selectedPreset}
+          builtin={selectedBuiltin}
+          onSaved={() => setPresetListVersion((version) => version + 1)}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function SettingsDialog() {
   const [currentTab, setCurrentTab] = useState("general");
-  const settingsDescription: Record<string, string> = {
-    general: "General Settings.",
-    controller: "Controller Mapping Settings",
-  };
   const { cameras, selectedInputId, selectInput } = useCaptureInput();
   const selectedInputLabel = cameras.find(
     (camera) => camera.deviceId === selectedInputId,
   )?.label;
-  console.log(selectedInputId);
 
   return (
     <Dialog>
@@ -45,25 +87,25 @@ export function SettingsDialog() {
           <GearSixIcon weight="fill" className="size-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-background min-w-4/5">
+      <DialogContent className="min-w-4/5 bg-background">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
 
           <DialogDescription>
-            {settingsDescription[currentTab]}
+            {SETTINGS_DESCRIPTIONS[currentTab]}
           </DialogDescription>
         </DialogHeader>
         <Tabs
           value={currentTab}
           onValueChange={(newTab) => setCurrentTab(newTab)}
           orientation="vertical"
-          className="w-100"
+          className="min-h-0 min-w-0 overflow-hidden"
         >
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="controller">Controller</TabsTrigger>
           </TabsList>
-          <TabsContent className="p-2" value="general">
+          <TabsContent className="min-w-0 overflow-y-auto p-2" value="general">
             Current Video Capture Device
             <Select
               value={selectedInputId}
@@ -90,8 +132,11 @@ export function SettingsDialog() {
               </SelectContent>
             </Select>
           </TabsContent>
-          <TabsContent value="controller">
-            Change your password here.
+          <TabsContent
+            className="min-w-0 overflow-y-auto p-2"
+            value="controller"
+          >
+            <ControllerSettings />
           </TabsContent>
         </Tabs>
       </DialogContent>

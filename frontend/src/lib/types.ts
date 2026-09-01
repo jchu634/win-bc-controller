@@ -94,6 +94,7 @@ export type WsInbound =
 export type ConfigSnapshot = Record<string, unknown>;
 
 export type PresetInfo = {
+  filename: string;
   name: string;
   builtin: boolean;
   description: string;

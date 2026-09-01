@@ -1,6 +1,6 @@
 {
   "name": "Switch Pro Controller",
-  "description": "Nintendo Switch Pro Controller connected to PC (pygame 2.x). Face buttons map Nintendo-to-Nintendo directly (no A/B or X/Y swap); triggers ride on analog axes 4/5; D-pad is exposed as buttons (11-14), not a hat. NOTE: raw button indices vary by OS and driver — validate against your hardware with test_controller_pygame.py and adjust as needed.",
+  "description": "Default Switch Pro Controller mapping.",
   "rumble_enabled": true,
   "buttons": {
     "0": "A",

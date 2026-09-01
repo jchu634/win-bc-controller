@@ -195,7 +195,9 @@ def test_presets_list(fx):
     with fx.client() as c:
         r = c.get("/api/presets").json()
         names = {p["name"] for p in r["presets"]}
-        assert {"xbox", "playstation", "switch_pro"} <= names
+        assert {"Xbox", "PlayStation", "Switch Pro Controller"} <= names
+        filenames = {p["filename"] for p in r["presets"]}
+        assert {"xbox", "playstation", "switch_pro"} <= filenames
         assert r["active"] == "xbox"
 
 
@@ -213,7 +215,12 @@ def test_preset_custom_crud_and_activate(fx):
     with fx.client() as c:
         assert c.put("/api/presets/my-pad", json={"contents": contents}).status_code == 200
         listed = c.get("/api/presets").json()["presets"]
-        assert any(p["name"] == "my-pad" and not p["builtin"] for p in listed)
+        assert any(
+            p["name"] == "Custom"
+            and p["filename"] == "my-pad"
+            and not p["builtin"]
+            for p in listed
+        )
 
         r = c.get("/api/presets/my-pad")
         assert r.status_code == 200
