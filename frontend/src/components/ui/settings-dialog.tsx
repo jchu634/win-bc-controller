@@ -48,7 +48,7 @@ function ControllerSettings() {
     <div className="flex min-w-0 flex-col gap-6">
       <ControllerPanel />
 
-      <div className="flex gap-x-4">
+      <div className="lg:flex lg:gap-x-4 space-y-4 lg:space-y-0">
         <PresetPicker
           selected={selectedPreset}
           onSelect={(preset) => selectPreset(preset.filename, preset.builtin)}
@@ -64,7 +64,10 @@ function ControllerSettings() {
         <PresetEditor
           name={selectedPreset}
           builtin={selectedBuiltin}
-          onSaved={() => setPresetListVersion((version) => version + 1)}
+          onSaved={(name) => {
+            selectPreset(name, false);
+            setPresetListVersion((version) => version + 1);
+          }}
         />
       </div>
     </div>
