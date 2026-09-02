@@ -549,11 +549,11 @@ const MAPPING_GROUPS = [
   { title: "Shoulder controls", controls: ["ZL", "ZR", "L", "R"] },
   {
     title: "System controls",
-    controls: ["PLUS", "MINUS", "CAPTURE", "HOME"],
+    controls: ["MINUS", "PLUS", "CAPTURE", "HOME"],
   },
-  { title: "D-pad", controls: ["UP", "DOWN", "LEFT", "RIGHT"] },
+  { title: "D-pad", controls: ["UP", "RIGHT", "DOWN", "LEFT"] },
   { title: "Sticks", controls: ["STICK_L", "STICK_R"] },
-  { title: "Face buttons", controls: ["X", "A", "Y", "B"] },
+  { title: "Face buttons", controls: ["A", "B", "X", "Y"] },
 ] satisfies readonly {
   title: string;
   controls: readonly SupportedButtonName[];
