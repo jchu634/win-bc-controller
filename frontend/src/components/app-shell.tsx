@@ -15,7 +15,6 @@ import { cn } from "cnfast";
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
   { to: "/macros", label: "Macros" },
-  { to: "/presets", label: "Presets" },
 ] as const;
 
 function ConnectionBadge() {

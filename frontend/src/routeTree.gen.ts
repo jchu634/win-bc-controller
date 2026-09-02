@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MacrosRouteImport } from './routes/macros'
-import { Route as PresetsRouteImport } from './routes/presets'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +22,31 @@ const MacrosRoute = MacrosRouteImport.update({
   path: '/macros',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PresetsRoute = PresetsRouteImport.update({
-  id: '/presets',
-  path: '/presets',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/macros': typeof MacrosRoute
-  '/presets': typeof PresetsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/macros': typeof MacrosRoute
-  '/presets': typeof PresetsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/macros': typeof MacrosRoute
-  '/presets': typeof PresetsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/macros' | '/presets'
+  fullPaths: '/' | '/macros'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/macros' | '/presets'
-  id: '__root__' | '/' | '/macros' | '/presets'
+  to: '/' | '/macros'
+  id: '__root__' | '/' | '/macros'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MacrosRoute: typeof MacrosRoute
-  PresetsRoute: typeof PresetsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,20 +65,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MacrosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/presets': {
-      id: '/presets'
-      path: '/presets'
-      fullPath: '/presets'
-      preLoaderRoute: typeof PresetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MacrosRoute: MacrosRoute,
-  PresetsRoute: PresetsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
