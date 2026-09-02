@@ -99,7 +99,7 @@ export function SettingsDialog() {
   return (
     <Dialog>
       <DialogTrigger>
-        <Button size="icon" className="bg-muted-foreground">
+        <Button size="icon" className="bg-muted-foreground fixed top-5 right-5">
           <GearSixIcon weight="fill" className="size-5" />
         </Button>
       </DialogTrigger>

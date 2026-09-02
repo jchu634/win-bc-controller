@@ -67,8 +67,6 @@ export function PresetPicker({
     [refresh],
   );
 
-  const activePreset = presets.find((p) => p.active) ?? null;
-
   const remove = useCallback(async () => {
     if (deleting === null) return;
     const filename = deleting.filename;
@@ -88,12 +86,7 @@ export function PresetPicker({
 
   return (
     <section className="flex flex-col gap-3 text-left">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Presets</h2>
-        <span className="ms-auto text-xs text-muted-foreground">
-          active: {activePreset?.name ?? "none"}
-        </span>
-      </div>
+      <h2 className="text-lg font-semibold text-foreground">Presets</h2>
 
       {error !== null && (
         <div
@@ -102,13 +95,13 @@ export function PresetPicker({
         >
           <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
           <p className="flex-1">{error}</p>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground hover:text-foreground"
+          <Button
+            size="xs"
+            variant="ghost"
             onClick={() => setError(null)}
           >
-            dismiss
-          </button>
+            Dismiss
+          </Button>
         </div>
       )}
 
@@ -121,33 +114,38 @@ export function PresetPicker({
           {presets.map((p) => (
             <li
               key={p.filename}
-              onClick={() => onSelect(p)}
               className={cn(
-                "flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
+                "flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
                 p.active && "bg-primary/5",
                 selected === p.filename && "bg-blue-200",
               )}
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-mono">
-                  {p.name}
-                  {p.builtin && (
-                    <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
-                      built-in
-                    </span>
-                  )}
-                  {p.active && (
-                    <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
-                      active
-                    </span>
-                  )}
-                </p>
-                {p.description && (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {p.description}
+              <Button
+                variant="ghost"
+                className="h-auto min-w-0 flex-1 justify-start rounded-none p-0 text-left font-normal hover:bg-transparent"
+                onClick={() => onSelect(p)}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono">
+                    {p.name}
+                    {p.builtin && (
+                      <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
+                        built-in
+                      </span>
+                    )}
+                    {p.active && (
+                      <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
+                        active
+                      </span>
+                    )}
                   </p>
-                )}
-              </div>
+                  {p.description && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {p.description}
+                    </p>
+                  )}
+                </div>
+              </Button>
               <div className="flex items-center gap-1.5">
                 {!p.builtin && (
                   <Button
@@ -164,9 +162,8 @@ export function PresetPicker({
                     <TrashIcon size={14} />
                   </Button>
                 )}
-                <button
-                  type="button"
-                  className="inline-flex h-6 items-center gap-1 rounded-4xl bg-primary px-2.5 text-xs text-primary-foreground hover:bg-primary/80 disabled:opacity-50"
+                <Button
+                  size="xs"
                   onClick={(event) => {
                     event.stopPropagation();
                     void activate(p.filename);
@@ -182,7 +179,7 @@ export function PresetPicker({
                     <SpinnerGapIcon size={12} className="animate-spin" />
                   ) : null}
                   {p.active ? "Active" : "Activate"}
-                </button>
+                </Button>
               </div>
             </li>
           ))}

@@ -27,7 +27,7 @@ export function MacroRunPanel({
 }: {
   selected: string | null;
   onSelect: (name: string) => void;
-  onCreate: () => void;
+  onCreate?: () => void;
   /** Bump to re-fetch the macro list (after create / delete). */
   refreshKey?: number;
 }) {
@@ -105,23 +105,19 @@ export function MacroRunPanel({
             {wsError.message}
             {wsError.detail ? ` — ${wsError.detail}` : ""}
           </p>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground hover:text-foreground"
-            onClick={clearError}
-          >
-            dismiss
-          </button>
+          <Button size="xs" variant="ghost" onClick={clearError}>
+            Dismiss
+          </Button>
         </div>
       )}
 
-      <div className="flex min-h-28 flex-col rounded-xl border border-border">
+      <div className="flex min-h-28 max-h-[calc(100svh-11rem)] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2 [scrollbar-gutter:stable]">
         {loading ? (
-          <div className="flex flex-1 items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center gap-2 rounded-xl py-6 text-sm text-muted-foreground">
             <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
           </div>
         ) : error !== null ? (
-          <div className="flex flex-1 flex-col items-center gap-2 py-6 text-sm">
+          <div className="flex flex-1 flex-col items-center gap-2 rounded-xl py-6 text-sm">
             <WarningIcon size={20} className="text-destructive" />
             <p>{error}</p>
             <Button size="xs" variant="outline" onClick={refresh}>
@@ -129,33 +125,36 @@ export function MacroRunPanel({
             </Button>
           </div>
         ) : names.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
-            <p>No macros yet — create one to get started.</p>
-            <Button size="xs" variant="outline" onClick={onCreate}>
-              <FilePlusIcon size={14} /> New macro
-            </Button>
+          <div className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-dashed border-border py-6 text-sm text-muted-foreground">
+            <p>No macros yet.</p>
+            {onCreate !== undefined && (
+              <Button size="xs" variant="outline" onClick={onCreate}>
+                <FilePlusIcon size={14} /> New macro
+              </Button>
+            )}
           </div>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul className="flex flex-col gap-2">
             {names.map((name) => {
               const isActive = macroActive && macro?.name === name;
               return (
                 <li
                   key={name}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 text-sm",
+                    "flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm",
                     isActive && "bg-primary/5",
                     selected === name && "bg-muted/60",
                   )}
                 >
-                  <button
-                    type="button"
-                    className="flex-1 truncate text-start font-mono text-foreground hover:underline"
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-auto min-w-0 flex-1 justify-start px-1 font-mono font-normal"
                     onClick={() => onSelect(name)}
                     title={name}
                   >
-                    {name}
-                  </button>
+                    <span className="truncate">{name}</span>
+                  </Button>
                   {isActive && isPaused && (
                     <span className="text-xs text-muted-foreground">paused</span>
                   )}

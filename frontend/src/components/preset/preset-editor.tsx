@@ -499,13 +499,13 @@ export const PresetEditor = forwardRef<
         >
           <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
           <p className="flex-1">{error}</p>
-          <button
-            type="button"
-            className="text-xs text-muted-foreground hover:text-foreground"
+          <Button
+            size="xs"
+            variant="ghost"
             onClick={() => setError(null)}
           >
-            dismiss
-          </button>
+            Dismiss
+          </Button>
         </div>
       )}
       {notice !== null && (
@@ -1138,8 +1138,9 @@ function PresetMappingEditor({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <button
-          type="button"
+        <Button
+          size="icon-sm"
+          variant={listening ? "default" : "outline"}
           onClick={() =>
             listening ? setListeningTarget(null) : startListening(target)
           }
@@ -1155,10 +1156,8 @@ function PresetMappingEditor({
               : `Listen for ${BUTTON_LABELS[target]}`
           }
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-md border transition-colors disabled:opacity-40",
-            listening
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:text-foreground",
+            "rounded-md",
+            !listening && "text-muted-foreground hover:text-foreground",
           )}
         >
           {listening ? (
@@ -1166,7 +1165,7 @@ function PresetMappingEditor({
           ) : (
             <GameControllerIcon />
           )}
-        </button>
+        </Button>
       </div>
     );
   };

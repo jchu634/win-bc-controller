@@ -4,10 +4,7 @@ import {
   VideoCameraSlashIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
-import {
-  useCaptureControls,
-  useCaptureStream,
-} from "@/src/hooks/use-capture";
+import { useCaptureControls, useCaptureStream } from "@/src/hooks/use-capture";
 
 export function CapturePreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -26,7 +23,7 @@ export function CapturePreview() {
   }, [stream]);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+    <div className="relative aspect-video w-4/5 overflow-hidden rounded-xl border border-border bg-black">
       <video
         ref={videoRef}
         autoPlay
