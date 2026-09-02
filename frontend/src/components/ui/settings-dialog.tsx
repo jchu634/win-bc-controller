@@ -48,7 +48,7 @@ function ControllerSettings() {
     <div className="flex min-w-0 flex-col gap-6">
       <ControllerPanel />
 
-      <div className="lg:flex lg:gap-x-4 space-y-4 lg:space-y-0">
+      <div className="2xl:flex 2xl:gap-x-4 space-y-4 2xl:space-y-0">
         <PresetPicker
           selected={selectedPreset}
           onSelect={(preset) => selectPreset(preset.filename, preset.builtin)}
@@ -88,7 +88,7 @@ export function SettingsDialog() {
           <GearSixIcon weight="fill" className="size-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="min-w-4/5 bg-background">
+      <DialogContent className="h-4/5 min-w-4/5 bg-background flex flex-col">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
 
@@ -100,14 +100,20 @@ export function SettingsDialog() {
           value={currentTab}
           onValueChange={(newTab) => setCurrentTab(newTab)}
           orientation="vertical"
-          className="min-h-0 min-w-0 overflow-hidden"
+          className="min-h-0 min-w-0 flex-1 overflow-hidden"
         >
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="controller">Controller</TabsTrigger>
           </TabsList>
-          <TabsContent className="min-w-0 overflow-y-auto p-2" value="general">
-            Current Video Capture Device
+          <TabsContent
+            className="min-w-0 overflow-y-auto p-2 space-y-2"
+            value="general"
+          >
+            <h2 className="text-lg font-semibold text-foreground">
+              Current Video Capture Device
+            </h2>
+
             <Select
               value={selectedInputId}
               onValueChange={(deviceId) => {
@@ -134,7 +140,7 @@ export function SettingsDialog() {
             </Select>
           </TabsContent>
           <TabsContent
-            className="min-w-0 overflow-y-auto p-2"
+            className="min-h-0 min-w-0 overflow-y-auto p-2"
             value="controller"
           >
             <ControllerSettings />
