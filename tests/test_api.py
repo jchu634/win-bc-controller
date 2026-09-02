@@ -39,7 +39,7 @@ class StubControllerService:
                 return type("Info", (), {"to_dict": lambda self=self, c=c: c})()
         raise ValueError(f"no controller matches {ident!r}")
 
-    def set_preset(self, preset):
+    def set_preset(self, preset, source=None):
         return None
 
 
@@ -229,6 +229,7 @@ def test_preset_custom_crud_and_activate(fx):
         assert r.status_code == 200
         assert r.json()["applied"] == "Custom"
         assert fx.config_store.config.preset == "my-pad"
+        assert fx.config_store.config.controller_presets["g1"] == "my-pad"
         assert fx.manager.current_preset is not None
         assert fx.manager.current_preset.name == "Custom"
         assert fx.manager.current_preset_name == "my-pad"
@@ -270,6 +271,7 @@ def test_config_patch_applies_preset(fx):
         assert fx.manager.current_preset is not None
         assert fx.manager.current_preset.name == "PlayStation"
         assert fx.manager.current_preset_name == "playstation"
+        assert fx.config_store.config.controller_presets["g1"] == "playstation"
 
 
 def test_config_patch_does_not_persist_unusable_preset(fx):

@@ -27,7 +27,7 @@ from lib.input.macro_source import (
     load_macro,
     validate_macro,
 )
-from lib.input.presets import PresetConfig, load_preset
+from lib.input.presets import PresetConfig, PresetSelection, load_preset
 from lib.input.pygame_source import PygameInputThread
 from lib.input.state import NEUTRAL, Button, ControllerState
 
@@ -137,8 +137,13 @@ class InputManager:
         self._service = service
 
     def set_preset(self, preset: PresetConfig, source: str | None = None) -> None:
-        self.current_preset = preset
-        self.current_preset_name = source
+        with self._lock:
+            self.current_preset = preset
+            self.current_preset_name = source
+
+    def on_controller_preset_changed(self, selection: PresetSelection) -> None:
+        """Record the preset selected by the controller service."""
+        self.set_preset(selection.config, selection.source)
 
     def controllers_payload(self) -> dict:
         """Frame payload describing devices, active selection, preset.
@@ -215,10 +220,9 @@ class InputManager:
                 raise MacroActiveError(
                     "cannot switch presets while a macro is running"
                 )
-        self.current_preset = preset
-        self.current_preset_name = source
+        self.set_preset(preset, source)
         if self._service is not None:
-            self._service.set_preset(preset)
+            self._service.set_preset(preset, source)
         logger.info(f"Applied controller preset: {preset.name}")
         self._emit_controllers()
         return preset

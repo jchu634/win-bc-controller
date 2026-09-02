@@ -323,7 +323,8 @@ async def controller_select(request: Request) -> Response:
 
 async def presets_list(request: Request) -> Response:
     store: ConfigStore = request.app.state.config_store
-    active = store.config.preset
+    manager: InputManager = request.app.state.manager
+    active = manager.current_preset_name or store.config.preset
     infos = [
         {**info, "active": info["filename"] == active}
         for info in list_preset_infos()
@@ -386,9 +387,13 @@ async def preset_delete(request: Request) -> Response:
             f"'{name}' is a built-in preset and cannot be deleted",
             status=403,
         )
-    if store.config.preset == name:
+    if (
+        store.config.preset == name
+        or name in store.config.controller_presets.values()
+    ):
         return _error(
-            f"preset '{name}' is currently active", status=409
+            f"preset '{name}' is active or assigned to a controller",
+            status=409,
         )
     try:
         delete_preset(name)
@@ -418,8 +423,14 @@ async def preset_activate(request: Request) -> Response:
 
     # Persist the selection so it survives restarts (and so the config
     # store stays the single source of truth).
-    store.update({"preset": name})
     payload = await asyncio.to_thread(manager.controllers_payload)
+    changes: dict = {"preset": name}
+    active_guid = payload.get("active")
+    if active_guid:
+        controller_presets = dict(store.config.controller_presets)
+        controller_presets[str(active_guid).casefold()] = name
+        changes["controller_presets"] = controller_presets
+    store.update(changes)
     payload["applied"] = preset.name
     return JSONResponse(payload)
 
@@ -440,7 +451,10 @@ async def config_patch(request: Request) -> Response:
     if not isinstance(body, dict):
         return _error("expected a JSON object")
     requested_preset = body.get("preset")
-    if requested_preset is not None and requested_preset != store.config.preset:
+    if (
+        requested_preset is not None
+        and requested_preset != manager.current_preset_name
+    ):
         # Apply first: the persisted config must never claim a preset that
         # the runtime rejected or could not load.
         try:
@@ -451,6 +465,13 @@ async def config_patch(request: Request) -> Response:
             return _error(str(e), status=404)
         except (ValueError, TypeError) as e:
             return _error(f"could not load preset: {e}")
+    if requested_preset is not None:
+        payload = await asyncio.to_thread(manager.controllers_payload)
+        active_guid = payload.get("active")
+        if active_guid:
+            controller_presets = dict(store.config.controller_presets)
+            controller_presets[str(active_guid).casefold()] = requested_preset
+            body["controller_presets"] = controller_presets
     changed = store.update(body)
     return JSONResponse({"changed": changed, "config": store.snapshot()})
 

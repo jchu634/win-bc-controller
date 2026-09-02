@@ -12,6 +12,19 @@ logger = logging.getLogger("switch_pair")
 APP_NAME = "win-bc-controller"
 
 
+def _normalize_controller_presets(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        guid.casefold(): preset
+        for guid, preset in value.items()
+        if isinstance(guid, str)
+        and guid.strip()
+        and isinstance(preset, str)
+        and preset.strip()
+    }
+
+
 def _config_dir() -> Path:
     """
     Locate the per-user config directory.
@@ -48,6 +61,12 @@ class Config:
     macro_rate_hz: int = 120
     preset: str = "xbox"
     controller_guid: str = ""
+    controller_presets: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.controller_presets = _normalize_controller_presets(
+            self.controller_presets
+        )
 
     @classmethod
     def _valid_keys(cls) -> set[str]:
@@ -119,6 +138,10 @@ class ConfigStore:
             for k, v in changes.items():
                 if k not in valid:
                     continue
+                if k == "controller_presets":
+                    if not isinstance(v, dict):
+                        continue
+                    v = _normalize_controller_presets(v)
                 if getattr(self._config, k) != v:
                     setattr(self._config, k, v)
                     changed[k] = v

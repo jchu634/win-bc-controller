@@ -19,7 +19,12 @@ from lib.input import NEUTRAL, apply_to_protocol, parse_rumble
 from lib.input.controller_service import ControllerService
 from lib.input.macro_source import MacroPlayerThread, load_macro
 from lib.input.manager import InputManager
-from lib.input.presets import PresetConfig, load_preset
+from lib.input.presets import (
+    PresetConfig,
+    PresetSelection,
+    load_preset,
+    resolve_controller_preset,
+)
 from lib.input.state import ControllerState
 from lib.sdp_records import DEVICE_CLASS_GAMEPAD, sdp_record
 from lib.server import build_app
@@ -412,11 +417,9 @@ async def main():
     )
     manager.bind_loop(asyncio.get_running_loop())
 
-    # Resolve the controller mapping preset. The preset name comes from the
-    # config store (persistable via PATCH /api/config or POST
-    # /api/presets/{name}/activate); ``--preset`` overrides it for the
-    # session. On failure we fall back to the built-in defaults so the
-    # controller stays usable.
+    # Load the configured preset as the initial fallback. Once pygame selects
+    # a controller, its saved GUID mapping or detected controller type replaces
+    # this value. An explicit --preset keeps its session-wide override behavior.
     try:
         preset = load_preset(config.preset)
     except (FileNotFoundError, ValueError, TypeError) as e:
@@ -437,11 +440,23 @@ async def main():
     controller_service: ControllerService | None = None
     if controllers_enabled:
         initial_ident = config.controller_guid or controller_index
+        if args.preset is not None:
+            def preset_resolver(_guid: str, _name: str) -> PresetSelection:
+                return PresetSelection(args.preset, preset)
+        else:
+            def preset_resolver(guid: str, name: str) -> PresetSelection:
+                return resolve_controller_preset(
+                    guid,
+                    name,
+                    config_store.config.controller_presets,
+                )
         controller_service = ControllerService(
             command_queue,
             preset=preset,
             initial_ident=initial_ident,
             on_change=manager.on_controllers_changed,
+            preset_resolver=preset_resolver,
+            on_preset_changed=manager.on_controller_preset_changed,
         )
         manager.set_controller_service(controller_service)
 

@@ -25,7 +25,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from lib.input.presets import PresetConfig
+from lib.input.presets import PresetConfig, PresetSelection
 from lib.input.pygame_source import PygameInputThread
 
 logger = logging.getLogger("switch_pair")
@@ -113,6 +113,8 @@ class ControllerService(threading.Thread):
         initial_ident: str | int | None = None,
         poll_hz: int = POLL_HZ,
         on_change: Callable[[list[dict], str | None], None] | None = None,
+        preset_resolver: Callable[[str, str], PresetSelection] | None = None,
+        on_preset_changed: Callable[[PresetSelection], None] | None = None,
         rate_hz: int = 120,
     ):
         super().__init__(name="controller-service", daemon=True)
@@ -120,6 +122,8 @@ class ControllerService(threading.Thread):
         self._preset = preset
         self._initial_ident = initial_ident
         self._on_change = on_change
+        self._preset_resolver = preset_resolver
+        self._on_preset_changed = on_preset_changed
         self._rate_hz = rate_hz
         self._poll_period = 1.0 / poll_hz
         self._mailbox: queue.Queue = queue.Queue()
@@ -178,10 +182,10 @@ class ControllerService(threading.Thread):
             raise TypeError(f"unexpected select result for {ident!r}")
         return result
 
-    def set_preset(self, preset: PresetConfig) -> None:
+    def set_preset(self, preset: PresetConfig, source: str | None = None) -> None:
         """Swap the mapping preset, restarting the capture on the same
         device (or applying it on next select if none is active)."""
-        result = self._request("set_preset", preset)
+        result = self._request("set_preset", (preset, source))
         if isinstance(result, Exception):
             raise result
 
@@ -252,7 +256,8 @@ class ControllerService(threading.Thread):
                 except ValueError as e:
                     fut.set_result(e)
             elif op == "set_preset":
-                fut.set_result(self._do_set_preset(payload))
+                preset, source = payload
+                fut.set_result(self._do_set_preset(preset, source))
             elif op == "shutdown":
                 self._stop.set()
                 fut.set_result(None)
@@ -366,6 +371,10 @@ class ControllerService(threading.Thread):
         if match.guid == self._active_guid and self._capture is not None:
             return match  # already active
         self._stop_capture()
+        if self._preset_resolver is not None:
+            selection = self._preset_resolver(match.guid, match.name)
+            self._preset = selection.config
+            self._report_preset(selection)
         self._active_guid = match.guid
         self._capture = PygameInputThread(
             self._queue,
@@ -380,8 +389,11 @@ class ControllerService(threading.Thread):
         self._notify()
         return match
 
-    def _do_set_preset(self, preset: PresetConfig) -> None:
+    def _do_set_preset(
+        self, preset: PresetConfig, source: str | None = None
+    ) -> None:
         self._preset = preset
+        self._report_preset(PresetSelection(source or preset.name, preset))
         active = resolve_controller(self._active_guid or "", self._controllers)
         if active is not None:
             self._stop_capture()
@@ -401,6 +413,15 @@ class ControllerService(threading.Thread):
             logger.info(
                 f"Preset '{preset.name}' stored; no active controller to restart"
             )
+
+    def _report_preset(self, selection: PresetSelection) -> None:
+        callback = self._on_preset_changed
+        if callback is None:
+            return
+        try:
+            callback(selection)
+        except Exception:
+            logger.exception("controller preset callback failed")
 
     def _stop_capture(self) -> None:
         capture = self._capture

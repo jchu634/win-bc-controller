@@ -39,6 +39,15 @@ logger = logging.getLogger("switch_pair")
 PRESETS_DIR = Path(__file__).resolve().parents[2] / "presets"
 BUILTIN_PRESETS = frozenset({"xbox", "playstation", "switch_pro"})
 
+# SDL GUIDs store the USB vendor ID as a little-endian 16-bit value at
+# bytes 4-5. These are the vendors for Microsoft's, Sony's, and Nintendo's
+# first-party controllers.
+_VENDOR_PRESETS = {
+    "5e04": "xbox",
+    "4c05": "playstation",
+    "7e05": "switch_pro",
+}
+
 _WRITE_LOCK = threading.Lock()
 
 
@@ -259,6 +268,83 @@ def list_preset_infos() -> list[dict]:
             },
         )
     return [infos[k] for k in sorted(infos)]
+
+
+@dataclass(frozen=True, slots=True)
+class PresetSelection:
+    """A preset together with the filename used to load it."""
+
+    source: str
+    config: PresetConfig
+
+
+def detect_controller_preset(name: str, guid: str = "") -> str:
+    """Return the built-in preset that best matches an SDL controller.
+
+    Device names cover SDL's common mappings. The vendor field in the GUID
+    handles generic names such as ``Wireless Controller``. Unknown devices
+    use the Xbox/SDL layout, which is pygame's most common fallback.
+    """
+    normalized_name = name.casefold()
+    if any(
+        marker in normalized_name
+        for marker in (
+            "dualsense",
+            "dualshock",
+            "playstation",
+            "sony",
+            "ps3",
+            "ps4",
+            "ps5",
+        )
+    ):
+        return "playstation"
+    if any(
+        marker in normalized_name
+        for marker in ("switch", "joy-con", "joycon", "nintendo")
+    ):
+        return "switch_pro"
+    if any(marker in normalized_name for marker in ("xbox", "x-box", "xinput")):
+        return "xbox"
+
+    normalized_guid = "".join(c for c in guid.casefold() if c in "0123456789abcdef")
+    if len(normalized_guid) >= 12:
+        vendor_preset = _VENDOR_PRESETS.get(normalized_guid[8:12])
+        if vendor_preset is not None:
+            return vendor_preset
+    return "xbox"
+
+
+def resolve_controller_preset(
+    guid: str,
+    name: str,
+    saved_presets: dict[str, str] | None = None,
+) -> PresetSelection:
+    """Load the saved GUID preset, or detect a built-in default.
+
+    A missing or invalid saved custom preset falls back to controller type
+    detection so a stale config entry cannot make the controller unusable.
+    """
+    normalized_guid = guid.casefold()
+    saved_source = (saved_presets or {}).get(normalized_guid)
+    detected_source = detect_controller_preset(name, guid)
+    sources = [saved_source, detected_source, "xbox"]
+    tried: set[str] = set()
+    for source in sources:
+        if not source or source in tried:
+            continue
+        tried.add(source)
+        try:
+            return PresetSelection(source, load_preset(source))
+        except (FileNotFoundError, ValueError, TypeError) as error:
+            logger.warning(
+                "Could not load preset %r for controller %r (%s): %s",
+                source,
+                name,
+                guid,
+                error,
+            )
+    return PresetSelection("xbox", PresetConfig.default())
 
 
 def list_presets() -> list[str]:
