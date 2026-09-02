@@ -1,6 +1,7 @@
 {
   "name": "PlayStation",
   "description": "Default DualShock 4 / DualSense mapping.",
+  "controller_layout": "playstation",
   "rumble_enabled": true,
   "buttons": {
     "0": "B",

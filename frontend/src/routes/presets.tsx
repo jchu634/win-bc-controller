@@ -21,7 +21,7 @@ function PresetsPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Button / stick / trigger mappings applied to the physical
-          controller. Built-ins are read-only; duplicate one to customise.
+          controller. Editing a built-in saves your changes as a new preset.
         </p>
       </header>
 
@@ -41,7 +41,10 @@ function PresetsPage() {
         <PresetEditor
           name={selected}
           builtin={selectedBuiltin}
-          onSaved={() => setListVersion((v) => v + 1)}
+          onSaved={(name) => {
+            pick(name, false);
+            setListVersion((v) => v + 1);
+          }}
         />
       </div>
     </div>

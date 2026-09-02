@@ -1,6 +1,7 @@
 {
   "name": "Xbox",
   "description": "Default Xbox 360 / One / Series controller mapping",
+  "controller_layout": "xbox",
   "rumble_enabled": true,
   "buttons": {
     "0": "B",

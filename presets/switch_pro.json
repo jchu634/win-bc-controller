@@ -1,6 +1,7 @@
 {
   "name": "Switch Pro Controller",
   "description": "Default Switch Pro Controller mapping.",
+  "controller_layout": "switch",
   "rumble_enabled": true,
   "buttons": {
     "0": "A",

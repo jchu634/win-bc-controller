@@ -1,0 +1,9 @@
+export * as genericIcons from "./generic";
+export * as gamecubeIcons from "./gamecube";
+export * as switchIcons from "./switch";
+export * as switch2Icons from "./switch-2";
+export * as playstationIcons from "./playstation";
+export * as xboxIcons from "./xbox";
+export * as steamControllerIcons from "./steam-controller";
+export * as steamDeckIcons from "./steam-deck";
+export * as keyboardMouseIcons from "./keyboard-mouse";
