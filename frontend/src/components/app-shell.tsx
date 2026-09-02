@@ -14,7 +14,6 @@ import { cn } from "cnfast";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard" },
-  { to: "/controller", label: "Controller" },
   { to: "/macros", label: "Macros" },
   { to: "/presets", label: "Presets" },
 ] as const;
