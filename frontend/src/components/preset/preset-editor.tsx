@@ -10,10 +10,12 @@ import {
 import { Effect } from "effect";
 import {
   ArrowCounterClockwiseIcon,
+  ArrowLeftIcon,
   CheckIcon,
   FloppyDiskIcon,
   GameControllerIcon,
   MagicWandIcon,
+  MinusIcon,
   PlayIcon,
   SpinnerGapIcon,
   SlidersHorizontalIcon,
@@ -43,6 +45,10 @@ import {
   SwitchStickRPress,
   SwitchStickRHorizontal,
   SwitchStickRVertical,
+  SwitchDpadUpOutline,
+  SwitchDpadDownOutline,
+  SwitchDpadLeftOutline,
+  SwitchDpadRightOutline,
 } from "@/src/assets/input-prompts/switch";
 import {
   XboxButtonA,
@@ -539,13 +545,19 @@ type SupportedButtonName = Exclude<
   "SL_L" | "SR_L" | "SL_R" | "SR_R"
 >;
 
-const MAPPING_COLUMNS: readonly [
-  readonly SupportedButtonName[],
-  readonly SupportedButtonName[],
-] = [
-  ["ZL", "L", "MINUS", "UP", "LEFT", "RIGHT", "DOWN", "STICK_L", "CAPTURE"],
-  ["ZR", "R", "PLUS", "X", "A", "Y", "B", "STICK_R", "HOME"],
-];
+const MAPPING_GROUPS = [
+  { title: "Shoulder controls", controls: ["ZL", "ZR", "L", "R"] },
+  {
+    title: "System controls",
+    controls: ["PLUS", "MINUS", "CAPTURE", "HOME"],
+  },
+  { title: "D-pad", controls: ["UP", "DOWN", "LEFT", "RIGHT"] },
+  { title: "Sticks", controls: ["STICK_L", "STICK_R"] },
+  { title: "Face buttons", controls: ["X", "A", "Y", "B"] },
+] satisfies readonly {
+  title: string;
+  controls: readonly SupportedButtonName[];
+}[];
 
 const BUTTON_LABELS: Record<SupportedButtonName, string> = {
   A: "A",
@@ -580,10 +592,10 @@ const BUTTON_ICONS: Record<
   R: SwitchButtonR,
   ZL: SwitchButtonZl,
   ZR: SwitchButtonZr,
-  UP: SwitchDpadUp,
-  DOWN: SwitchDpadDown,
-  LEFT: SwitchDpadLeft,
-  RIGHT: SwitchDpadRight,
+  UP: SwitchDpadUpOutline,
+  DOWN: SwitchDpadDownOutline,
+  LEFT: SwitchDpadLeftOutline,
+  RIGHT: SwitchDpadRightOutline,
   PLUS: SwitchButtonPlus,
   MINUS: SwitchButtonMinus,
   HOME: SwitchButtonHome,
@@ -945,11 +957,19 @@ function PresetMappingEditor({
     return (
       <div
         key={target}
-        className="group flex min-w-0 items-center gap-2 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-border hover:bg-background/80"
+        className="group flex w-fit items-center gap-2 rounded-lg p-1.5 transition-colors"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground p-0.5 text-background">
-          <Icon className="size-7" />
+        <span
+          title={BUTTON_LABELS[target]}
+          className="flex size-8 shrink-0 items-center justify-center text-primary-foreground"
+        >
+          <Icon className="size-7 " />
         </span>
+        <ArrowLeftIcon
+          aria-hidden="true"
+          weight="bold"
+          className="size-4 shrink-0 text-primary-foreground "
+        />
         <Select
           value={sourceValue(source)}
           onValueChange={(nextValue) => {
@@ -961,24 +981,26 @@ function PresetMappingEditor({
             id={`mapping-${target}`}
             size="sm"
             aria-label={`Physical input for ${BUTTON_LABELS[target]}`}
-            className="min-w-0 flex-1 rounded-md border-border bg-background px-2 text-xs"
-          >
-            <SelectValue>
-              {source === null || SelectedInputIcon === null ? (
-                "None"
-              ) : (
-                <>
-                  <SelectedInputIcon className="size-5" />
-                  {physicalInputLabel(
+            title={
+              source === null
+                ? `${BUTTON_LABELS[target]} is not mapped`
+                : `${BUTTON_LABELS[target]} maps to ${physicalInputLabel(
                     source.kind,
                     Number(source.index),
                     controller,
-                  )}
-                </>
+                  )}`
+            }
+            className="w-auto shrink-0 rounded-md border-primary-foreground/30 bg-primary-foreground px-2 text-primary"
+          >
+            <SelectValue>
+              {source === null || SelectedInputIcon === null ? (
+                <MinusIcon className="size-5" />
+              ) : (
+                <SelectedInputIcon className="size-5" />
               )}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent align="start">
+          <SelectContent align="start" className="w-50">
             <SelectGroup>
               <SelectItem value="">None</SelectItem>
             </SelectGroup>
@@ -1049,7 +1071,7 @@ function PresetMappingEditor({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted/30 px-4 py-3">
+      <div className="flex flex-wrap items-center  border-b border-border bg-muted/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <GameControllerIcon size={18} />
           <div>
@@ -1078,10 +1100,24 @@ function PresetMappingEditor({
         </label>
       </div>
 
-      <div className="grid gap-2 bg-muted/10 p-3 md:grid-cols-2 xl:grid-cols-[minmax(270px,1fr)_minmax(220px,0.8fr)_minmax(270px,1fr)]">
-        <div className="space-y-0.5">{MAPPING_COLUMNS[0].map(mappingRow)}</div>
+      <div className="flex justify-between p-4">
+        <div className="min-w-0 space-y-3">
+          {MAPPING_GROUPS.map((group) => (
+            <section
+              key={group.title}
+              className="min-w-0 rounded-xl border bg-primary p-2"
+            >
+              <h4 className="px-2 py-1 text-xs font-semibold text-primary-foreground">
+                {group.title}
+              </h4>
+              <div className="lg:grid lg:grid-cols-2 ">
+                {group.controls.map(mappingRow)}
+              </div>
+            </section>
+          ))}
+        </div>
 
-        <div className="order-first flex min-h-48 flex-col items-center justify-center rounded-xl border border-border/70 bg-background/60 p-5 md:col-span-2 xl:order-none xl:col-span-1">
+        <div className="flex h-100% 2.5xl:w-3/5 flex-col items-center justify-center center p-5">
           {controller.image === null ? (
             <GameControllerIcon
               weight="light"
@@ -1105,8 +1141,6 @@ function PresetMappingEditor({
             </div>
           )}
         </div>
-
-        <div className="space-y-0.5">{MAPPING_COLUMNS[1].map(mappingRow)}</div>
       </div>
     </div>
   );

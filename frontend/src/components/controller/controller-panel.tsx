@@ -30,7 +30,7 @@ export function ControllerPanel() {
   );
 
   return (
-    <section className="flex w-full flex-col gap-4 text-left">
+    <section className="flex w-full flex-col space-y-2 text-left">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-lg font-semibold text-foreground">Controller</h2>
         <span className="ms-auto text-xs text-muted-foreground">
@@ -59,7 +59,7 @@ export function ControllerPanel() {
             }}
             disabled={busy || controllers.length === 0 || macroActive}
           >
-            <SelectTrigger className="w-full" aria-label="Select controller">
+            <SelectTrigger className="w-50%" aria-label="Select controller">
               <SelectValue placeholder="No controllers detected">
                 {activeController ? `${activeController.name}` : null}
               </SelectValue>
