@@ -117,15 +117,15 @@ export function PresetPicker({
           <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-xl border border-border">
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
           {presets.map((p) => (
             <li
               key={p.filename}
               onClick={() => onSelect(p)}
               className={cn(
-                "flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-muted/40",
-                selected === p.filename && "bg-muted/60",
+                "flex cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
                 p.active && "bg-primary/5",
+                selected === p.filename && "bg-blue-200",
               )}
             >
               <div className="min-w-0 flex-1">
