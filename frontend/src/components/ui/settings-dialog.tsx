@@ -14,10 +14,13 @@ import {
 } from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
 import { GearSixIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useCaptureInput } from "@/src/hooks/use-capture";
 import { ControllerPanel } from "@/src/components/controller/controller-panel";
-import { PresetEditor } from "@/src/components/preset/preset-editor";
+import {
+  PresetEditor,
+  type PresetEditorHandle,
+} from "@/src/components/preset/preset-editor";
 import { PresetPicker } from "@/src/components/preset/preset-picker";
 import {
   Select,
@@ -38,10 +41,21 @@ function ControllerSettings() {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [selectedBuiltin, setSelectedBuiltin] = useState(false);
   const [presetListVersion, setPresetListVersion] = useState(0);
+  const presetEditor = useRef<PresetEditorHandle | null>(null);
 
-  function selectPreset(name: string, builtin: boolean) {
+  function openPreset(name: string, builtin: boolean) {
     setSelectedPreset(name);
     setSelectedBuiltin(builtin);
+  }
+
+  function requestPreset(name: string, builtin: boolean) {
+    if (name === selectedPreset) return;
+    const navigate = () => openPreset(name, builtin);
+    if (presetEditor.current === null) {
+      navigate();
+      return;
+    }
+    presetEditor.current.requestNavigation(navigate);
   }
 
   return (
@@ -51,7 +65,7 @@ function ControllerSettings() {
       <div className="2xl:flex 2xl:gap-x-4 space-y-4 2xl:space-y-0">
         <PresetPicker
           selected={selectedPreset}
-          onSelect={(preset) => selectPreset(preset.filename, preset.builtin)}
+          onSelect={(preset) => requestPreset(preset.filename, preset.builtin)}
           onDeleted={(name) => {
             if (selectedPreset === name) {
               setSelectedPreset(null);
@@ -62,10 +76,11 @@ function ControllerSettings() {
           refreshKey={presetListVersion}
         />
         <PresetEditor
+          ref={presetEditor}
           name={selectedPreset}
           builtin={selectedBuiltin}
           onSaved={(name) => {
-            selectPreset(name, false);
+            openPreset(name, false);
             setPresetListVersion((version) => version + 1);
           }}
         />

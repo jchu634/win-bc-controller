@@ -1,6 +1,8 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -138,7 +140,16 @@ export type PresetEditorProps = {
   onSaved: (name: string) => void;
 };
 
-export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
+export type PresetEditorHandle = {
+  requestNavigation: (navigate: () => void) => void;
+};
+
+type SaveResult = "saved" | "save-as-required" | "failed";
+
+export const PresetEditor = forwardRef<
+  PresetEditorHandle,
+  PresetEditorProps
+>(function PresetEditor({ name, builtin, onSaved }, ref) {
   const [value, setValue] = useState("");
   const [savedText, setSavedText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -152,7 +163,10 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [markers, setMarkers] = useState<JsonMarker[]>([]);
   const [advanced, setAdvanced] = useState(false);
+  const [navigationPromptOpen, setNavigationPromptOpen] = useState(false);
   const editorHandle = useRef<JsonEditorHandle | null>(null);
+  const pendingNavigation = useRef<(() => void) | null>(null);
+  const saveAsForNavigation = useRef(false);
 
   useEffect(() => {
     if (name === null) return;
@@ -175,6 +189,34 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
   }, [name]);
 
   const dirty = savedText !== null && value !== savedText;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      requestNavigation(navigate) {
+        if (!dirty) {
+          navigate();
+          return;
+        }
+        pendingNavigation.current = navigate;
+        setNavigationPromptOpen(true);
+      },
+    }),
+    [dirty],
+  );
+
+  const cancelNavigation = useCallback(() => {
+    pendingNavigation.current = null;
+    setNavigationPromptOpen(false);
+  }, []);
+
+  const finishNavigation = useCallback(() => {
+    const navigate = pendingNavigation.current;
+    pendingNavigation.current = null;
+    saveAsForNavigation.current = false;
+    setNavigationPromptOpen(false);
+    navigate?.();
+  }, []);
 
   const syntaxPrecheck = useCallback((text: string): JsonMarker[] => {
     try {
@@ -225,13 +267,13 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
     [],
   );
 
-  const save = useCallback(async (): Promise<boolean> => {
-    if (name === null) return false;
+  const save = useCallback(async (): Promise<SaveResult> => {
+    if (name === null) return "failed";
     const local = syntaxPrecheck(value);
     if (local.length > 0) {
       setMarkers(local);
       setError("Invalid JSON — fix the highlighted line before saving.");
-      return false;
+      return "failed";
     }
     if (builtin) {
       let suggestedName = name;
@@ -248,7 +290,7 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
       setSaveAsName(`${suggestedName} copy`);
       setSaveAsError(null);
       setSaveAsOpen(true);
-      return false;
+      return "save-as-required";
     }
     setSaving(true);
     const result = await Effect.runPromise(putPreset(name, value)).catch(
@@ -268,16 +310,16 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
       setMarkers([]);
       setError(null);
       onSaved(name);
-      return true;
+      return "saved";
     }
-    return false;
+    return "failed";
   }, [name, builtin, value, syntaxPrecheck, buildMarkers, onSaved]);
 
   const activate = useCallback(async () => {
     if (name === null) return;
     if (dirty) {
       const saved = await save();
-      if (!saved) return;
+      if (saved !== "saved") return;
     }
     setActivating(true);
     await Effect.runPromise(activatePreset(name))
@@ -337,7 +379,24 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
     if (!succeeded) return;
     setSaveAsOpen(false);
     onSaved(targetFilename);
-  }, [saveAsName, value, onSaved]);
+    if (saveAsForNavigation.current) finishNavigation();
+  }, [saveAsName, value, onSaved, finishNavigation]);
+
+  const saveAndNavigate = useCallback(async () => {
+    saveAsForNavigation.current = builtin;
+    const result = await save();
+    switch (result) {
+      case "saved":
+        finishNavigation();
+        return;
+      case "save-as-required":
+        setNavigationPromptOpen(false);
+        return;
+      case "failed":
+        saveAsForNavigation.current = false;
+        return;
+    }
+  }, [builtin, finishNavigation, save]);
 
   if (name === null) {
     return (
@@ -477,7 +536,16 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
           disabled={false}
         />
       )}
-      <Dialog open={saveAsOpen} onOpenChange={setSaveAsOpen}>
+      <Dialog
+        open={saveAsOpen}
+        onOpenChange={(open) => {
+          setSaveAsOpen(open);
+          if (!open && saveAsForNavigation.current) {
+            saveAsForNavigation.current = false;
+            cancelNavigation();
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Save as new preset</DialogTitle>
@@ -503,7 +571,13 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
             </p>
           )}
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
+            <DialogClose
+              render={<Button variant="outline" />}
+              onClick={() => {
+                if (saveAsForNavigation.current) cancelNavigation();
+                saveAsForNavigation.current = false;
+              }}
+            >
               Cancel
             </DialogClose>
             <Button
@@ -518,9 +592,37 @@ export function PresetEditor({ name, builtin, onSaved }: PresetEditorProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog
+        open={navigationPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) cancelNavigation();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave without saving?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes to this preset. Save them before opening
+              another preset?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelNavigation}>
+              Go back
+            </Button>
+            <Button variant="destructive" onClick={finishNavigation}>
+              Exit without saving
+            </Button>
+            <Button onClick={() => void saveAndNavigate()} disabled={saving}>
+              {saving && <SpinnerGapIcon size={14} className="animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
-}
+});
 
 type PresetMappingEditorProps = {
   value: string;
