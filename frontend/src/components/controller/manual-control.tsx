@@ -275,12 +275,12 @@ export function ManualControl() {
   };
 
   return (
-    <section className="w-full rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-sm">
+    <section className="w-full ">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">Manual control</h2>
       </div>
 
-      <div className="mx-auto flex max-w-xl flex-col gap-2">
+      <div className="mx-auto flex max-w-xl flex-col gap-2 rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-sm">
         <div className="grid grid-cols-4 gap-1" aria-label="Triggers">
           {BUTTON_GROUPS.shoulders.map(({ button, ...visual }) => (
             <ControlButton

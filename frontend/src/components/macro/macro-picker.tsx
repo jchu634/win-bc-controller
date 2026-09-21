@@ -62,17 +62,13 @@ export function MacroPicker({
         >
           <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
           <p className="min-w-0 flex-1 wrap-break-words">{error}</p>
-          <Button
-            size="xs"
-            variant="ghost"
-            onClick={() => setError(null)}
-          >
+          <Button size="xs" variant="ghost" onClick={() => setError(null)}>
             Dismiss
           </Button>
         </div>
       )}
 
-      <div className="max-h-[calc(100svh-11rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2 [scrollbar-gutter:stable]">
+      <div className="max-h-[calc(100svh-11rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2 scrollbar-gutter-stable">
         {loading ? (
           <div className="flex min-h-28 items-center justify-center gap-2 rounded-xl text-sm text-muted-foreground">
             <SpinnerGapIcon size={16} className="animate-spin" /> Loading...
