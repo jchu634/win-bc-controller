@@ -4,10 +4,12 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Effect } from "effect";
 import {
   FilePlusIcon,
   PauseIcon,
+  PencilSimpleIcon,
   PlayIcon,
   SpinnerGapIcon,
   StopIcon,
@@ -34,7 +36,7 @@ export function MacroRunPanel({
   const [names, setNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { mode, macro, macroActive, isPaused, startByName, pause, resume, cancel } =
+  const { macro, macroActive, isPaused, startByName, pause, resume, cancel } =
     useMacroRunner();
   const { lastError, clearError } = useSocket();
 
@@ -58,18 +60,46 @@ export function MacroRunPanel({
 
   return (
     <section className="flex w-full flex-col gap-3 text-left">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Macros</h2>
-        {macroActive ? (
-          <span className="inline-flex items-center gap-1.5 rounded-4xl bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            {isPaused ? "Paused" : "Running"}: {macro?.name}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col items-start gap-1.5">
+          <h2 className="text-lg font-semibold text-foreground">Macros</h2>
+          <span
+            className={cn(
+              "w-80 truncate text-sm font-medium",
+              !macroActive && "text-foreground",
+              macroActive && !isPaused && "text-green-600",
+              isPaused && "text-orange-600",
+            )}
+          >
+            Currently{" "}
+            {macroActive
+              ? `${isPaused ? "paused" : "running"} "${macro?.name}"`
+              : "doing nothing"}
           </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            mode: {mode}
-          </span>
-        )}
-        <div className="ms-auto flex items-center gap-2">
+        </div>
+        <Button render={<Link to="/macros" />} variant="outline" size="sm">
+          <PencilSimpleIcon size={14} /> Edit macros
+        </Button>
+      </div>
+
+      {wsError !== null && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
+        >
+          <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
+          <p className="flex-1">
+            {wsError.message}
+            {wsError.detail ? ` — ${wsError.detail}` : ""}
+          </p>
+          <Button size="xs" variant="ghost" onClick={clearError}>
+            Dismiss
+          </Button>
+        </div>
+      )}
+
+      <div className="flex min-h-28 max-h-[calc(100svh-11rem)] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2">
+        <div className="mb-2 flex items-center justify-end gap-2">
           {isPaused ? (
             <Button size="sm" variant="outline" onClick={resume}>
               <PlayIcon size={14} weight="fill" /> Resume
@@ -93,25 +123,6 @@ export function MacroRunPanel({
             <StopIcon size={14} weight="fill" /> Stop
           </Button>
         </div>
-      </div>
-
-      {wsError !== null && (
-        <div
-          role="alert"
-          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
-        >
-          <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
-          <p className="flex-1">
-            {wsError.message}
-            {wsError.detail ? ` — ${wsError.detail}` : ""}
-          </p>
-          <Button size="xs" variant="ghost" onClick={clearError}>
-            Dismiss
-          </Button>
-        </div>
-      )}
-
-      <div className="flex min-h-28 max-h-[calc(100svh-11rem)] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2 [scrollbar-gutter:stable]">
         {loading ? (
           <div className="flex flex-1 items-center justify-center gap-2 rounded-xl py-6 text-sm text-muted-foreground">
             <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
@@ -156,7 +167,9 @@ export function MacroRunPanel({
                     <span className="truncate">{name}</span>
                   </Button>
                   {isActive && isPaused && (
-                    <span className="text-xs text-muted-foreground">paused</span>
+                    <span className="text-xs text-muted-foreground">
+                      paused
+                    </span>
                   )}
                   <Button
                     size="xs"
