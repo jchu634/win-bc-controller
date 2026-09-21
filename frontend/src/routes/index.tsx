@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  PencilSimpleIcon,
   PlayIcon,
   SpinnerGapIcon,
   StopIcon,
@@ -9,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { CapturePreview } from "@/src/components/capture-preview";
 import { MacroRunPanel } from "@/src/components/macro/macro-run-panel";
+import { ManualControl } from "@/src/components/controller/manual-control";
 import { Button } from "@/src/components/ui/button";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/ui/settings-dialog";
@@ -31,15 +31,15 @@ function App() {
     permission === "granted" || permission === "unsupported";
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-6 px-4 pb-6">
+    <div className="flex h-full w-full flex-col gap-6 px-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SettingsDialog />
       </div>
 
-      <div className="flex w-full flex-col gap-4 md:flex-row">
+      <div className="flex w-full gap-4 ">
         <CapturePreview />
 
-        <div className="flex w-full flex-col space-y-4 md:w-1/3">
+        <div className="flex flex-col space-y-4 max-w-1/3">
           {permissionGranted ? (
             <Button
               onClick={streaming ? stop : () => void start(selectedInputId)}
@@ -81,6 +81,7 @@ function App() {
             </Button>
           )}
           <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
+          <ManualControl />
         </div>
       </div>
     </div>
