@@ -47,7 +47,10 @@ function App() {
           <h1 className="mb-6 text-2xl font-semibold">Controller</h1>
           <div className="grid items-start gap-6 xl:grid-cols-2">
             <div className="min-w-0 rounded-2xl border border-border bg-card p-4">
-              <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
+              <MacroRunPanel
+                selected={selectedMacro}
+                onSelect={setSelectedMacro}
+              />
             </div>
             <div className="min-w-0 overflow-x-auto">
               <ManualControl />
@@ -65,7 +68,7 @@ function App() {
                 variant={streaming ? "destructive" : "default"}
                 disabled={starting || !selectedInputId}
                 className={cn(
-                  "w-full h-12 text-lg",
+                  "w-[calc(100%-4rem)] h-12 text-lg",
                   streaming && "border-red-800 border-2",
                 )}
               >
@@ -99,7 +102,10 @@ function App() {
                 Request camera access
               </Button>
             )}
-            <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
+            <MacroRunPanel
+              selected={selectedMacro}
+              onSelect={setSelectedMacro}
+            />
             <ManualControl />
           </div>
         </div>
