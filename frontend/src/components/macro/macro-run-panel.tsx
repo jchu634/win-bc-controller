@@ -98,7 +98,7 @@ export function MacroRunPanel({
         </div>
       )}
 
-      <div className="flex min-h-28 max-h-[calc(100svh-11rem)] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-border bg-muted/30 p-2">
+      <div className="flex min-h-28 flex-col rounded-2xl border border-border bg-muted/30 p-2">
         <div className="mb-2 flex items-center justify-end gap-2">
           {isPaused ? (
             <Button size="sm" variant="outline" onClick={resume}>
@@ -145,7 +145,7 @@ export function MacroRunPanel({
             )}
           </div>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex max-h-58 flex-col gap-2 overflow-y-auto overscroll-contain scrollbar-gutter-stabl">
             {names.map((name) => {
               const isActive = macroActive && macro?.name === name;
               return (
