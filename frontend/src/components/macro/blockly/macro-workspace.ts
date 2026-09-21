@@ -1,6 +1,6 @@
 import * as Blockly from "blockly/core";
 import { BUTTON_NAMES, type ButtonName, type MacroAction, type MacroDoc } from "@/src/lib/types";
-import type { MacroPath } from "@/src/lib/macro-document";
+import { MACRO_VERSION, type MacroPath } from "@/src/lib/macro-document";
 import { MACRO_BLOCK_TYPES, registerMacroBlocks } from "@/src/components/macro/blockly/macro-blocks";
 
 export type WorkspaceIssue = {
@@ -329,7 +329,7 @@ export function readMacroWorkspace({
     return { kind: "invalid", issues: context.issues };
   }
 
-  const document: MacroDoc = { repeat, actions };
+  const document: MacroDoc = { version: MACRO_VERSION, repeat, actions };
   if (name !== undefined) document.name = name;
   return {
     kind: "valid",

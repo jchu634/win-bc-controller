@@ -8,6 +8,7 @@ describe("parseMacroDocument", () => {
   it("parses every supported action", () => {
     const result = parseMacroDocument(
       JSON.stringify({
+        version: 1,
         name: "combo",
         repeat: 0,
         actions: [
@@ -27,16 +28,18 @@ describe("parseMacroDocument", () => {
   });
 
   it.each([
-    ["negative repeat", { repeat: -1, actions: [] }, ["repeat"]],
-    ["fractional repeat", { repeat: 1.5, actions: [] }, ["repeat"]],
+    ["missing version", { actions: [] }, ["version"]],
+    ["future version", { version: 2, actions: [] }, ["version"]],
+    ["negative repeat", { version: 1, repeat: -1, actions: [] }, ["repeat"]],
+    ["fractional repeat", { version: 1, repeat: 1.5, actions: [] }, ["repeat"]],
     [
       "negative wait",
-      { actions: [{ do: "wait", ms: -1 }] },
+      { version: 1, actions: [{ do: "wait", ms: -1 }] },
       ["actions", 0, "ms"],
     ],
     [
       "fractional loop count",
-      { actions: [{ do: "loop", count: 1.5, actions: [] }] },
+      { version: 1, actions: [{ do: "loop", count: 1.5, actions: [] }] },
       ["actions", 0, "count"],
     ],
   ])("rejects %s", (_label, document, expectedPath) => {
@@ -51,6 +54,7 @@ describe("parseMacroDocument", () => {
   it("rejects fields that the block editor cannot preserve", () => {
     const result = parseVisualMacroDocument(
       JSON.stringify({
+        version: 1,
         name: "extended",
         actions: [{ do: "wait", ms: 10, note: "keep me" }],
       }),

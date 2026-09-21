@@ -78,6 +78,7 @@ def test_parse_json_text_non_object():
 
 def _ok_macro():
     return {
+        "version": 1,
         "name": "t",
         "repeat": 2,
         "actions": [
@@ -102,6 +103,8 @@ def test_validate_macro_ok():
 @pytest.mark.parametrize(
     ("mutate", "path"),
     [
+        (lambda m: m.pop("version"), ["version"]),
+        (lambda m: m.update(version=2), ["version"]),
         (lambda m: m.pop("actions"), []),
         (lambda m: m.update(actions={}), ["actions"]),
         (lambda m: m.update(repeat=-1), ["repeat"]),
@@ -124,7 +127,7 @@ def test_validate_macro_failures(mutate, path):
 
 
 def test_validate_macro_deep_nesting():
-    macro = {"actions": [{"do": "loop", "count": 1, "actions": []}]}
+    macro = {"version": 1, "actions": [{"do": "loop", "count": 1, "actions": []}]}
     # Nest 20 loops deep; validator must stop at 16.
     inner = macro["actions"][0]
     for _ in range(20):
@@ -186,7 +189,7 @@ def test_parse_message_roundtrip():
     msg = parse_message('{"type": "macro", "op": "start", "name": "x"}')
     assert isinstance(msg, MacroStartByName)
 
-    inline = {"name": "x", "actions": []}
+    inline = {"version": 1, "name": "x", "actions": []}
     msg = parse_message(json.dumps({"type": "macro", "op": "start", "macro": inline}))
     assert isinstance(msg, MacroStartInline)
 

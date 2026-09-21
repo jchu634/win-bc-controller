@@ -26,6 +26,7 @@ afterEach(() => {
 describe("macro workspace conversion", () => {
   it("round trips the complete macro document", () => {
     const document: MacroDoc = {
+      version: 1,
       name: "combo",
       repeat: 0,
       actions: [
@@ -49,7 +50,7 @@ describe("macro workspace conversion", () => {
 
   it("rejects a detached action block", () => {
     const workspace = createWorkspace();
-    loadMacroWorkspace({ workspace, document: { actions: [] } });
+    loadMacroWorkspace({ workspace, document: { version: 1, actions: [] } });
     const orphan = workspace.newBlock(MACRO_BLOCK_TYPES.wait);
     orphan.initModel();
 
@@ -72,7 +73,7 @@ describe("macro workspace conversion", () => {
       actions = [{ do: "loop", count: 1, actions }];
     }
     const workspace = createWorkspace();
-    loadMacroWorkspace({ workspace, document: { actions } });
+    loadMacroWorkspace({ workspace, document: { version: 1, actions } });
 
     const result = readMacroWorkspace({ workspace, name: undefined });
 

@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "name": "press-a-three-times",
   "repeat": 0,
   "actions": [

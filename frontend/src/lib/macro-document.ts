@@ -17,7 +17,9 @@ export type VisualMacroParseResult =
   | Exclude<MacroDocumentParseResult, { kind: "valid" }>
   | { kind: "unsupported"; message: string; path: MacroPath };
 
-const ROOT_KEYS = new Set(["name", "repeat", "actions"]);
+export const MACRO_VERSION = 1;
+
+const ROOT_KEYS = new Set(["version", "name", "repeat", "actions"]);
 const ACTION_KEYS = {
   press: new Set(["do", "button"]),
   release: new Set(["do", "button"]),
@@ -194,6 +196,9 @@ export function parseMacroDocument(text: string): MacroDocumentParseResult {
   if (!isRecord(value)) {
     return invalid("The macro must be an object.", []);
   }
+  if (value.version !== MACRO_VERSION) {
+    return invalid(`Macro version must be ${MACRO_VERSION}.`, ["version"]);
+  }
   if (value.name !== undefined && typeof value.name !== "string") {
     return invalid("Macro name must be a string.", ["name"]);
   }
@@ -209,7 +214,7 @@ export function parseMacroDocument(text: string): MacroDocumentParseResult {
   const actions = parseActions(value.actions, ["actions"], 0);
   if (!Array.isArray(actions)) return actions;
 
-  const document: MacroDoc = { actions };
+  const document: MacroDoc = { version: MACRO_VERSION, actions };
   if (typeof value.name === "string") document.name = value.name;
   if (typeof value.repeat === "number") document.repeat = value.repeat;
   return { kind: "valid", document };
@@ -241,5 +246,5 @@ export function formatMacroDocument(document: MacroDoc): string {
 }
 
 export function createMacroDocument(name: string): string {
-  return formatMacroDocument({ name, repeat: 1, actions: [] });
+  return formatMacroDocument({ version: MACRO_VERSION, name, repeat: 1, actions: [] });
 }

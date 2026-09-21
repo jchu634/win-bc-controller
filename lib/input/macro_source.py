@@ -17,6 +17,7 @@ logger = logging.getLogger("switch_pair")
 SLICE_SECONDS = 0.005
 
 VALID_BUTTONS = frozenset(b.name for b in Button if b.name)
+MACRO_VERSION = 1
 
 
 def load_macro(path: str | Path) -> dict:
@@ -61,6 +62,11 @@ def validate_macro(macro: dict) -> dict:
     Mirrors exactly what :class:`MacroPlayerThread` can execute:
     ``press`` / ``release`` / ``wait`` / ``stick`` / nested ``loop``.
     """
+    if macro.get("version") != MACRO_VERSION:
+        raise MacroValidationError(
+            ["version"], f"must be {MACRO_VERSION}"
+        )
+
     if "actions" not in macro:
         raise MacroValidationError([], "missing required key 'actions'")
     if not isinstance(macro["actions"], list):
@@ -145,6 +151,7 @@ class MacroPlayerThread(threading.Thread):
     Macro schema (event-based: press / release / wait / stick / loop)::
 
         {
+          "version": 1,
           "name": "example",
           "repeat": 0,            # 0 = loop forever, N = play N times
           "actions": [

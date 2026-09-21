@@ -36,6 +36,7 @@ export type MacroAction =
   | { do: "loop"; count: number; actions: MacroAction[] };
 
 export type MacroDoc = {
+  version: 1;
   name?: string;
   repeat?: number;
   actions: MacroAction[];

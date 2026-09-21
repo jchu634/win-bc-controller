@@ -48,7 +48,7 @@ class Fixture:
         self.macros_dir = tmp_path / "macros"
         self.macros_dir.mkdir()
         (self.macros_dir / "example.json").write_text(
-            '{"name": "example", "actions": [{"do": "press", "button": "A"}]}',
+            '{"version": 1, "name": "example", "actions": [{"do": "press", "button": "A"}]}',
             encoding="utf-8",
         )
         # Isolate the presets directory (copy builtins in) so custom
@@ -130,7 +130,7 @@ def test_macro_put_validation(fx):
         # Semantic error with path.
         r = c.put(
             "/api/macros/bad",
-            json={"contents": '{"actions": [{"do": "press", "button": "Q"}]}'},
+            json={"contents": '{"version": 1, "actions": [{"do": "press", "button": "Q"}]}'},
         )
         assert r.status_code == 400
         body = r.json()
@@ -145,7 +145,7 @@ def test_macro_put_validation(fx):
 
 def test_macro_crud_roundtrip(fx):
     with fx.client() as c:
-        contents = '{"name": "t", "actions": [{"do": "wait", "ms": 5}]}'
+        contents = '{"version": 1, "name": "t", "actions": [{"do": "wait", "ms": 5}]}'
         assert c.put("/api/macros/new-one", json={"contents": contents}).status_code == 200
         assert c.get("/api/macros/new-one").json()["contents"] == contents
         assert c.delete("/api/macros/new-one").status_code == 200
@@ -299,6 +299,7 @@ def test_ws_handshake_and_status(fx):
                 "type": "macro",
                 "op": "start",
                 "macro": {
+                    "version": 1,
                     "name": "hold",
                     "repeat": 0,
                     "actions": [
@@ -329,7 +330,11 @@ def test_ws_handshake_and_status(fx):
             {
                 "type": "macro",
                 "op": "start",
-                "macro": {"name": "bad", "actions": [{"do": "nope"}]},
+                "macro": {
+                    "version": 1,
+                    "name": "bad",
+                    "actions": [{"do": "nope"}],
+                },
             }
         )
         # cancel + error frames may interleave; drain until error.
