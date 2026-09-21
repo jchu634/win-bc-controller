@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import { putMacro } from "@/src/lib/api";
+import { listMacros, putMacro } from "@/src/lib/api";
 import { errorMessage } from "@/src/lib/errors";
 import { createMacroDocument } from "@/src/lib/macro-document";
 
@@ -30,12 +30,14 @@ function MacrosPage() {
   const [creatingMacro, setCreatingMacro] = useState(false);
   const [newName, setNewName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
+  const [overwriteName, setOverwriteName] = useState<string | null>(null);
   const macroEditor = useRef<MacroEditorHandle | null>(null);
 
   const openCreateDialog = useCallback(() => {
     setCreating(true);
     setNewName("");
     setCreateError(null);
+    setOverwriteName(null);
   }, []);
 
   const requestNavigation = useCallback((navigate: () => void) => {
@@ -58,14 +60,7 @@ function MacrosPage() {
     [requestNavigation, selected],
   );
 
-  const submitCreate = useCallback(async () => {
-    const name = newName.trim();
-    if (!NAME_PATTERN.test(name)) {
-      setCreateError(
-        "Letters, digits, spaces, '_' and '-' only; must start with a letter or digit.",
-      );
-      return;
-    }
+  const createMacro = useCallback(async (name: string) => {
     setCreatingMacro(true);
     const ok = await Effect.runPromise(putMacro(name, createMacroDocument(name)))
       .then(() => true)
@@ -76,10 +71,40 @@ function MacrosPage() {
     setCreatingMacro(false);
     if (ok) {
       setCreating(false);
+      setOverwriteName(null);
       setListVersion((v) => v + 1);
       setSelected(name);
     }
-  }, [newName]);
+  }, []);
+
+  const submitCreate = useCallback(async () => {
+    const name = newName.trim();
+    setCreateError(null);
+    if (!NAME_PATTERN.test(name)) {
+      setCreateError(
+        "Letters, digits, spaces, '_' and '-' only; must start with a letter or digit.",
+      );
+      return;
+    }
+    setCreatingMacro(true);
+    const existingName = await Effect.runPromise(listMacros())
+      .then(({ names }) =>
+        names.find(
+          (candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase(),
+        ) ?? null,
+      )
+      .catch((error: unknown) => {
+        setCreateError(errorMessage(error));
+        return undefined;
+      });
+    setCreatingMacro(false);
+    if (existingName === undefined) return;
+    if (existingName !== null) {
+      setOverwriteName(existingName);
+      return;
+    }
+    await createMacro(name);
+  }, [createMacro, newName]);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
@@ -118,49 +143,92 @@ function MacrosPage() {
       <Dialog
         open={creating}
         onOpenChange={(open) => {
-          if (!open && !creatingMacro) setCreating(false);
+          if (!open && !creatingMacro) {
+            setCreating(false);
+            setOverwriteName(null);
+          }
         }}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New macro</DialogTitle>
-            <DialogDescription>
-              Choose a name. You can add actions after the macro is created.
-            </DialogDescription>
-          </DialogHeader>
-          <input
-            autoFocus
-            value={newName}
-            onChange={(event) => setNewName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void submitCreate();
-            }}
-            placeholder="Macro name"
-            aria-label="New macro name"
-            className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-          />
-          {createError !== null && (
-            <p role="alert" className="text-sm text-destructive">
-              {createError}
-            </p>
-          )}
-          <DialogFooter>
-            <DialogClose
-              render={<Button variant="outline" />}
-              disabled={creatingMacro}
-            >
-              Cancel
-            </DialogClose>
-            <Button
-              onClick={() => void submitCreate()}
-              disabled={creatingMacro || newName.trim().length === 0}
-            >
-              {creatingMacro && (
-                <SpinnerGapIcon size={14} className="animate-spin" />
+          {overwriteName === null ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>New macro</DialogTitle>
+                <DialogDescription>
+                  Choose a name. You can add actions after the macro is created.
+                </DialogDescription>
+              </DialogHeader>
+              <input
+                autoFocus
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submitCreate();
+                }}
+                placeholder="Macro name"
+                aria-label="New macro name"
+                className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+              />
+              {createError !== null && (
+                <p role="alert" className="text-sm text-destructive">
+                  {createError}
+                </p>
               )}
-              Create macro
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <DialogClose
+                  render={<Button variant="outline" />}
+                  disabled={creatingMacro}
+                >
+                  Cancel
+                </DialogClose>
+                <Button
+                  onClick={() => void submitCreate()}
+                  disabled={creatingMacro || newName.trim().length === 0}
+                >
+                  {creatingMacro && (
+                    <SpinnerGapIcon size={14} className="animate-spin" />
+                  )}
+                  Create macro
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Overwrite macro?</DialogTitle>
+                <DialogDescription>
+                  A macro with this name already exists. Do you want to overwrite it?
+                </DialogDescription>
+              </DialogHeader>
+              {createError !== null && (
+                <p role="alert" className="text-sm text-destructive">
+                  {createError}
+                </p>
+              )}
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOverwriteName(null);
+                    setCreateError(null);
+                  }}
+                  disabled={creatingMacro}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => void createMacro(overwriteName)}
+                  disabled={creatingMacro}
+                >
+                  {creatingMacro && (
+                    <SpinnerGapIcon size={14} className="animate-spin" />
+                  )}
+                  Overwrite macro
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
