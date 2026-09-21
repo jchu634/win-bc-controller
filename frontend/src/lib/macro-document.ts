@@ -5,15 +5,30 @@ import {
   type MacroDoc,
 } from "@/src/lib/types";
 
-/**
- * Validated document boundary shared by the JSON editor and a future block
- * editor. Visual editing can work with MacroDoc without depending on JSON text.
- */
+export type MacroPath = (string | number)[];
 
 export type MacroDocumentParseResult =
   | { kind: "valid"; document: MacroDoc }
   | { kind: "invalid-json"; error: SyntaxError }
-  | { kind: "invalid-document"; message: string };
+  | { kind: "invalid-document"; message: string; path: MacroPath };
+
+export type VisualMacroParseResult =
+  | { kind: "valid"; document: MacroDoc }
+  | Exclude<MacroDocumentParseResult, { kind: "valid" }>
+  | { kind: "unsupported"; message: string; path: MacroPath };
+
+const ROOT_KEYS = new Set(["name", "repeat", "actions"]);
+const ACTION_KEYS = {
+  press: new Set(["do", "button"]),
+  release: new Set(["do", "button"]),
+  wait: new Set(["do", "ms"]),
+  stick: new Set(["do", "side", "x", "y"]),
+  loop: new Set(["do", "count", "actions"]),
+} satisfies Record<MacroAction["do"], ReadonlySet<string>>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 function isButtonName(value: unknown): value is ButtonName {
   return (
@@ -26,63 +41,140 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function isMacroAction(value: unknown): value is MacroAction {
-  if (typeof value !== "object" || value === null || !("do" in value)) {
-    return false;
-  }
-
-  switch (value.do) {
-    case "press":
-    case "release":
-      return "button" in value && isButtonName(value.button);
-    case "wait":
-      return "ms" in value && isFiniteNumber(value.ms);
-    case "stick":
-      return (
-        "side" in value &&
-        (value.side === "left" || value.side === "right") &&
-        "x" in value &&
-        isFiniteNumber(value.x) &&
-        "y" in value &&
-        isFiniteNumber(value.y)
-      );
-    case "loop":
-      return (
-        "count" in value &&
-        isFiniteNumber(value.count) &&
-        "actions" in value &&
-        Array.isArray(value.actions) &&
-        value.actions.every(isMacroAction)
-      );
-    default:
-      return false;
-  }
+function invalid(message: string, path: MacroPath): MacroDocumentParseResult {
+  return { kind: "invalid-document", message, path };
 }
 
-function isMacroDocument(value: unknown): value is MacroDoc {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    !("actions" in value) ||
-    !Array.isArray(value.actions) ||
-    !value.actions.every(isMacroAction)
-  ) {
-    return false;
+function parseActions(
+  value: unknown,
+  path: MacroPath,
+  depth: number,
+): MacroAction[] | MacroDocumentParseResult {
+  if (!Array.isArray(value)) return invalid("Actions must be a list.", path);
+  if (depth > 16) {
+    return invalid("Loops are nested too deeply. The maximum is 16.", path);
   }
 
-  if (
-    "name" in value &&
-    value.name !== undefined &&
-    typeof value.name !== "string"
-  ) {
-    return false;
-  }
+  const actions: MacroAction[] = [];
+  for (const [index, candidate] of value.entries()) {
+    const actionPath = [...path, index];
+    if (!isRecord(candidate)) {
+      return invalid("Each action must be an object.", actionPath);
+    }
 
-  return (
-    !("repeat" in value) ||
-    value.repeat === undefined ||
-    isFiniteNumber(value.repeat)
-  );
+    switch (candidate.do) {
+      case "press":
+      case "release":
+        if (!isButtonName(candidate.button)) {
+          return invalid(
+            `Unknown button for '${candidate.do}'.`,
+            [...actionPath, "button"],
+          );
+        }
+        actions.push({ do: candidate.do, button: candidate.button });
+        break;
+      case "wait":
+        if (!isFiniteNumber(candidate.ms) || candidate.ms < 0) {
+          return invalid(
+            "Wait duration must be a non-negative number.",
+            [...actionPath, "ms"],
+          );
+        }
+        actions.push({ do: "wait", ms: candidate.ms });
+        break;
+      case "stick":
+        if (candidate.side !== "left" && candidate.side !== "right") {
+          return invalid(
+            "Stick side must be 'left' or 'right'.",
+            [...actionPath, "side"],
+          );
+        }
+        if (!isFiniteNumber(candidate.x)) {
+          return invalid("Stick X must be a finite number.", [
+            ...actionPath,
+            "x",
+          ]);
+        }
+        if (!isFiniteNumber(candidate.y)) {
+          return invalid("Stick Y must be a finite number.", [
+            ...actionPath,
+            "y",
+          ]);
+        }
+        actions.push({
+          do: "stick",
+          side: candidate.side,
+          x: candidate.x,
+          y: candidate.y,
+        });
+        break;
+      case "loop": {
+        if (
+          typeof candidate.count !== "number" ||
+          !Number.isInteger(candidate.count) ||
+          candidate.count < 0
+        ) {
+          return invalid("Loop count must be a non-negative integer.", [
+            ...actionPath,
+            "count",
+          ]);
+        }
+        const nested = parseActions(
+          candidate.actions,
+          [...actionPath, "actions"],
+          depth + 1,
+        );
+        if (!Array.isArray(nested)) return nested;
+        actions.push({ do: "loop", count: candidate.count, actions: nested });
+        break;
+      }
+      default:
+        return invalid(
+          "Unknown action. Expected press, release, wait, stick, or loop.",
+          actionPath,
+        );
+    }
+  }
+  return actions;
+}
+
+function findUnknownKey(
+  value: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  path: MacroPath,
+): MacroPath | null {
+  const key = Object.keys(value).find((candidate) => !allowed.has(candidate));
+  return key === undefined ? null : [...path, key];
+}
+
+function findUnsupportedActionKey(
+  actions: unknown[],
+  path: MacroPath,
+): MacroPath | null {
+  for (const [index, candidate] of actions.entries()) {
+    if (!isRecord(candidate)) continue;
+    const actionPath = [...path, index];
+    const kind = candidate.do;
+    if (
+      kind !== "press" &&
+      kind !== "release" &&
+      kind !== "wait" &&
+      kind !== "stick" &&
+      kind !== "loop"
+    ) {
+      continue;
+    }
+    const unknown = findUnknownKey(candidate, ACTION_KEYS[kind], actionPath);
+    if (unknown !== null) return unknown;
+    if (kind === "loop" && Array.isArray(candidate.actions)) {
+      const nested = findUnsupportedActionKey(candidate.actions, [
+        ...actionPath,
+        "actions",
+      ]);
+      if (nested !== null) return nested;
+    }
+  }
+  return null;
 }
 
 export function parseMacroDocument(text: string): MacroDocumentParseResult {
@@ -99,17 +191,55 @@ export function parseMacroDocument(text: string): MacroDocumentParseResult {
     };
   }
 
-  if (!isMacroDocument(value)) {
-    return {
-      kind: "invalid-document",
-      message: "The macro does not match the supported action format.",
-    };
+  if (!isRecord(value)) {
+    return invalid("The macro must be an object.", []);
+  }
+  if (value.name !== undefined && typeof value.name !== "string") {
+    return invalid("Macro name must be a string.", ["name"]);
+  }
+  if (
+    value.repeat !== undefined &&
+    (typeof value.repeat !== "number" ||
+      !Number.isInteger(value.repeat) ||
+      value.repeat < 0)
+  ) {
+    return invalid("Repeat must be a non-negative integer.", ["repeat"]);
   }
 
-  return { kind: "valid", document: value };
+  const actions = parseActions(value.actions, ["actions"], 0);
+  if (!Array.isArray(actions)) return actions;
+
+  const document: MacroDoc = { actions };
+  if (typeof value.name === "string") document.name = value.name;
+  if (typeof value.repeat === "number") document.repeat = value.repeat;
+  return { kind: "valid", document };
+}
+
+export function parseVisualMacroDocument(text: string): VisualMacroParseResult {
+  const parsed = parseMacroDocument(text);
+  if (parsed.kind !== "valid") return parsed;
+
+  const raw: unknown = JSON.parse(text);
+  if (!isRecord(raw)) return parsed;
+  const rootUnknown = findUnknownKey(raw, ROOT_KEYS, []);
+  const unsupported =
+    rootUnknown ??
+    (Array.isArray(raw.actions)
+      ? findUnsupportedActionKey(raw.actions, ["actions"])
+      : null);
+  if (unsupported === null) return parsed;
+
+  return {
+    kind: "unsupported",
+    path: unsupported,
+    message: `The visual editor cannot preserve '${unsupported.join(".")}'. Remove it in JSON mode before switching.`,
+  };
+}
+
+export function formatMacroDocument(document: MacroDoc): string {
+  return `${JSON.stringify(document, null, 2)}\n`;
 }
 
 export function createMacroDocument(name: string): string {
-  const document: MacroDoc = { name, repeat: 1, actions: [] };
-  return `${JSON.stringify(document, null, 2)}\n`;
+  return formatMacroDocument({ name, repeat: 1, actions: [] });
 }

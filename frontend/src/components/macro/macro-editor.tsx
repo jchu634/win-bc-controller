@@ -39,12 +39,17 @@ import {
   type JsonEditorHandle,
   type JsonMarker,
 } from "@/src/components/json-editor/json-editor";
+import { MacroBlocklyEditor } from "@/src/components/macro/blockly/macro-blockly-editor";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { deleteMacro, getMacro, putMacro } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";
-import type { ValidationBody } from "@/src/lib/types";
+import type { MacroDoc, ValidationBody } from "@/src/lib/types";
 import { locatePathLine, positionToLineCol } from "@/src/lib/json-locate";
-import { parseMacroDocument } from "@/src/lib/macro-document";
+import {
+  formatMacroDocument,
+  parseMacroDocument,
+  parseVisualMacroDocument,
+} from "@/src/lib/macro-document";
 
 function parseErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -63,6 +68,7 @@ export type MacroEditorHandle = {
 };
 
 type SaveResult = "saved" | "failed";
+type EditorMode = "blocks" | "json";
 
 export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
   function MacroEditor({ name, onDeleted }, ref) {
@@ -74,6 +80,11 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
     const [deletePromptOpen, setDeletePromptOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [markers, setMarkers] = useState<JsonMarker[]>([]);
+    const [editorMode, setEditorMode] = useState<EditorMode>("blocks");
+    const [blockDocument, setBlockDocument] = useState<MacroDoc | null>(null);
+    const [blockRevision, setBlockRevision] = useState(0);
+    const [blockValid, setBlockValid] = useState(true);
+    const [blockDirty, setBlockDirty] = useState(false);
     const [selectionPromptOpen, setSelectionPromptOpen] = useState(false);
     const editorHandle = useRef<JsonEditorHandle | null>(null);
     const pendingSelection = useRef<(() => void) | null>(null);
@@ -86,6 +97,8 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
         setSavedText(null);
         setMarkers([]);
         setError(null);
+        setBlockDocument(null);
+        setBlockValid(true);
         return;
       }
       let cancelled = false;
@@ -93,15 +106,29 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       setError(null);
       setMarkers([]);
       setSavedText(null);
+      setBlockDocument(null);
+      setBlockDirty(false);
+      setBlockValid(true);
       Effect.runPromise(getMacro(name))
         .then((r) => {
           if (cancelled) return;
           setValue(r.contents);
           setSavedText(r.contents);
+          const visual = parseVisualMacroDocument(r.contents);
+          if (visual.kind === "valid") {
+            setBlockDocument(visual.document);
+            setBlockRevision((revision) => revision + 1);
+            setBlockValid(true);
+          } else {
+            setBlockDocument(null);
+            setEditorMode("json");
+          }
         })
         .catch((e) => {
           if (cancelled) return;
           setValue("");
+          setBlockDocument(null);
+          setEditorMode("json");
           setError(parseErrorMessage(e));
         })
         .finally(() => {
@@ -112,7 +139,8 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       };
     }, [name]);
 
-    const dirty = savedText !== null && value !== savedText;
+    const dirty =
+      savedText !== null && (value !== savedText || blockDirty);
     const shouldBlockNavigation = useCallback(() => dirty, [dirty]);
     const routeBlocker = useBlocker({
       shouldBlockFn: shouldBlockNavigation,
@@ -212,6 +240,10 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
 
     const save = useCallback(async (): Promise<SaveResult> => {
       if (name === null) return "failed";
+      if (editorMode === "blocks" && !blockValid) {
+        setError("Fix the block workspace before saving.");
+        return "failed";
+      }
       const local = syntaxPrecheck(value);
       if (local.length > 0) {
         setMarkers(local);
@@ -235,15 +267,27 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       setSaving(false);
       if (result !== null) {
         setSavedText(value);
+        setBlockDirty(false);
         setMarkers([]);
         setError(null);
         return "saved";
       }
       return "failed";
-    }, [name, value, syntaxPrecheck, buildMarkers]);
+    }, [
+      name,
+      value,
+      editorMode,
+      blockValid,
+      syntaxPrecheck,
+      buildMarkers,
+    ]);
 
     const run = useCallback(() => {
       if (name === null) return;
+      if (editorMode === "blocks" && !blockValid) {
+        setError("Fix the block workspace before running.");
+        return;
+      }
       const result = parseMacroDocument(value);
       switch (result.kind) {
         case "valid":
@@ -261,7 +305,14 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
           setError(result.message);
           return;
       }
-    }, [name, value, syntaxPrecheck, startInline]);
+    }, [
+      name,
+      value,
+      editorMode,
+      blockValid,
+      syntaxPrecheck,
+      startInline,
+    ]);
 
     const format = useCallback(() => {
       try {
@@ -308,6 +359,72 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       if (result === "saved") finishNavigation();
     }, [finishNavigation, save]);
 
+    const showBlocks = useCallback(() => {
+      const result = parseVisualMacroDocument(value);
+      switch (result.kind) {
+        case "valid":
+          setBlockDocument(result.document);
+          setBlockRevision((revision) => revision + 1);
+          setBlockValid(true);
+          setBlockDirty(value !== savedText);
+          setMarkers([]);
+          setError(null);
+          setEditorMode("blocks");
+          return;
+        case "invalid-json": {
+          const local = syntaxPrecheck(value);
+          setMarkers(local);
+          setError("Fix the highlighted JSON error before opening Blocks.");
+          return;
+        }
+        case "invalid-document":
+        case "unsupported": {
+          const line = locatePathLine(value, result.path);
+          setMarkers(
+            line === null
+              ? []
+              : [{ line, severity: "error", message: result.message }],
+          );
+          setError(result.message);
+          return;
+        }
+      }
+    }, [savedText, syntaxPrecheck, value]);
+
+    const discardChanges = useCallback(() => {
+      if (savedText === null) return;
+      if (
+        editorMode === "json" &&
+        editorHandle.current?.replaceDocument(savedText)
+      ) {
+        setBlockDirty(false);
+        setMarkers([]);
+        setError(null);
+        return;
+      }
+      setValue(savedText);
+      const visual = parseVisualMacroDocument(savedText);
+      if (visual.kind === "valid") {
+        setBlockDocument(visual.document);
+        setBlockRevision((revision) => revision + 1);
+        setBlockValid(true);
+      }
+      setBlockDirty(false);
+      setMarkers([]);
+      setError(null);
+    }, [editorMode, savedText]);
+
+    const handleBlockChange = useCallback(
+      (document: MacroDoc) => {
+        const text = formatMacroDocument(document);
+        if (!editorHandle.current?.replaceDocument(text)) setValue(text);
+        setBlockDirty(savedText === null || text !== savedText);
+        setMarkers([]);
+        setError(null);
+      },
+      [savedText],
+    );
+
     if (name === null) {
       return (
         <section className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
@@ -333,26 +450,21 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
             </span>
           )}
           <div className="ms-auto flex flex-wrap items-center gap-2">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={format}
-              title="Format JSON"
-              aria-label="Format JSON"
-            >
-              <MagicWandIcon size={14} />
-            </Button>
+            {editorMode === "json" && (
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={format}
+                title="Format JSON"
+                aria-label="Format JSON"
+              >
+                <MagicWandIcon size={14} />
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
-              onClick={() => {
-                if (savedText === null) return;
-                if (!editorHandle.current?.replaceDocument(savedText)) {
-                  setValue(savedText);
-                }
-                setMarkers([]);
-                setError(null);
-              }}
+              onClick={discardChanges}
               disabled={!dirty}
               title="Discard changes"
             >
@@ -364,7 +476,12 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
               role="group"
               aria-label="Macro debugging controls"
             >
-              <Button size="sm" variant="outline" onClick={run}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={run}
+                disabled={editorMode === "blocks" && !blockValid}
+              >
                 <PlayIcon size={14} weight="fill" /> Run
               </Button>
               <Button
@@ -392,7 +509,9 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
             <Button
               size="sm"
               onClick={() => void save()}
-              disabled={saving || !dirty}
+              disabled={
+                saving || !dirty || (editorMode === "blocks" && !blockValid)
+              }
             >
               {saving ? (
                 <SpinnerGapIcon size={14} className="animate-spin" />
@@ -438,21 +557,64 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
           </div>
         )}
 
+        <div
+          className="inline-flex w-fit rounded-full bg-muted p-1"
+          role="tablist"
+          aria-label="Macro editor mode"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={editorMode === "blocks"}
+            className="rounded-full px-3 py-1 text-sm text-muted-foreground aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-sm"
+            onClick={() => {
+              if (editorMode === "json") showBlocks();
+            }}
+          >
+            Blocks
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={editorMode === "json"}
+            className="rounded-full px-3 py-1 text-sm text-muted-foreground aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-sm"
+            onClick={() => setEditorMode("json")}
+            disabled={editorMode === "blocks" && !blockValid}
+          >
+            JSON
+          </button>
+        </div>
+
         {loading ? (
           <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground">
             <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
           </div>
         ) : (
-          <JsonEditor
-            ref={editorHandle}
-            fileName={`${name}.json`}
-            cacheKey={`macro:${name}`}
-            value={value}
-            onChange={setValue}
-            editing
-            markers={markers}
-            className="max-h-[60vh]"
-          />
+          <>
+            {blockDocument !== null && (
+              <div className={editorMode === "blocks" ? undefined : "hidden"}>
+                <MacroBlocklyEditor
+                  key={`${name}:${blockRevision}`}
+                  document={blockDocument}
+                  onChange={handleBlockChange}
+                  onDirty={() => setBlockDirty(true)}
+                  onValidityChange={setBlockValid}
+                />
+              </div>
+            )}
+            <div className={editorMode === "json" ? undefined : "hidden"}>
+              <JsonEditor
+                ref={editorHandle}
+                fileName={`${name}.json`}
+                cacheKey={`macro:${name}`}
+                value={value}
+                onChange={setValue}
+                editing
+                markers={markers}
+                className="max-h-[60vh]"
+              />
+            </div>
+          </>
         )}
 
         <Dialog

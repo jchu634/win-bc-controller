@@ -82,7 +82,7 @@ function MacrosPage() {
   }, [newName]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-3 text-left">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -98,7 +98,7 @@ function MacrosPage() {
         </Button>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(240px,1fr)_2fr]">
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <MacroPicker
           selected={selected}
           onSelect={selectMacro}
