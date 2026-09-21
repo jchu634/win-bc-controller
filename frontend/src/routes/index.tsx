@@ -12,12 +12,16 @@ import { ManualControl } from "@/src/components/controller/manual-control";
 import { Button } from "@/src/components/ui/button";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/ui/settings-dialog";
-import { useGeneralSettings } from "@/src/hooks/use-general-settings";
+import { useSelector } from "@tanstack/react-store";
+import { generalSettingsStore } from "@/src/stores/general-settings";
 import cn from "cnfast";
 import "@/src/App.css";
 
 function App() {
-  const { controlsOnlyHomepage } = useGeneralSettings();
+  const controlsOnlyHomepage = useSelector(
+    generalSettingsStore,
+    (settings) => settings.controlsOnlyHomepage,
+  );
   const [selectedMacro, setSelectedMacro] = useState<string | null>(null);
   const { selectedInputId } = useCaptureInput();
   const {

@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { Effect } from "effect";
+import { useSelector } from "@tanstack/react-store";
+import { generalSettingsStore } from "@/src/stores/general-settings";
 import {
   type CameraDevice,
   CameraError,
@@ -48,6 +50,10 @@ export function CaptureProvider({
 }: {
   readonly children: ReactNode;
 }) {
+  const controlsOnlyHomepage = useSelector(
+    generalSettingsStore,
+    (settings) => settings.controlsOnlyHomepage,
+  );
   const activeStreamRef = useRef<MediaStream | null>(null);
   const [cameras, setCameras] = useState<readonly CameraDevice[]>([]);
   const [selectedInputId, setSelectedInputId] = useState("");
@@ -125,6 +131,7 @@ export function CaptureProvider({
   };
 
   useEffect(() => {
+    let cancelled = false;
     let status: PermissionStatus | null = null;
     const permissions = navigator.permissions;
     if (!permissions?.query) {
@@ -135,17 +142,23 @@ export function CaptureProvider({
     void permissions
       .query({ name: "camera" as PermissionName })
       .then((nextStatus) => {
+        if (cancelled) return;
         status = nextStatus;
         setPermission(nextStatus.state);
-        if (nextStatus.state === "prompt") void requestAccess();
+        if (nextStatus.state === "prompt" && !controlsOnlyHomepage) {
+          void requestAccess();
+        }
         nextStatus.onchange = () => setPermission(nextStatus.state);
       })
-      .catch(() => setPermission("unsupported"));
+      .catch(() => {
+        if (!cancelled) setPermission("unsupported");
+      });
 
     return () => {
+      cancelled = true;
       if (status) status.onchange = null;
     };
-  }, [requestAccess]);
+  }, [requestAccess, controlsOnlyHomepage]);
 
   useEffect(() => {
     if (permission !== "granted" && permission !== "unsupported") return;

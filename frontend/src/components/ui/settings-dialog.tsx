@@ -13,6 +13,11 @@ import {
   TabsTrigger,
 } from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
+import { useSelector } from "@tanstack/react-store";
+import {
+  generalSettingsStore,
+  setControlsOnlyHomepage,
+} from "@/src/stores/general-settings";
 import { GearSixIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -93,12 +98,21 @@ function ControllerSettings() {
   );
 }
 
-function CaptureDeviceSettings() {
+function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const startedForPreview = useRef(false);
   const [visible, setVisible] = useState(false);
   const stream = useCaptureStream();
-  const { error, start, starting, stop, streaming } = useCaptureControls();
+  const {
+    error,
+    start,
+    starting,
+    stop,
+    streaming,
+    permission,
+    requestAccess,
+    requestingPermission,
+  } = useCaptureControls();
   const { cameras, selectedInputId, selectInput } = useCaptureInput();
   const selectedInputLabel = cameras.find(
     (camera) => camera.deviceId === selectedInputId,
@@ -106,6 +120,13 @@ function CaptureDeviceSettings() {
 
   const stopRef = useRef(stop);
   stopRef.current = stop;
+
+  useEffect(() => {
+    if (disabled) {
+      setVisible(false);
+      startedForPreview.current = false;
+    }
+  }, [disabled]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -142,8 +163,18 @@ function CaptureDeviceSettings() {
 
   return (
     <div className="flex flex-col items-start gap-3">
+      {permission !== "granted" && permission !== "unsupported" && (
+        <Button
+          variant="outline"
+          disabled={disabled || requestingPermission}
+          onClick={() => void requestAccess()}
+        >
+          {requestingPermission ? "Requesting camera access..." : "Request camera access"}
+        </Button>
+      )}
       <div className="flex w-full flex-wrap items-center gap-2">
         <Select
+          disabled={disabled}
           value={selectedInputId}
           onValueChange={(deviceId) => {
             if (deviceId !== null) selectInput(deviceId);
@@ -169,7 +200,7 @@ function CaptureDeviceSettings() {
         <Button
           type="button"
           variant="outline"
-          disabled={!selectedInputId || starting}
+          disabled={disabled || !selectedInputId || starting}
           onClick={() => void togglePreview()}
         >
           {starting && (
@@ -180,7 +211,7 @@ function CaptureDeviceSettings() {
       </div>
 
       <div className="aspect-video w-1/2 min-w-80 overflow-hidden rounded-lg border border-border bg-black">
-        {visible && stream ? (
+        {!disabled && visible && stream ? (
           <video
             ref={videoRef}
             autoPlay
@@ -191,7 +222,9 @@ function CaptureDeviceSettings() {
           />
         ) : (
           <div className="flex size-full items-center justify-center px-6 text-center text-sm text-zinc-400">
-            {visible
+            {disabled
+              ? "Capture controls are disabled while the controls-only homepage is enabled."
+              : visible
               ? (error ??
                 (starting ? "Starting preview..." : "Preview unavailable"))
               : "Preview disabled"}
@@ -204,6 +237,11 @@ function CaptureDeviceSettings() {
 
 export function SettingsDialog() {
   const [currentTab, setCurrentTab] = useState("general");
+  const controlsOnlyHomepage = useSelector(
+    generalSettingsStore,
+    (settings) => settings.controlsOnlyHomepage,
+  );
+  const { stop, starting } = useCaptureControls();
 
   return (
     <Dialog>
@@ -234,11 +272,32 @@ export function SettingsDialog() {
             className="min-w-0 overflow-y-auto p-2 space-y-2"
             value="general"
           >
+            <label className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+              <span>
+                <span className="block font-semibold">Controls-only homepage</span>
+                <span id="controls-only-description" className="block text-sm text-muted-foreground">
+                  Focus on macros and manual control without the capture card preview.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="size-5 shrink-0 accent-primary"
+                aria-describedby="controls-only-description"
+                checked={controlsOnlyHomepage}
+                disabled={starting}
+                onChange={(event) => {
+                  const enabled = event.target.checked;
+                  if (enabled) stop();
+                  setControlsOnlyHomepage(enabled);
+                }}
+              />
+            </label>
             <h2 className="text-lg font-semibold text-foreground">
               Current Video Capture Device
             </h2>
 
-            <CaptureDeviceSettings />
+            <CaptureDeviceSettings disabled={controlsOnlyHomepage} />
           </TabsContent>
           <TabsContent
             className="min-h-0 min-w-0 overflow-y-auto p-2"
