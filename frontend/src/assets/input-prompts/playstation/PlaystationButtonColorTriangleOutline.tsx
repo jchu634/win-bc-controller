@@ -1,0 +1,12 @@
+import type { SVGProps } from "react";
+const SvgPlaystationButtonColorTriangleOutline = (
+  props: SVGProps<SVGSVGElement>
+) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={64} height={64} viewBox="0 0 64 64" {...props}>
+    <path
+      fill="#40E2A0"
+      d="M17.15 17.15Q11 23.3 11 32q0 8.75 6.15 14.85Q23.3 53 32 53q8.75 0 14.85-6.15Q53 40.75 53 32q0-8.7-6.15-14.85Q40.75 11 32 11q-8.7 0-14.85 6.15M56 32q0 10-7.05 16.95Q42 56 32 56q-9.95 0-17-7.05Q8 42 8 32q0-9.95 7-17 6.45-6.4 15.35-6.95L32 8l1.7.05q8.9.55 15.25 6.95Q56 22.05 56 32m-24-6.05L25 38h14.05zM46 42H18l14-24z"
+    />
+  </svg>
+);
+export default SvgPlaystationButtonColorTriangleOutline;

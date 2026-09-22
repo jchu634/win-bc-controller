@@ -1,0 +1,10 @@
+import type { SVGProps } from "react";
+const SvgControllerLgOutline = (props: SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={64} height={64} viewBox="0 0 64 64" {...props}>
+    <path
+      fill="currentColor"
+      d="M20.4 8h33.5q3.4-.15 1.35 1.6-1.2.9-1.75 2.4l-8.3 36q-2.3 8.6-20.65 7.95-17.05.6-16.55-8L12.15 16q1.3-8.15 8.25-8m21.1 13.5.8.25.55.6.15.85q-.25 2.25-1.9 3.85l-.05.05Q39.15 29 36.5 29t-4.6-1.95Q30 25.15 30 22.5q.05-2.75 1.9-4.6 1.95-1.9 4.6-1.9t4.55 1.9q.45.45.45 1.05L41.05 20q-.45.45-1.05.45T38.95 20q-1-1-2.45-1t-2.45 1l-.05.05q-.95 1-1 2.45v.05q0 1.4 1 2.4l1.5.9 1 .15q1.4 0 2.45-1.05l.4-.45H36.5v-3zM13.2 51.55q3.7 1.65 11.25 1.4h.2q15.4.55 17.65-5.7l8.3-35.9.1-.35H20.35q-4.4.1-5.2 5.5v-.1L11 48.15q-.1 2.3 2.2 3.4M23 26h6v3h-9V16h3z"
+    />
+  </svg>
+);
+export default SvgControllerLgOutline;

@@ -28,9 +28,9 @@ DEFAULT_BUTTON_MAP: dict[int, Button] = {
     5: Button.R,  # RB
     6: Button.MINUS,  # Back
     7: Button.PLUS,  # Start
-    8: Button.HOME,  # Guide
-    9: Button.STICK_L,  # Left stick click
-    10: Button.STICK_R,  # Right stick click
+    8: Button.STICK_L,  # Left stick click
+    9: Button.STICK_R,  # Right stick click
+    10: Button.HOME,  # Guide
 }
 
 # Analog trigger axes treated as digital above ``trigger_threshold``.
@@ -43,6 +43,11 @@ DEFAULT_DPAD_HAT: int | None = 0
 class PygameInputThread(threading.Thread):
     """Daemon thread that polls a physical gamepad via pygame and pushes
     ``ControllerState`` snapshots onto a thread-safe command queue.
+
+    ``pump=False`` when running under :class:`ControllerService`, which
+    owns the pygame event pump (hotplug detection) on its own thread.
+    ``start_paused=True`` creates the thread already paused (used when a
+    macro is running and the device is switched underneath it).
     """
 
     def __init__(
@@ -54,6 +59,8 @@ class PygameInputThread(threading.Thread):
         trigger_threshold: float = 0.30,
         button_map: dict[int, Button] | None = None,
         preset: PresetConfig | None = None,
+        pump: bool = True,
+        start_paused: bool = False,
     ):
         super().__init__(name="pygame-input", daemon=True)
         self._queue = command_queue
@@ -61,6 +68,7 @@ class PygameInputThread(threading.Thread):
         self._period = 1.0 / rate_hz
         self._deadzone = deadzone
         self._trigger_threshold = trigger_threshold
+        self._pump = pump
         # A preset, when supplied, is the single source of truth for every
         # mapping. Falling back to per-field defaults preserves backward
         # compatibility for callers that pass ``button_map`` directly.
@@ -77,10 +85,11 @@ class PygameInputThread(threading.Thread):
             self._right_stick = DEFAULT_RIGHT_STICK
             self._dpad_hat = DEFAULT_DPAD_HAT
         self._stop = threading.Event()
-        # Set = running, cleared = paused. 
+        # Set = running, cleared = paused.
         # While paused we keep pumping pygame events but skip enqueuing snapshots
         self._pause = threading.Event()
-        self._pause.set()
+        if not start_paused:
+            self._pause.set()
 
     def stop(self):
         self._stop.set()
@@ -99,7 +108,8 @@ class PygameInputThread(threading.Thread):
     def run(self):
         try:
             pygame_init()
-        except Exception:
+        except Exception as e1:
+            logger.error(f"pygame init failed, falling back to joystick init: {e1}")
             # Headless / no-display environments: fall back to joystick-only.
             try:
                 joystick.init()
@@ -107,6 +117,7 @@ class PygameInputThread(threading.Thread):
                 logger.error(f"pygame init failed: {e}")
                 return
 
+        stick = None
         try:
             count = joystick.get_count()
             if count <= self._device_index:
@@ -122,10 +133,17 @@ class PygameInputThread(threading.Thread):
                 f"buttons, {stick.get_numhats()} hats)"
             )
             self._loop(stick)
-        except Exception as e:
-            logger.exception(f"Pygame input thread crashed: {e}")
+        except Exception:
+            logger.exception("Pygame input thread crashed")
         finally:
-            joystick.quit()
+            # Close only this instance; ``joystick.quit()`` would tear down
+            # the whole module and any other open devices (e.g. probes from
+            # the ControllerService enumeration).
+            if stick is not None:
+                try:
+                    stick.quit()
+                except Exception:
+                    logger.debug("failed to close pygame joystick", exc_info=True)
 
     def _loop(self, stick):
         n_axes = stick.get_numaxes()
@@ -133,10 +151,12 @@ class PygameInputThread(threading.Thread):
         n_hats = stick.get_numhats()
 
         while not self._stop.is_set():
-            # Always pump, even when paused: some SDL drivers accumulate
-            # state internally and can stall if event.pump() stops being
-            # called. We just skip the enqueue when paused.
-            event.pump()
+            # Some SDL drivers accumulate state internally and can stall if
+            # event.pump() stops being called. When a ControllerService owns
+            # the pump we skip it here; otherwise pump defensively even
+            # while paused. We just skip the enqueue when paused.
+            if self._pump:
+                event.pump()
             if not self._pause.is_set():
                 time.sleep(self._period)
                 continue
