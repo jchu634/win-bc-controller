@@ -272,7 +272,7 @@ class InputManager:
     def start_macro_by_name(self, name: str) -> None:
         path = self.macros_dir / f"{name}.json"
         macro = load_macro(path)
-        macro.setdefault("name", name)
+        macro["name"] = name
         self.start_macro(macro)
 
     def cancel_macro(self) -> None:

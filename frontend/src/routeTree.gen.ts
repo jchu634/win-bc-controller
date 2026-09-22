@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ControlsRouteImport } from './routes/controls'
 import { Route as MacrosRouteImport } from './routes/macros'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ControlsRoute = ControlsRouteImport.update({
+  id: '/controls',
+  path: '/controls',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MacrosRoute = MacrosRouteImport.update({
@@ -25,27 +31,31 @@ const MacrosRoute = MacrosRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/controls': typeof ControlsRoute
   '/macros': typeof MacrosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/controls': typeof ControlsRoute
   '/macros': typeof MacrosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/controls': typeof ControlsRoute
   '/macros': typeof MacrosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/macros'
+  fullPaths: '/' | '/controls' | '/macros'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/macros'
-  id: '__root__' | '/' | '/macros'
+  to: '/' | '/controls' | '/macros'
+  id: '__root__' | '/' | '/controls' | '/macros'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ControlsRoute: typeof ControlsRoute
   MacrosRoute: typeof MacrosRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/controls': {
+      id: '/controls'
+      path: '/controls'
+      fullPath: '/controls'
+      preLoaderRoute: typeof ControlsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/macros': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ControlsRoute: ControlsRoute,
   MacrosRoute: MacrosRoute,
 }
 export const routeTree = rootRouteImport

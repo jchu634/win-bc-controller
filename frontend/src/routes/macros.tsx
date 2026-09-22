@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { Effect } from "effect";
 import { ArrowLeftIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
@@ -24,7 +24,12 @@ import { createMacroDocument } from "@/src/lib/macro-document";
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$/;
 
 function MacrosPage() {
-  const [selected, setSelected] = useState<string | null>(null);
+  const hash = useLocation({ select: (location) => location.hash });
+  const selected = hash || null;
+  const navigate = Route.useNavigate();
+  const setSelected = useCallback((name: string | null) => {
+    void navigate({ hash: name ?? "", ignoreBlocker: true });
+  }, [navigate]);
   const [listVersion, setListVersion] = useState(0);
   const [creating, setCreating] = useState(false);
   const [creatingMacro, setCreatingMacro] = useState(false);
@@ -57,7 +62,7 @@ function MacrosPage() {
       if (name === selected) return;
       requestNavigation(() => setSelected(name));
     },
-    [requestNavigation, selected],
+    [requestNavigation, selected, setSelected],
   );
 
   const createMacro = useCallback(async (name: string) => {
@@ -75,7 +80,7 @@ function MacrosPage() {
       setListVersion((v) => v + 1);
       setSelected(name);
     }
-  }, []);
+  }, [setSelected]);
 
   const submitCreate = useCallback(async () => {
     const name = newName.trim();
@@ -133,6 +138,10 @@ function MacrosPage() {
         <MacroEditor
           ref={macroEditor}
           name={selected}
+          onRenamed={(name) => {
+            setSelected(name);
+            setListVersion((v) => v + 1);
+          }}
           onDeleted={() => {
             setSelected(null);
             setListVersion((v) => v + 1);

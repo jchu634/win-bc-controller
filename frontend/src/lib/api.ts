@@ -135,3 +135,9 @@ export const activatePreset = (name: string) =>
     `/api/presets/${encodeURIComponent(name)}/activate`,
     { method: "POST" },
   );
+
+export const renameMacro = (name: string, newName: string) =>
+  requestJson<{ name: string }>(
+    `/api/macros/${encodeURIComponent(name)}`,
+    { method: "PATCH", body: JSON.stringify({ name: newName }) },
+  );

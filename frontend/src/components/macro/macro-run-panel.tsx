@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { Effect } from "effect";
 import {
   FilePlusIcon,
+  MagnifyingGlassIcon,
   PauseIcon,
   PencilSimpleIcon,
   PlayIcon,
@@ -19,6 +20,7 @@ import { Button } from "@/src/components/ui/button";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { useSocket } from "@/src/hooks/use-socket";
 import { listMacros } from "@/src/lib/api";
+import { Input } from "@/src/components/ui/input";
 import { cn } from "cnfast";
 
 export function MacroRunPanel({
@@ -34,6 +36,7 @@ export function MacroRunPanel({
   refreshKey?: number;
 }) {
   const [names, setNames] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { macro, macroActive, isPaused, startByName, pause, resume, cancel } =
@@ -57,6 +60,13 @@ export function MacroRunPanel({
 
   const wsError =
     lastError !== null && lastError.message !== "" ? lastError : null;
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const filteredNames =
+    normalizedSearch === ""
+      ? names
+      : names.filter((name) =>
+          name.toLocaleLowerCase().includes(normalizedSearch),
+        );
 
   return (
     <section className="flex w-full flex-col gap-3 text-left">
@@ -98,8 +108,21 @@ export function MacroRunPanel({
         </div>
       )}
 
-      <div className="flex min-h-28 flex-col rounded-2xl border border-border bg-muted/30 p-2">
-        <div className="mb-2 flex items-center justify-end gap-2">
+      <div className="flex min-h-28 flex-col rounded-md border border-border bg-muted/30 p-2">
+        <div className="mb-2 flex items-center gap-2">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search macros</span>
+            <MagnifyingGlassIcon
+              size={14}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search macros"
+              className="h-8 w-full rounded-md border border-input bg-background pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </label>
           {isPaused ? (
             <Button size="sm" variant="outline" onClick={resume}>
               <PlayIcon size={14} weight="fill" /> Resume
@@ -124,11 +147,11 @@ export function MacroRunPanel({
           </Button>
         </div>
         {loading ? (
-          <div className="flex flex-1 items-center justify-center gap-2 rounded-xl py-6 text-sm text-muted-foreground">
+          <div className="flex flex-1 items-center justify-center gap-2 rounded-md py-6 text-sm text-muted-foreground">
             <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
           </div>
         ) : error !== null ? (
-          <div className="flex flex-1 flex-col items-center gap-2 rounded-xl py-6 text-sm">
+          <div className="flex flex-1 flex-col items-center gap-2 rounded-md py-6 text-sm">
             <WarningIcon size={20} className="text-destructive" />
             <p>{error}</p>
             <Button size="xs" variant="outline" onClick={refresh}>
@@ -136,7 +159,7 @@ export function MacroRunPanel({
             </Button>
           </div>
         ) : names.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-dashed border-border py-6 text-sm text-muted-foreground">
+          <div className="flex flex-1 flex-col items-center gap-2 rounded-md border border-dashed border-border py-6 text-sm text-muted-foreground">
             <p>No macros yet.</p>
             {onCreate !== undefined && (
               <Button size="xs" variant="outline" onClick={onCreate}>
@@ -144,27 +167,39 @@ export function MacroRunPanel({
               </Button>
             )}
           </div>
+        ) : filteredNames.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center rounded-md py-6 text-sm text-muted-foreground">
+            No macros match "{search.trim()}".
+          </div>
         ) : (
-          <ul className="flex max-h-58 flex-col gap-2 overflow-y-auto overscroll-contain scrollbar-gutter-stabl">
-            {names.map((name) => {
+          <ul className="flex max-h-50 flex-col gap-2 overflow-y-auto overscroll-contain scrollbar-gutter-stabl">
+            {filteredNames.map((name) => {
               const isActive = macroActive && macro?.name === name;
               return (
                 <li
                   key={name}
                   className={cn(
-                    "flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm",
-                    isActive && "bg-primary/5",
-                    selected === name && "bg-muted/60",
+                    "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/60 focus-within:bg-muted/60",
+                    selected === name ? "bg-muted/60" : isActive ? "bg-primary/5" : "bg-background",
                   )}
                 >
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-auto min-w-0 flex-1 justify-start px-1 font-mono font-normal"
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 cursor-pointer px-1 text-left font-mono font-normal outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                    aria-pressed={selected === name}
                     onClick={() => onSelect(name)}
                     title={name}
                   >
-                    <span className="truncate">{name}</span>
+                    <span className="block truncate">{name}</span>
+                  </button>
+                  <Button
+                    render={<Link to="/macros" hash={name} />}
+                    size="xs"
+                    variant="outline"
+                    className="relative z-10"
+                    aria-label={`Edit ${name}`}
+                  >
+                    <PencilSimpleIcon size={12} /> Edit
                   </Button>
                   {isActive && isPaused && (
                     <span className="text-xs text-muted-foreground">
@@ -173,6 +208,7 @@ export function MacroRunPanel({
                   )}
                   <Button
                     size="xs"
+                    className="relative z-10"
                     variant={isActive ? "secondary" : "default"}
                     disabled={macroActive && !isActive && !isPaused}
                     onClick={() => startByName(name)}

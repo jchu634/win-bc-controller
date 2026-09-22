@@ -13,6 +13,7 @@ from bumble.l2cap import ClassicChannelSpec
 from bumble.pairing import PairingConfig, PairingDelegate
 from bumble.transport import open_transport
 
+from lib.bluetooth import BluetoothService
 from lib.config import Config, ConfigStore, config_path
 from lib.controller import ControllerTypes
 from lib.input import NEUTRAL, apply_to_protocol, parse_rumble
@@ -270,6 +271,8 @@ def make_l2cap_handler(psm, state):
             state.session_stop.set()
         else:
             logger.warning("HID Control channel closed")
+            state.ctrl_ready.clear()
+            state.session_stop.set()
 
     def handler(channel):
         logger.info(f"Incoming L2CAP connection on PSM 0x{psm:04X}")
@@ -469,10 +472,11 @@ async def main():
 
     # Launch the web server (Starlette + uvicorn) on the same loop so the
     # WS endpoint can submit states directly to ``command_queue``.
+    bluetooth = BluetoothService()
     web_task: asyncio.Task | None = None
     if not args.no_web:
         frontend_dist = project_root / "frontend" / "dist"
-        app = build_app(manager, config_store, frontend_dist)
+        app = build_app(manager, config_store, frontend_dist, bluetooth=bluetooth)
         web_task = asyncio.create_task(serve_web(app, config.web_host, config.web_port))
         logger.info(
             f"Web UI: http://{config.web_host}:{config.web_port} "
@@ -490,8 +494,9 @@ async def main():
         device.classic_enabled = True
         device.public_address = Address(config.bt_address)
         device.class_of_device = DEVICE_CLASS_GAMEPAD
-        device.discoverable = True
-        device.connectable = True
+        # Headless mode has no pairing button. Web sessions start idle.
+        device.discoverable = args.no_web
+        device.connectable = args.no_web
         device.pairing_config_factory = lambda _: PairingConfig(
             sc=True,
             mitm=False,
@@ -524,8 +529,13 @@ async def main():
             )
         )
 
+        bluetooth.attach(device, state, make_l2cap_handler)
+
         logger.info(f"Powered on. address={device.public_address} name={device.name!r}")
-        logger.info("Advertising as Pro Controller. Waiting for a Switch...")
+        if args.no_web:
+            logger.info("Advertising as Pro Controller. Waiting for a Switch...")
+        else:
+            logger.info("Bluetooth ready. Use Start pairing or Reconnect in the web UI.")
 
         # Start input sources now that the radio is up. They are daemon
         # threads; they keep producing states whether or not a session
@@ -547,8 +557,15 @@ async def main():
                         break
 
                 logger.info("Waiting for both HID channels to open...")
-                await state.ctrl_ready.wait()
-                await state.intr_ready.wait()
+
+                async def wait_for_channels():
+                    await state.ctrl_ready.wait()
+                    await state.intr_ready.wait()
+
+                if not await run_until_disconnected(wait_for_channels(), state):
+                    if bluetooth.connection is not None:
+                        await bluetooth.connection.disconnect()
+                    continue
 
                 interrupt_channel = state.intr_channel
                 if interrupt_channel is None:
@@ -561,9 +578,19 @@ async def main():
                 )
 
                 try:
-                    await run_pairing_handshake(
-                        protocol, interrupt_channel, state.incoming
-                    )
+                    if not await run_until_disconnected(
+                        asyncio.wait_for(
+                            run_pairing_handshake(
+                                protocol, interrupt_channel, state.incoming
+                            ),
+                            timeout=30,
+                        ),
+                        state,
+                    ):
+                        continue
+                    bluetooth.connected = True
+                    if not args.no_web:
+                        await bluetooth.set_pairing(False)
                     active_preset = manager.current_preset or preset
                     await run_mainloop(
                         protocol,
@@ -579,6 +606,10 @@ async def main():
                     logger.exception("Session ended with an error")
                 else:
                     logger.info("Session ended cleanly")
+                finally:
+                    bluetooth.connected = False
+                    if bluetooth.connection is not None:
+                        await bluetooth.connection.disconnect()
 
                 logger.info("Re-listening for a new Switch connection...")
         finally:
@@ -591,5 +622,23 @@ async def main():
                     pass
 
 
-bumble.logging.setup_basic_logging("info")
-asyncio.run(main())
+async def run_until_disconnected(awaitable, state):
+    operation = asyncio.ensure_future(awaitable)
+    stopped = asyncio.create_task(state.session_stop.wait())
+    try:
+        done, _ = await asyncio.wait(
+            {operation, stopped}, return_when=asyncio.FIRST_COMPLETED
+        )
+        if stopped in done:
+            return False
+        await operation
+        return True
+    finally:
+        operation.cancel()
+        stopped.cancel()
+        await asyncio.gather(operation, stopped, return_exceptions=True)
+
+
+if __name__ == "__main__":
+    bumble.logging.setup_basic_logging("info")
+    asyncio.run(main())

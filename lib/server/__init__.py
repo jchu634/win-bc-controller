@@ -38,6 +38,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from lib.bluetooth import BluetoothService
 from lib.config import ConfigStore
 from lib.input.macro_source import MacroValidationError, validate_macro
 from lib.input.manager import InputManager, MacroActiveError, state_from_event
@@ -214,6 +215,37 @@ async def _dispatch_ws(text: str, websocket: WebSocket, manager: InputManager) -
 
 
 
+async def bluetooth_control(request: Request) -> Response:
+    service: BluetoothService = request.app.state.bluetooth
+    try:
+        if request.method != "GET":
+            try:
+                body = await request.json()
+            except ValueError:
+                return _error("invalid JSON body")
+            if not isinstance(body, dict):
+                return _error("expected a JSON object")
+            if request.method == "PUT":
+                if not isinstance(body.get("pairing"), bool):
+                    return _error("pairing must be a boolean")
+                await service.set_pairing(body["pairing"])
+            elif request.method == "POST" and body.get("action") == "disconnect":
+                await service.disconnect()
+            else:
+                if not isinstance(body.get("address"), str):
+                    return _error("address must be a saved device address")
+                if request.method == "DELETE":
+                    await service.forget(body["address"])
+                else:
+                    await service.reconnect(body["address"])
+        return JSONResponse(await service.status())
+    except ValueError as e:
+        return _error(str(e), status=409)
+    except Exception as e:
+        logger.exception("Bluetooth operation failed")
+        return _error(f"Bluetooth operation failed: {e}", status=503)
+
+
 async def macros_list(request: Request) -> Response:
     store: JsonDocStore = request.app.state.macro_store
     return JSONResponse({"names": store.list_names()})
@@ -260,6 +292,28 @@ async def macro_put(request: Request) -> Response:
         return _error(str(e))
     logger.info(f"Saved macro '{name}'")
     return JSONResponse({"name": name, "saved": True})
+
+
+async def macro_rename(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    name = request.path_params["name"]
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error("invalid JSON body")
+    new_name = body.get("name") if isinstance(body, dict) else None
+    if not isinstance(new_name, str):
+        return _error("expected {'name': '<new macro name>'}")
+    running = request.app.state.manager.status().get("macro") or {}
+    if running.get("name") == name:
+        return _error(f"macro '{name}' is currently running", status=409)
+    try:
+        new_name = store.rename(name, new_name)
+    except UnsafeNameError as e:
+        return _error(str(e))
+    except DocError as e:
+        return _error(str(e), status=404)
+    return JSONResponse({"name": new_name})
 
 
 async def macro_delete(request: Request) -> Response:
@@ -523,6 +577,7 @@ def build_app(
     config_store: ConfigStore,
     frontend_dist: Path,
     macro_store: JsonDocStore | None = None,
+    bluetooth: BluetoothService | None = None,
 ) -> Starlette:
     """Construct the Starlette application.
 
@@ -535,6 +590,7 @@ def build_app(
         macro_store = JsonDocStore(manager.macros_dir)
 
     routes = [
+        Route("/api/bluetooth", bluetooth_control, methods=["GET", "PUT", "POST", "DELETE"]),
         WebSocketRoute("/ws", macro_ws_endpoint),
         Route("/api/config", config_get, methods=["GET"]),
         Route("/api/config", config_patch, methods=["PATCH"]),
@@ -543,6 +599,7 @@ def build_app(
         Route("/api/macros", macros_list, methods=["GET"]),
         Route("/api/macros/{name}", macro_get, methods=["GET"]),
         Route("/api/macros/{name}", macro_put, methods=["PUT"]),
+        Route("/api/macros/{name}", macro_rename, methods=["PATCH"]),
         Route("/api/macros/{name}", macro_delete, methods=["DELETE"]),
         Route("/api/controllers", controllers_get, methods=["GET"]),
         Route("/api/controllers/active", controller_select, methods=["PUT"]),
@@ -573,6 +630,7 @@ def build_app(
 
     app = Starlette(routes=routes)
     app.state.manager = manager
+    app.state.bluetooth = bluetooth if bluetooth is not None else BluetoothService()
     app.state.config_store = config_store
     app.state.macro_store = macro_store
     return app

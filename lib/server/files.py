@@ -100,6 +100,18 @@ class JsonDocStore:
                 raise DocError(f"'{name}' does not exist")
             path.unlink()
 
+    def rename(self, name: str, new_name: str) -> str:
+        source = doc_path(self.directory, name)
+        new_name = validate_name(new_name)
+        doc_path(self.directory, new_name)
+        target = self.directory / f"{new_name}.json"
+        with self._lock:
+            if not source.is_file():
+                raise DocError(f"'{name}' does not exist")
+            if name != new_name:
+                os.replace(source, target)
+            return new_name
+
     def exists(self, name: str) -> bool:
         try:
             return doc_path(self.directory, name).is_file()

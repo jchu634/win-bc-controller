@@ -7,6 +7,7 @@ import queue
 import shutil
 import threading
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from starlette.testclient import TestClient
@@ -113,6 +114,32 @@ def test_macro_list_get(fx):
         r = c.get("/api/macros/example")
         assert r.status_code == 200
         assert "press" in r.json()["contents"]
+
+
+def test_bluetooth_unavailable_and_validation(fx):
+    with fx.client() as c:
+        status = c.get("/api/bluetooth")
+        assert status.status_code == 200
+        assert status.json()["available"] is False
+        assert status.json()["peers"] == []
+        assert c.put("/api/bluetooth", json={"pairing": "yes"}).status_code == 400
+        assert c.post("/api/bluetooth", json={"address": 12}).status_code == 400
+        assert c.put("/api/bluetooth", json={"pairing": True}).status_code == 503
+
+
+def test_bluetooth_disconnect_and_delete_routes(fx):
+    with fx.client() as c:
+        service = c.app.state.bluetooth
+        service.disconnect = AsyncMock()
+        service.forget = AsyncMock()
+        assert c.post("/api/bluetooth", json={"action": "disconnect"}).status_code == 200
+        service.disconnect.assert_awaited_once()
+        response = c.request("DELETE", "/api/bluetooth", json={"address": "12:34:56:78:90:AB/P"})
+        assert response.status_code == 200
+        service.forget.assert_awaited_once_with("12:34:56:78:90:AB/P")
+        assert c.request("DELETE", "/api/bluetooth", json={}).status_code == 400
+        service.forget.side_effect = ValueError("Select a previously paired device")
+        assert c.request("DELETE", "/api/bluetooth", json={"address": "unknown"}).status_code == 409
 
 
 def test_macro_put_validation(fx):
@@ -355,3 +382,46 @@ def test_ws_threadsafety_of_broadcast(fx):
     thread = threading.Thread(target=fx.manager._emit_status)
     thread.start()
     thread.join()
+
+
+def test_macro_rename(fx):
+    with fx.client() as c:
+        original = c.get("/api/macros/example").json()["contents"]
+        assert c.patch("/api/macros/example", json={"name": "New name"}).status_code == 200
+        assert c.get("/api/macros/example").status_code == 404
+        assert c.get("/api/macros/New name").json()["contents"] == original
+        assert c.patch("/api/macros/New name", json={"name": "NEW NAME"}).status_code == 200
+        assert c.get("/api/macros").json() == {"names": ["NEW NAME"]}
+        assert c.put("/api/macros/other", json={"contents": original}).status_code == 200
+        assert c.patch("/api/macros/NEW NAME", json={"name": "../bad"}).status_code == 400
+        assert c.patch("/api/macros/missing", json={"name": "new"}).status_code == 404
+        assert c.patch("/api/macros/NEW NAME", json={"name": 1}).status_code == 400
+
+
+def test_macro_rename_running_conflict(fx, monkeypatch):
+    monkeypatch.setattr(fx.manager, "status", lambda: {
+        "macro": {"name": "example", "state": "paused"}
+    })
+    with fx.client() as c:
+        assert c.patch("/api/macros/example", json={"name": "new"}).status_code == 409
+        assert c.get("/api/macros/example").status_code == 200
+
+
+def test_renamed_macro_runs_with_file_name(fx, monkeypatch):
+    started = []
+    monkeypatch.setattr(fx.manager, "start_macro", started.append)
+    with fx.client() as c:
+        assert c.patch("/api/macros/example", json={"name": "Renamed"}).status_code == 200
+        fx.manager.start_macro_by_name("Renamed")
+    assert started[0]["name"] == "Renamed"
+
+
+def test_macro_rename_overwrites_destination(fx):
+    with fx.client() as c:
+        original = c.get("/api/macros/example").json()["contents"]
+        replacement = '{"version": 1, "actions": [{"do": "wait", "ms": 10}]}'
+        assert c.put("/api/macros/target", json={"contents": replacement}).status_code == 200
+        assert c.patch("/api/macros/example", json={"name": "target"}).status_code == 200
+        assert c.get("/api/macros/target").json()["contents"] == original
+        assert c.get("/api/macros/example").status_code == 404
+        assert c.get("/api/macros").json() == {"names": ["target"]}

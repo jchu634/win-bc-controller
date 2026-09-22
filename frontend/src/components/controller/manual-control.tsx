@@ -280,7 +280,7 @@ export function ManualControl() {
         <h2 className="text-lg font-semibold">Manual control</h2>
       </div>
 
-      <div className="mx-auto flex max-w-xl flex-col gap-2 rounded-2xl border border-border bg-card p-3 text-card-foreground shadow-sm">
+      <div className="mx-auto flex max-w-xl flex-col gap-2 rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm">
         <div className="grid grid-cols-4 gap-1" aria-label="Triggers">
           {BUTTON_GROUPS.shoulders.map(({ button, ...visual }) => (
             <ControlButton
