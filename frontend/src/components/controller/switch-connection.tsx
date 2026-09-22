@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   PlugsConnectedIcon,
   PlugsIcon,
@@ -171,9 +171,13 @@ type SwitchConnectionState = ReturnType<typeof useSwitchConnection>;
 
 type SwitchConnectionProps = {
   connection: SwitchConnectionState;
+  settingsAction?: ReactNode;
 };
 
-export function SwitchConnection({ connection }: SwitchConnectionProps) {
+export function SwitchConnection({
+  connection,
+  settingsAction,
+}: SwitchConnectionProps) {
   const {
     status,
     selected: address,
@@ -220,13 +224,10 @@ export function SwitchConnection({ connection }: SwitchConnectionProps) {
             : "disconnected";
 
   return (
-    <section
-      className="min-w-0 rounded-md border border-border bg-card p-4"
-      aria-label="Switch connection"
-    >
+    <section aria-label="Connection">
       <div className="flex w-full items-center justify-between gap-2">
         <div className="flex items-center space-x-4">
-          <h2 className="font-semibold">Connection</h2>
+          <h2 className="font-semibold text-lg">Connection</h2>
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger
@@ -251,38 +252,39 @@ export function SwitchConnection({ connection }: SwitchConnectionProps) {
             </Tooltip>
           </div>
         </div>
-        <Button
-          variant="outline"
-          disabled={disabled || (!status?.pairing && active)}
-          onClick={() => void update("PUT", { pairing: !status?.pairing })}
-        >
-          {status?.pairing ? "Stop pairing" : "Start pairing"}
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            disabled={disabled || (!status?.pairing && active)}
+            onClick={() => void update("PUT", { pairing: !status?.pairing })}
+          >
+            {status?.pairing ? "Stop pairing" : "Start pairing"}
+          </Button>
+          {settingsAction}
+        </div>
       </div>
 
       <div className="flex items-end gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm">
-          Controller Configs
-          <Select
-            value={address}
-            disabled={disabled || active || !address}
-            onValueChange={(value) => setSelected(value ?? "")}
+        <Select
+          value={address}
+          disabled={disabled || active || !address}
+          onValueChange={(value) => setSelected(value ?? "")}
+        >
+          <SelectTrigger
+            className="w-full min-w-0"
+            aria-label="Controller config"
           >
-            <SelectTrigger
-              className="w-full min-w-0"
-              aria-label="Controller config"
-            >
-              <SelectValue placeholder="No saved devices" />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {status?.peers.map((peer) => (
-                <SelectItem key={peer} value={peer}>
-                  {peer}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
+            <SelectValue placeholder="No saved devices" />
+          </SelectTrigger>
+          <SelectContent align="start">
+            {status?.peers.map((peer) => (
+              <SelectItem key={peer} value={peer}>
+                {peer}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Dialog>
           <DialogTrigger
             render={

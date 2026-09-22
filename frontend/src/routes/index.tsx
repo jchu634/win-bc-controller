@@ -132,7 +132,7 @@ function App() {
                 className={cn(
                   "h-12 shrink-0 text-lg",
                   switchConnection.status?.state == "disconnected" &&
-                    "bg-green-600 text-white",
+                    "bg-green-700 text-white",
                 )}
               />
             </div>
