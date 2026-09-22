@@ -27,6 +27,7 @@ from typing import Any
 
 from lib.input.presets import PresetConfig, PresetSelection
 from lib.input.pygame_source import PygameInputThread
+from lib.input.state import NEUTRAL
 
 logger = logging.getLogger("switch_pair")
 
@@ -127,7 +128,7 @@ class ControllerService(threading.Thread):
         self._rate_hz = rate_hz
         self._poll_period = 1.0 / poll_hz
         self._mailbox: queue.Queue = queue.Queue()
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         self._pyg_ok = False
         self._controllers: list[ControllerInfo] = []
         self._active_guid: str | None = None
@@ -154,7 +155,7 @@ class ControllerService(threading.Thread):
         return self._captures_paused
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_event.set()
 
     def status(self) -> dict:
         """Snapshot: controllers + active GUID + availability. Blocks
@@ -222,7 +223,7 @@ class ControllerService(threading.Thread):
                     self._do_select(self._controllers[0].index)
                 self._notify()
 
-            while not self._stop.is_set():
+            while not self._stop_event.is_set():
                 deadline = time.monotonic() + self._poll_period
                 while True:
                     remaining = deadline - time.monotonic()
@@ -247,7 +248,7 @@ class ControllerService(threading.Thread):
                     {
                         "controllers": [c.to_dict() for c in self._controllers],
                         "active": self._active_guid,
-                        "available": True,
+                        "available": self._pyg_ok,
                     }
                 )
             elif op == "select":
@@ -259,7 +260,7 @@ class ControllerService(threading.Thread):
                 preset, source = payload
                 fut.set_result(self._do_set_preset(preset, source))
             elif op == "shutdown":
-                self._stop.set()
+                self._stop_event.set()
                 fut.set_result(None)
             else:
                 fut.set_result(ValueError(f"unknown op: {op!r}"))
@@ -269,12 +270,15 @@ class ControllerService(threading.Thread):
 
     def _init_pygame(self) -> bool:
         try:
-            from pygame import joystick
+            from pygame import display, joystick
 
+            # The event queue requires the video subsystem, even without a
+            # window or any controllers connected at startup.
+            display.init()
             joystick.init()
             return True
         except Exception as e:
-            logger.error(f"joystick init failed: {e}")
+            logger.error(f"pygame event/joystick init failed: {e}")
             return False
 
     # -- pygame-side helpers (service thread only) --------------------------
@@ -325,8 +329,11 @@ class ControllerService(threading.Thread):
             interesting = tuple(
                 t for t in (added, removed) if t is not None
             )
-            hotplug_events = pyg_event.get(interesting) if interesting else []
+            # Capture reads device state directly. Drain unused input events
+            # too so they cannot fill the queue and crowd out hotplug events.
+            hotplug_events = [e for e in pyg_event.get() if e.type in interesting]
         except Exception:
+            logger.exception("controller hotplug polling failed")
             return
 
         if not hotplug_events:
@@ -338,6 +345,8 @@ class ControllerService(threading.Thread):
         # controller by its stable GUID.
         previous_guid = self._active_guid
         self._stop_capture()
+        if previous_guid is not None and not self._captures_paused:
+            self._queue.put(NEUTRAL)
         changed = self._refresh_controllers()
         previous = resolve_controller(previous_guid or "", self._controllers)
         if previous is not None:
@@ -358,7 +367,7 @@ class ControllerService(threading.Thread):
             except ValueError:
                 pass
 
-        if changed:
+        if changed or self._active_guid != previous_guid:
             self._notify()
 
     def _do_select(self, ident: str | int) -> ControllerInfo:

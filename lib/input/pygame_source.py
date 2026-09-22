@@ -84,7 +84,7 @@ class PygameInputThread(threading.Thread):
             self._left_stick = DEFAULT_LEFT_STICK
             self._right_stick = DEFAULT_RIGHT_STICK
             self._dpad_hat = DEFAULT_DPAD_HAT
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
         # Set = running, cleared = paused.
         # While paused we keep pumping pygame events but skip enqueuing snapshots
         self._pause = threading.Event()
@@ -92,8 +92,8 @@ class PygameInputThread(threading.Thread):
             self._pause.set()
 
     def stop(self):
-        self._stop.set()
-        # Release a paused thread so it can observe _stop and exit.
+        self._stop_event.set()
+        # Release a paused thread so it can observe the stop event and exit.
         self._pause.set()
 
     def pause(self):
@@ -103,11 +103,12 @@ class PygameInputThread(threading.Thread):
         self._pause.set()
 
     def is_paused(self) -> bool:
-        return not self._pause.is_set() and not self._stop.is_set()
+        return not self._pause.is_set() and not self._stop_event.is_set()
 
     def run(self):
         try:
-            pygame_init()
+            if self._pump:
+                pygame_init()
         except Exception as e1:
             logger.error(f"pygame init failed, falling back to joystick init: {e1}")
             # Headless / no-display environments: fall back to joystick-only.
@@ -150,7 +151,7 @@ class PygameInputThread(threading.Thread):
         n_buttons = stick.get_numbuttons()
         n_hats = stick.get_numhats()
 
-        while not self._stop.is_set():
+        while not self._stop_event.is_set():
             # Some SDL drivers accumulate state internally and can stall if
             # event.pump() stops being called. When a ControllerService owns
             # the pump we skip it here; otherwise pump defensively even
