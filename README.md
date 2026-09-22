@@ -17,6 +17,25 @@ uv run main.py pro_controller.json usb:0 --input controller:0
 
 On the Switch: **Controllers → Change Grip/Order** → select "Pro Controller".
 
+The home page's **Switch connection** panel has **Start pairing** and
+**Stop pairing** buttons. Bluetooth starts idle. Click **Start pairing**
+to make the controller discoverable. Pairing stops after the controller
+handshake completes. With `--no-web`, pairing still starts automatically.
+Stopping pairing cancels an
+unfinished connection and leaves an established session running.
+
+To reconnect, select a saved address under **Paired Switch** and click
+**Reconnect** with the console awake and in range. Saved devices come from
+Bumble's Bluetooth key store for the current controller address. Keep the
+same controller address and key store across restarts. Connection errors
+appear in the panel so you can retry.
+
+The connection panel sits above the capture input button in the sidebar.
+**Disconnect** closes the current connection and keeps the saved pairing.
+**Delete pairing** removes the selected Switch's saved Bluetooth keys from
+this computer, disconnecting that Switch first if active. You must pair
+again before reconnecting it. Other saved devices and app settings remain.
+
 ### Command-line interface
 
 ```
@@ -62,6 +81,11 @@ The Starlette app runs on the same asyncio loop as the controller mainloop and s
 | `/` | GET | Serves the built frontend from `frontend/dist/` (SPA fallback) |
 | `/ws` | WS | Macro command channel (see below) |
 | `/api/config` | GET | Return current config |
+| `/api/bluetooth` | GET | Radio, pairing, connection status and saved peer addresses |
+| `/api/bluetooth` | PUT | Start/stop pairing with `{"pairing": true/false}` |
+| `/api/bluetooth` | POST | Reconnect a saved bond with `{"address": "..."}` |
+| `/api/bluetooth` | POST | Disconnect and stop pairing with `{"action": "disconnect"}` |
+| `/api/bluetooth` | DELETE | Delete the selected saved pairing with `{"address": "..."}` |
 | `/api/config` | PATCH | Merge-update config (persists to disk) |
 | `/api/control-mode` | GET | `{"mode": "manual"\|"macro", "macro": {...}\|null}` |
 | `/api/control-mode` | PUT | Set mode; flipping to `manual` cancels any running macro |
