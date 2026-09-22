@@ -56,16 +56,9 @@ export function ConnectionToggleButton({
     ? disabled || !status?.address || reconnecting
     : disabled || !address;
 
-  // onClick={streaming ? stop : () => void start(selectedInputId)}
-  // variant={streaming ? "default" : "destructive"}
-  // disabled={starting || !selectedInputId}
-  // className={cn(
-  //   "h-12 min-w-0 flex-1 text-lg",
-  //   !streaming && "bg-green-600 text-white",
-  // )}
   return (
     <Button
-      variant={active ? "default" : "destructive"}
+      variant={active ? "destructive" : "default"}
 
       disabled={buttonDisabled}
       onClick={active ? onDisconnect : onReconnect}

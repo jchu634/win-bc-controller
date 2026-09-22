@@ -76,12 +76,9 @@ function App() {
               {permissionGranted ? (
                 <Button
                   onClick={streaming ? stop : () => void start(selectedInputId)}
-                  variant={streaming ? "default" : "destructive"}
+                  variant={streaming ? "destructive" : "secondary"}
                   disabled={starting || !selectedInputId}
-                  className={cn(
-                    "h-12 flex-1 text-lg",
-                    !streaming && "bg-green-600 text-white",
-                  )}
+                  className={cn("h-10 flex-1 text-lg")}
                 >
                   {starting ? (
                     <SpinnerGapIcon
@@ -98,7 +95,7 @@ function App() {
                 </Button>
               ) : (
                 <Button
-                  className="h-12 min-w-0 flex-1"
+                  className="h-10 min-w-0 flex-1"
                   onClick={() => void requestAccess()}
                   disabled={requestingPermission}
                 >
@@ -130,7 +127,7 @@ function App() {
                   })
                 }
                 className={cn(
-                  "h-12 shrink-0 text-lg",
+                  "h-10 shrink-0 text-lg",
                   switchConnection.status?.state == "disconnected" &&
                     "bg-green-700 text-white",
                 )}
