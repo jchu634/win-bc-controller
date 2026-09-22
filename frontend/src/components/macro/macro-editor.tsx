@@ -41,7 +41,7 @@ import {
 } from "@/src/components/json-editor/json-editor";
 import { MacroBlocklyEditor } from "@/src/components/macro/blockly/macro-blockly-editor";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
-import { deleteMacro, getMacro, putMacro } from "@/src/lib/api";
+import { deleteMacro, getMacro, listMacros, putMacro, renameMacro } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";
 import type { MacroDoc, ValidationBody } from "@/src/lib/types";
 import { locatePathLine, positionToLineCol } from "@/src/lib/json-locate";
@@ -61,6 +61,7 @@ function parseErrorMessage(error: unknown): string {
 export type MacroEditorProps = {
   name: string | null;
   onDeleted: (name: string) => void;
+  onRenamed: (name: string) => void;
 };
 
 export type MacroEditorHandle = {
@@ -71,11 +72,18 @@ type SaveResult = "saved" | "failed";
 type EditorMode = "blocks" | "json";
 
 export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
-  function MacroEditor({ name, onDeleted }, ref) {
+  function MacroEditor({ name, onDeleted, onRenamed }, ref) {
     const [value, setValue] = useState("");
+    const [documentKey, setDocumentKey] = useState(name);
     const [savedText, setSavedText] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [renameOpen, setRenameOpen] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [overwriteName, setOverwriteName] = useState<string | null>(null);
+    const [renaming, setRenaming] = useState(false);
+    const [renameError, setRenameError] = useState<string | null>(null);
+    const renamedTo = useRef<string | null>(null);
     const [deleting, setDeleting] = useState(false);
     const [deletePromptOpen, setDeletePromptOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -92,6 +100,10 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       useMacroRunner();
 
     useEffect(() => {
+      if (name !== null && renamedTo.current === name) {
+        renamedTo.current = null;
+        return;
+      }
       if (name === null) {
         setValue("");
         setSavedText(null);
@@ -101,6 +113,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
         setBlockValid(true);
         return;
       }
+      setDocumentKey(name);
       let cancelled = false;
       setLoading(true);
       setError(null);
@@ -282,6 +295,37 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       buildMarkers,
     ]);
 
+    const rename = useCallback(async (confirmedName?: string) => {
+      if (name === null || renaming) return;
+      setRenaming(true);
+      setRenameError(null);
+      try {
+        const targetName = confirmedName ?? newName.trim();
+        if (!/^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$/.test(targetName)) {
+          setRenameError("Letters, digits, spaces, '_' and '-' only; must start with a letter or digit.");
+          return;
+        }
+        if (confirmedName === undefined) {
+          const { names } = await Effect.runPromise(listMacros());
+          const existingName = names.find((candidate) =>
+            candidate !== name && candidate.toLocaleLowerCase() === targetName.toLocaleLowerCase(),
+          );
+          if (existingName !== undefined) {
+            setOverwriteName(existingName);
+            return;
+          }
+        }
+        const result = await Effect.runPromise(renameMacro(name, targetName));
+        renamedTo.current = result.name;
+        setRenameOpen(false);
+        onRenamed(result.name);
+      } catch (cause: unknown) {
+        setRenameError(parseErrorMessage(cause));
+      } finally {
+        setRenaming(false);
+      }
+    }, [name, newName, onRenamed, renaming]);
+
     const run = useCallback(() => {
       if (name === null) return;
       if (editorMode === "blocks" && !blockValid) {
@@ -291,7 +335,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
       const result = parseMacroDocument(value);
       switch (result.kind) {
         case "valid":
-          startInline(result.document);
+          startInline({ ...result.document, name });
           setMarkers([]);
           setError(null);
           return;
@@ -439,6 +483,19 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
           <h2 className="font-mono text-lg font-semibold text-foreground">
             {name}.json
           </h2>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={loading || saving || deleting || renaming || savedText === null}
+            onClick={() => {
+              setNewName(name);
+              setOverwriteName(null);
+              setRenameError(null);
+              setRenameOpen(true);
+            }}
+          >
+            Rename
+          </Button>
           {dirty && (
             <span className="rounded-4xl bg-amber-500/15 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400">
               unsaved
@@ -594,7 +651,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
             {blockDocument !== null && (
               <div className={editorMode === "blocks" ? undefined : "hidden"}>
                 <MacroBlocklyEditor
-                  key={`${name}:${blockRevision}`}
+                  key={blockRevision}
                   document={blockDocument}
                   onChange={handleBlockChange}
                   onDirty={() => setBlockDirty(true)}
@@ -606,7 +663,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
               <JsonEditor
                 ref={editorHandle}
                 fileName={`${name}.json`}
-                cacheKey={`macro:${name}`}
+                cacheKey={`macro:${documentKey}`}
                 value={value}
                 onChange={setValue}
                 editing
@@ -616,6 +673,51 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
             </div>
           </>
         )}
+
+        <Dialog open={renameOpen} onOpenChange={(open) => {
+          if (!renaming) setRenameOpen(open);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{overwriteName === null ? "Rename macro" : "Overwrite macro?"}</DialogTitle>
+              <DialogDescription>
+                {overwriteName === null
+                  ? "Choose a new file name. Unsaved edits will be kept."
+                  : `A macro named "${overwriteName}" already exists. Do you want to overwrite it with "${name}"?`}
+              </DialogDescription>
+            </DialogHeader>
+            {overwriteName === null && <input
+              autoFocus
+              aria-label="Macro name"
+              value={newName}
+              maxLength={64}
+              disabled={renaming}
+              onChange={(event) => setNewName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && newName.trim() && newName.trim() !== name) void rename();
+              }}
+              className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+            />}
+            {renameError !== null && <p role="alert" className="text-sm text-destructive">{renameError}</p>}
+            <DialogFooter>
+              <Button variant="outline" disabled={renaming} onClick={() => {
+                if (overwriteName === null) setRenameOpen(false);
+                else {
+                  setOverwriteName(null);
+                  setRenameError(null);
+                }
+              }}>Cancel</Button>
+              <Button
+                variant={overwriteName === null ? "default" : "destructive"}
+                disabled={renaming || !newName.trim() || newName.trim() === name}
+                onClick={() => void rename(overwriteName ?? undefined)}
+              >
+                {renaming && <SpinnerGapIcon size={14} className="animate-spin" />}
+                {overwriteName === null ? "Rename" : "Overwrite macro"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog
           open={deletePromptOpen}

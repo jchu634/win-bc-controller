@@ -382,3 +382,46 @@ def test_ws_threadsafety_of_broadcast(fx):
     thread = threading.Thread(target=fx.manager._emit_status)
     thread.start()
     thread.join()
+
+
+def test_macro_rename(fx):
+    with fx.client() as c:
+        original = c.get("/api/macros/example").json()["contents"]
+        assert c.patch("/api/macros/example", json={"name": "New name"}).status_code == 200
+        assert c.get("/api/macros/example").status_code == 404
+        assert c.get("/api/macros/New name").json()["contents"] == original
+        assert c.patch("/api/macros/New name", json={"name": "NEW NAME"}).status_code == 200
+        assert c.get("/api/macros").json() == {"names": ["NEW NAME"]}
+        assert c.put("/api/macros/other", json={"contents": original}).status_code == 200
+        assert c.patch("/api/macros/NEW NAME", json={"name": "../bad"}).status_code == 400
+        assert c.patch("/api/macros/missing", json={"name": "new"}).status_code == 404
+        assert c.patch("/api/macros/NEW NAME", json={"name": 1}).status_code == 400
+
+
+def test_macro_rename_running_conflict(fx, monkeypatch):
+    monkeypatch.setattr(fx.manager, "status", lambda: {
+        "macro": {"name": "example", "state": "paused"}
+    })
+    with fx.client() as c:
+        assert c.patch("/api/macros/example", json={"name": "new"}).status_code == 409
+        assert c.get("/api/macros/example").status_code == 200
+
+
+def test_renamed_macro_runs_with_file_name(fx, monkeypatch):
+    started = []
+    monkeypatch.setattr(fx.manager, "start_macro", started.append)
+    with fx.client() as c:
+        assert c.patch("/api/macros/example", json={"name": "Renamed"}).status_code == 200
+        fx.manager.start_macro_by_name("Renamed")
+    assert started[0]["name"] == "Renamed"
+
+
+def test_macro_rename_overwrites_destination(fx):
+    with fx.client() as c:
+        original = c.get("/api/macros/example").json()["contents"]
+        replacement = '{"version": 1, "actions": [{"do": "wait", "ms": 10}]}'
+        assert c.put("/api/macros/target", json={"contents": replacement}).status_code == 200
+        assert c.patch("/api/macros/example", json={"name": "target"}).status_code == 200
+        assert c.get("/api/macros/target").json()["contents"] == original
+        assert c.get("/api/macros/example").status_code == 404
+        assert c.get("/api/macros").json() == {"names": ["target"]}

@@ -294,6 +294,28 @@ async def macro_put(request: Request) -> Response:
     return JSONResponse({"name": name, "saved": True})
 
 
+async def macro_rename(request: Request) -> Response:
+    store: JsonDocStore = request.app.state.macro_store
+    name = request.path_params["name"]
+    try:
+        body = await request.json()
+    except ValueError:
+        return _error("invalid JSON body")
+    new_name = body.get("name") if isinstance(body, dict) else None
+    if not isinstance(new_name, str):
+        return _error("expected {'name': '<new macro name>'}")
+    running = request.app.state.manager.status().get("macro") or {}
+    if running.get("name") == name:
+        return _error(f"macro '{name}' is currently running", status=409)
+    try:
+        new_name = store.rename(name, new_name)
+    except UnsafeNameError as e:
+        return _error(str(e))
+    except DocError as e:
+        return _error(str(e), status=404)
+    return JSONResponse({"name": new_name})
+
+
 async def macro_delete(request: Request) -> Response:
     store: JsonDocStore = request.app.state.macro_store
     manager: InputManager = request.app.state.manager
@@ -577,6 +599,7 @@ def build_app(
         Route("/api/macros", macros_list, methods=["GET"]),
         Route("/api/macros/{name}", macro_get, methods=["GET"]),
         Route("/api/macros/{name}", macro_put, methods=["PUT"]),
+        Route("/api/macros/{name}", macro_rename, methods=["PATCH"]),
         Route("/api/macros/{name}", macro_delete, methods=["DELETE"]),
         Route("/api/controllers", controllers_get, methods=["GET"]),
         Route("/api/controllers/active", controller_select, methods=["PUT"]),

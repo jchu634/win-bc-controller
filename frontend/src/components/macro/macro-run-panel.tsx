@@ -179,19 +179,27 @@ export function MacroRunPanel({
                 <li
                   key={name}
                   className={cn(
-                    "flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm",
-                    isActive && "bg-primary/5",
-                    selected === name && "bg-muted/60",
+                    "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/60 focus-within:bg-muted/60",
+                    selected === name ? "bg-muted/60" : isActive ? "bg-primary/5" : "bg-background",
                   )}
                 >
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-auto min-w-0 flex-1 justify-start px-1 font-mono font-normal"
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 cursor-pointer px-1 text-left font-mono font-normal outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                    aria-pressed={selected === name}
                     onClick={() => onSelect(name)}
                     title={name}
                   >
-                    <span className="truncate">{name}</span>
+                    <span className="block truncate">{name}</span>
+                  </button>
+                  <Button
+                    render={<Link to="/macros" hash={name} />}
+                    size="xs"
+                    variant="outline"
+                    className="relative z-10"
+                    aria-label={`Edit ${name}`}
+                  >
+                    <PencilSimpleIcon size={12} /> Edit
                   </Button>
                   {isActive && isPaused && (
                     <span className="text-xs text-muted-foreground">
@@ -200,6 +208,7 @@ export function MacroRunPanel({
                   )}
                   <Button
                     size="xs"
+                    className="relative z-10"
                     variant={isActive ? "secondary" : "default"}
                     disabled={macroActive && !isActive && !isPaused}
                     onClick={() => startByName(name)}
