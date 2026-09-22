@@ -20,6 +20,7 @@ import { Button } from "@/src/components/ui/button";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { useSocket } from "@/src/hooks/use-socket";
 import { listMacros } from "@/src/lib/api";
+import { Input } from "@/src/components/ui/input";
 import { cn } from "cnfast";
 
 export function MacroRunPanel({
@@ -115,8 +116,7 @@ export function MacroRunPanel({
               size={14}
               className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
             />
-            <input
-              type="search"
+            <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search macros"
