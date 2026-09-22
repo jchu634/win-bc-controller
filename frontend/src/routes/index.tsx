@@ -19,7 +19,6 @@ import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/ui/settings-dialog";
 import { useSelector } from "@tanstack/react-store";
 import { generalSettingsStore } from "@/src/stores/general-settings";
-import cn from "cnfast";
 import "@/src/App.css";
 
 function App() {
@@ -67,18 +66,18 @@ function App() {
           </div>
         </main>
       ) : (
-        <div className="flex w-full gap-4 ">
+        <div className="flex w-full gap-4">
           <CapturePreview />
 
-          <div className="flex flex-col space-y-4 max-w-1/3">
+          <div className="flex flex-col space-y-4 max-w-1/3 pt-8">
             <SwitchConnection connection={switchConnection} />
             <div className="flex gap-2">
               {permissionGranted ? (
                 <Button
                   onClick={streaming ? stop : () => void start(selectedInputId)}
-                  variant={streaming ? "destructive" : "secondary"}
+                  variant={streaming ? "destructive" : "tertiary"}
                   disabled={starting || !selectedInputId}
-                  className={cn("h-10 flex-1 text-lg")}
+                  className="h-10 flex-1 text-lg"
                 >
                   {starting ? (
                     <SpinnerGapIcon
@@ -126,11 +125,7 @@ function App() {
                     action: "disconnect",
                   })
                 }
-                className={cn(
-                  "h-10 shrink-0 text-lg",
-                  switchConnection.status?.state == "disconnected" &&
-                    "bg-green-700 text-white",
-                )}
+                className="h-10 shrink-0 text-lg"
               />
             </div>
             <MacroRunPanel

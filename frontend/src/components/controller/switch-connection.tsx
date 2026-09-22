@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
   PlugsConnectedIcon,
   PlugsIcon,
@@ -58,7 +58,7 @@ export function ConnectionToggleButton({
 
   return (
     <Button
-      variant={active ? "destructive" : "default"}
+      variant={active ? "destructive" : "tertiary"}
 
       disabled={buttonDisabled}
       onClick={active ? onDisconnect : onReconnect}
@@ -164,13 +164,9 @@ type SwitchConnectionState = ReturnType<typeof useSwitchConnection>;
 
 type SwitchConnectionProps = {
   connection: SwitchConnectionState;
-  settingsAction?: ReactNode;
 };
 
-export function SwitchConnection({
-  connection,
-  settingsAction,
-}: SwitchConnectionProps) {
+export function SwitchConnection({ connection }: SwitchConnectionProps) {
   const {
     status,
     selected: address,
@@ -245,17 +241,6 @@ export function SwitchConnection({
             </Tooltip>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            disabled={disabled || (!status?.pairing && active)}
-            onClick={() => void update("PUT", { pairing: !status?.pairing })}
-          >
-            {status?.pairing ? "Stop pairing" : "Start pairing"}
-          </Button>
-          {settingsAction}
-        </div>
       </div>
 
       <div className="flex items-end gap-2">
@@ -278,6 +263,13 @@ export function SwitchConnection({
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="default"
+          disabled={disabled || (!status?.pairing && active)}
+          onClick={() => void update("PUT", { pairing: !status?.pairing })}
+        >
+          {status?.pairing ? "Stop pairing" : "Start pairing"}
+        </Button>
         <Dialog>
           <DialogTrigger
             render={
@@ -291,7 +283,7 @@ export function SwitchConnection({
               />
             }
           >
-            <TrashIcon />
+            <TrashIcon weight="fill" />
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

@@ -169,7 +169,9 @@ function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
           disabled={disabled || requestingPermission}
           onClick={() => void requestAccess()}
         >
-          {requestingPermission ? "Requesting camera access..." : "Request camera access"}
+          {requestingPermission
+            ? "Requesting camera access..."
+            : "Request camera access"}
         </Button>
       )}
       <div className="flex w-full flex-wrap items-center gap-2">
@@ -225,9 +227,9 @@ function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
             {disabled
               ? "Capture controls are disabled while the controls-only homepage is enabled."
               : visible
-              ? (error ??
-                (starting ? "Starting preview..." : "Preview unavailable"))
-              : "Preview disabled"}
+                ? (error ??
+                  (starting ? "Starting preview..." : "Preview unavailable"))
+                : "Preview disabled"}
           </div>
         )}
       </div>
@@ -246,7 +248,8 @@ export function SettingsDialog() {
   return (
     <Dialog>
       <DialogTrigger>
-        <Button size="icon" className="bg-muted-foreground fixed top-5 right-5">
+        <Button className="bg-muted-foreground fixed top-5 right-4">
+          General Settings
           <GearSixIcon weight="fill" className="size-5" />
         </Button>
       </DialogTrigger>
@@ -274,9 +277,15 @@ export function SettingsDialog() {
           >
             <label className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-border p-4">
               <span>
-                <span className="block font-semibold">Controls-only homepage</span>
-                <span id="controls-only-description" className="block text-sm text-muted-foreground">
-                  Focus on macros and manual control without the capture card preview.
+                <span className="block font-semibold">
+                  Controls-only homepage
+                </span>
+                <span
+                  id="controls-only-description"
+                  className="block text-sm text-muted-foreground"
+                >
+                  Focus on macros and manual control without the capture card
+                  preview.
                 </span>
               </span>
               <input
