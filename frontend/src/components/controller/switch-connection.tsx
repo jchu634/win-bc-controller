@@ -72,7 +72,7 @@ export function ConnectionToggleButton({
         <PlugsConnectedIcon weight="fill" />
       )}
       {busy
-        ? "Working…"
+        ? "Connecting…"
         : active
           ? "Disconnect Controller"
           : "Reconnect Controller"}

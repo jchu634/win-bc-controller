@@ -40,6 +40,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
+import { Checkbox } from "@/src/components/ui/checkbox";
+import { Separator } from "@/src/components/ui/separator";
+import { Label } from "@/src/components/ui/label";
 
 const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   general: "General settings.",
@@ -238,15 +241,32 @@ function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
 }
 
 export function SettingsDialog() {
+  const [open, setOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("general");
   const controlsOnlyHomepage = useSelector(
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
+  const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] = useState(
+    controlsOnlyHomepage,
+  );
   const { stop, starting } = useCaptureControls();
 
   return (
-    <Dialog>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (nextOpen) {
+          setDraftControlsOnlyHomepage(controlsOnlyHomepage);
+          return;
+        }
+
+        if (draftControlsOnlyHomepage === controlsOnlyHomepage) return;
+        if (draftControlsOnlyHomepage) stop();
+        setControlsOnlyHomepage(draftControlsOnlyHomepage);
+      }}
+    >
       <DialogTrigger>
         <Button className="bg-muted-foreground fixed top-5 right-4">
           General Settings
@@ -272,41 +292,37 @@ export function SettingsDialog() {
             <TabsTrigger value="controller">Controller</TabsTrigger>
           </TabsList>
           <TabsContent
-            className="min-w-0 overflow-y-auto p-2 space-y-2"
+            className="min-w-0 space-y-4 overflow-y-auto p-2"
             value="general"
           >
-            <label className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-border p-4">
-              <span>
-                <span className="block font-semibold">
+            <div className="flex flex-col gap-3">
+              <h2 className="text-lg font-semibold text-foreground">
+                Current Video Capture Device
+              </h2>
+              <CaptureDeviceSettings disabled={draftControlsOnlyHomepage} />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="controls-only-homepage">
                   Controls-only homepage
-                </span>
-                <span
+                </Label>
+                <p
                   id="controls-only-description"
-                  className="block text-sm text-muted-foreground"
+                  className="text-sm text-muted-foreground"
                 >
                   Focus on macros and manual control without the capture card
                   preview.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                role="switch"
-                className="size-5 shrink-0 accent-primary"
+                </p>
+              </div>
+              <Checkbox
+                id="controls-only-homepage"
                 aria-describedby="controls-only-description"
-                checked={controlsOnlyHomepage}
+                checked={draftControlsOnlyHomepage}
                 disabled={starting}
-                onChange={(event) => {
-                  const enabled = event.target.checked;
-                  if (enabled) stop();
-                  setControlsOnlyHomepage(enabled);
-                }}
+                onCheckedChange={setDraftControlsOnlyHomepage}
               />
-            </label>
-            <h2 className="text-lg font-semibold text-foreground">
-              Current Video Capture Device
-            </h2>
-
-            <CaptureDeviceSettings disabled={controlsOnlyHomepage} />
+            </div>
           </TabsContent>
           <TabsContent
             className="min-h-0 min-w-0 overflow-y-auto p-2"
