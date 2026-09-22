@@ -124,9 +124,7 @@ async def run_pairing_handshake(protocol, interrupt_channel, incoming):
             and protocol.vibration_enabled
             and protocol.player_number
         ):
-            logger.info(
-                f"Handshake complete (player {protocol.player_number})"
-            )
+            logger.info(f"Handshake complete (player {protocol.player_number})")
             return
 
         # Before the Switch has spoken, poll slowly to avoid flooding;
@@ -162,7 +160,10 @@ async def run_mainloop(
     duration_start = perf_counter()
 
     while not stop_event.is_set():
-        if not interrupt_channel or interrupt_channel.state != interrupt_channel.State.OPEN:
+        if (
+            not interrupt_channel
+            or interrupt_channel.state != interrupt_channel.State.OPEN
+        ):
             logger.warning("Interrupt channel no longer open")
             return
 
@@ -423,9 +424,7 @@ async def main():
     try:
         preset = load_preset(config.preset)
     except (FileNotFoundError, ValueError, TypeError) as e:
-        logger.warning(
-            f"Could not load preset {config.preset!r}: {e}; using defaults"
-        )
+        logger.warning(f"Could not load preset {config.preset!r}: {e}; using defaults")
         preset = PresetConfig.default()
     manager.set_preset(preset, config.preset)
     logger.info(
@@ -441,15 +440,18 @@ async def main():
     if controllers_enabled:
         initial_ident = config.controller_guid or controller_index
         if args.preset is not None:
+
             def preset_resolver(_guid: str, _name: str) -> PresetSelection:
                 return PresetSelection(args.preset, preset)
         else:
+
             def preset_resolver(guid: str, name: str) -> PresetSelection:
                 return resolve_controller_preset(
                     guid,
                     name,
                     config_store.config.controller_presets,
                 )
+
         controller_service = ControllerService(
             command_queue,
             preset=preset,
@@ -471,9 +473,7 @@ async def main():
     if not args.no_web:
         frontend_dist = project_root / "frontend" / "dist"
         app = build_app(manager, config_store, frontend_dist)
-        web_task = asyncio.create_task(
-            serve_web(app, config.web_host, config.web_port)
-        )
+        web_task = asyncio.create_task(serve_web(app, config.web_host, config.web_port))
         logger.info(
             f"Web UI: http://{config.web_host}:{config.web_port} "
             f"(ws://{config.web_host}:{config.web_port}/ws)"
@@ -524,9 +524,7 @@ async def main():
             )
         )
 
-        logger.info(
-            f"Powered on. address={device.public_address} name={device.name!r}"
-        )
+        logger.info(f"Powered on. address={device.public_address} name={device.name!r}")
         logger.info("Advertising as Pro Controller. Waiting for a Switch...")
 
         # Start input sources now that the radio is up. They are daemon
