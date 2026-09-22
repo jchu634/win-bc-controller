@@ -17,10 +17,10 @@
     "10": "HOME"
   },
   "triggers": {
-    "2": "ZL",
+    "4": "ZL",
     "5": "ZR"
   },
   "left_stick": { "x_axis": 0, "y_axis": 1 },
-  "right_stick": { "x_axis": 3, "y_axis": 4 },
+  "right_stick": { "x_axis": 2, "y_axis": 3 },
   "dpad": { "hat": 0 }
 }
