@@ -7,6 +7,7 @@ import queue
 import shutil
 import threading
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from starlette.testclient import TestClient
@@ -113,6 +114,32 @@ def test_macro_list_get(fx):
         r = c.get("/api/macros/example")
         assert r.status_code == 200
         assert "press" in r.json()["contents"]
+
+
+def test_bluetooth_unavailable_and_validation(fx):
+    with fx.client() as c:
+        status = c.get("/api/bluetooth")
+        assert status.status_code == 200
+        assert status.json()["available"] is False
+        assert status.json()["peers"] == []
+        assert c.put("/api/bluetooth", json={"pairing": "yes"}).status_code == 400
+        assert c.post("/api/bluetooth", json={"address": 12}).status_code == 400
+        assert c.put("/api/bluetooth", json={"pairing": True}).status_code == 503
+
+
+def test_bluetooth_disconnect_and_delete_routes(fx):
+    with fx.client() as c:
+        service = c.app.state.bluetooth
+        service.disconnect = AsyncMock()
+        service.forget = AsyncMock()
+        assert c.post("/api/bluetooth", json={"action": "disconnect"}).status_code == 200
+        service.disconnect.assert_awaited_once()
+        response = c.request("DELETE", "/api/bluetooth", json={"address": "12:34:56:78:90:AB/P"})
+        assert response.status_code == 200
+        service.forget.assert_awaited_once_with("12:34:56:78:90:AB/P")
+        assert c.request("DELETE", "/api/bluetooth", json={}).status_code == 400
+        service.forget.side_effect = ValueError("Select a previously paired device")
+        assert c.request("DELETE", "/api/bluetooth", json={"address": "unknown"}).status_code == 409
 
 
 def test_macro_put_validation(fx):
