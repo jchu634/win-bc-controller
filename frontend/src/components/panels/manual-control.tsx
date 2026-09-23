@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import {
   GenericButtonCircle,
+  GenericButtonCircleFill,
   GenericButtonCircleOutline,
   GenericButtonSquare,
   GenericButtonSquareOutline,
@@ -14,19 +15,13 @@ import {
   GenericStickRight,
   GenericStickUp,
 } from "@/src/assets/input-prompts/generic";
-import {
-  XboxDpadDown,
-  XboxDpadDownOutline,
-  XboxDpadLeft,
-  XboxDpadLeftOutline,
-  XboxDpadRight,
-  XboxDpadRightOutline,
-  XboxDpadUp,
-  XboxDpadUpOutline,
-} from "@/src/assets/input-prompts/xbox";
+import { Dpad, type DpadDirection } from "@/src/components/ui/dpad";
+import { AnalogStick } from "@/src/components/ui/analog-stick";
+import type { StickPosition } from "@/src/lib/analog-stick";
 import { useSocket } from "@/src/hooks/use-socket";
 import type { ButtonName } from "@/src/lib/types";
 import { Button } from "@/src/components/ui/button";
+import { Switch } from "@/src/components/ui/switch";
 import { cn } from "cnfast";
 
 type ControlButtonProps = {
@@ -49,6 +44,36 @@ type ButtonVisual = { button: ButtonName } & Pick<
 type StickSide = "left" | "right";
 type StickDirection = "up" | "down" | "left" | "right";
 type StickInput = `${StickSide}-${StickDirection}`;
+type StickMode = "drag" | "buttons";
+const STICK_MODES_KEY = "manual-control-stick-modes";
+
+function loadStickMode(): StickMode {
+  try {
+    const saved: unknown = JSON.parse(
+      localStorage.getItem(STICK_MODES_KEY) ?? "null",
+    );
+    if (saved === "drag" || saved === "buttons") return saved;
+    if (typeof saved !== "object" || saved === null) return "drag";
+    return "left" in saved && saved.left === "buttons" ||
+      "right" in saved && saved.right === "buttons"
+      ? "buttons"
+      : "drag";
+  } catch {
+    return "drag";
+  }
+}
+
+const STICK_BUTTONS = {
+  left: "STICK_L",
+  right: "STICK_R",
+} satisfies Record<StickSide, ButtonName>;
+
+const DPAD_BUTTONS = {
+  up: "UP",
+  down: "DOWN",
+  left: "LEFT",
+  right: "RIGHT",
+} satisfies Record<DpadDirection, ButtonName>;
 
 function stickPosition(
   side: StickSide,
@@ -140,8 +165,10 @@ const BUTTON_GROUPS = {
     {
       button: "ZL",
       label: "ZL",
-      icon: <GenericButtonTriggerBOutline className="size-full" />,
-      pressedIcon: <GenericButtonTriggerB className="size-full" />,
+      icon: (
+        <GenericButtonTriggerBOutline className="size-full -scale-x-100 translate-x-2px" />
+      ),
+      pressedIcon: <GenericButtonTriggerB className="size-full -scale-x-100" />,
     },
     {
       button: "L",
@@ -158,8 +185,10 @@ const BUTTON_GROUPS = {
     {
       button: "ZR",
       label: "ZR",
-      icon: <GenericButtonTriggerBOutline className="size-full -scale-x-100" />,
-      pressedIcon: <GenericButtonTriggerB className="size-full -scale-x-100" />,
+      icon: (
+        <GenericButtonTriggerBOutline className="size-full translate-x-2px" />
+      ),
+      pressedIcon: <GenericButtonTriggerB className="size-full " />,
     },
   ],
   system: [
@@ -184,6 +213,12 @@ export function ManualControl() {
   const { connection, send, status } = useSocket();
   const heldButtons = useRef<Set<ButtonName>>(new Set());
   const heldSticks = useRef<Set<StickInput>>(new Set());
+  const analogSticks = useRef<Record<StickSide, StickPosition | null>>({
+    left: null,
+    right: null,
+  });
+  const [analogPositions, setAnalogPositions] = useState(analogSticks.current);
+  const [stickMode, setStickMode] = useState(loadStickMode);
   const [pressedButtons, setPressedButtons] = useState<Set<ButtonName>>(
     () => new Set(),
   );
@@ -192,19 +227,38 @@ export function ManualControl() {
   );
   const disabled = connection !== "open" || status?.mode === "macro";
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STICK_MODES_KEY, JSON.stringify(stickMode));
+    } catch {
+      // Controls still work when browser storage is unavailable.
+    }
+  }, [stickMode]);
+
   const sendState = useCallback(() => {
     send({
       type: "state",
       buttons: [...heldButtons.current],
-      left: stickPosition("left", heldSticks.current),
-      right: stickPosition("right", heldSticks.current),
+      left:
+        analogSticks.current.left ?? stickPosition("left", heldSticks.current),
+      right:
+        analogSticks.current.right ??
+        stickPosition("right", heldSticks.current),
     });
   }, [send]);
 
   const releaseAll = useCallback(() => {
-    if (heldButtons.current.size === 0 && heldSticks.current.size === 0) return;
+    if (
+      heldButtons.current.size === 0 &&
+      heldSticks.current.size === 0 &&
+      analogSticks.current.left === null &&
+      analogSticks.current.right === null
+    )
+      return;
     heldButtons.current = new Set();
     heldSticks.current = new Set();
+    analogSticks.current = { left: null, right: null };
+    setAnalogPositions(analogSticks.current);
     setPressedButtons(new Set());
     setPressedSticks(new Set());
     sendState();
@@ -252,6 +306,54 @@ export function ManualControl() {
     onRelease: () => release(button),
   });
 
+  const changeAnalogStick = useCallback(
+    (side: StickSide, position: StickPosition | null) => {
+      if (disabled && position !== null) return;
+      const previous = analogSticks.current[side];
+      if (
+        previous === position ||
+        (previous !== null &&
+          position !== null &&
+          previous[0] === position[0] &&
+          previous[1] === position[1])
+      )
+        return;
+      analogSticks.current = { ...analogSticks.current, [side]: position };
+      setAnalogPositions(analogSticks.current);
+      sendState();
+    },
+    [disabled, sendState],
+  );
+
+  const changeLeftStick = useCallback(
+    (position: StickPosition | null) => {
+      changeAnalogStick("left", position);
+    },
+    [changeAnalogStick],
+  );
+
+  const changeRightStick = useCallback(
+    (position: StickPosition | null) => {
+      changeAnalogStick("right", position);
+    },
+    [changeAnalogStick],
+  );
+
+  const changeStickMode = (mode: StickMode) => {
+    if (stickMode === mode) return;
+    heldSticks.current = new Set();
+    setPressedSticks(new Set());
+    analogSticks.current = { left: null, right: null };
+    setAnalogPositions(analogSticks.current);
+    const nextButtons = new Set(heldButtons.current);
+    nextButtons.delete(STICK_BUTTONS.left);
+    nextButtons.delete(STICK_BUTTONS.right);
+    heldButtons.current = nextButtons;
+    setPressedButtons(nextButtons);
+    sendState();
+    setStickMode(mode);
+  };
+
   const stickControlProps = (side: StickSide, direction: StickDirection) => {
     const input: StickInput = `${side}-${direction}`;
     return {
@@ -294,18 +396,12 @@ export function ManualControl() {
         </div>
 
         <div className="flex w-full justify-between items-center gap-3">
-          <div
-            className="grid grid-cols-2 place-items-center size-28 gap-0"
-            aria-label="Directional pad"
-          >
-            {/* prettier-ignore */}
-            <>
-              <ControlButton {...controlProps("UP")} label="" accessibleLabel="D-pad up" icon={<XboxDpadUpOutline className="size-full" />} pressedIcon={<XboxDpadUp className="size-full" />} />
-              <ControlButton {...controlProps("DOWN")} label="" accessibleLabel="D-pad down" icon={<XboxDpadDownOutline className="size-full" />} pressedIcon={<XboxDpadDown className="size-full" />} />
-              <ControlButton {...controlProps("LEFT")} label="" accessibleLabel="D-pad left" icon={<XboxDpadLeftOutline className="size-full" />} pressedIcon={<XboxDpadLeft className="size-full" />} />
-              <ControlButton {...controlProps("RIGHT")} label="" accessibleLabel="D-pad right" icon={<XboxDpadRightOutline className="size-full" />} pressedIcon={<XboxDpadRight className="size-full" />} />
-            </>
-          </div>
+          <Dpad
+            className="size-28"
+            disabled={disabled}
+            onDirectionPress={(direction) => press(DPAD_BUTTONS[direction])}
+            onDirectionRelease={(direction) => release(DPAD_BUTTONS[direction])}
+          />
 
           <div className="flex flex-row gap-0">
             {BUTTON_GROUPS.system.map(({ button, ...visual }) => (
@@ -332,26 +428,79 @@ export function ManualControl() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 px-6" aria-label="Analog sticks">
+        <div
+          className="grid grid-cols-2 justify-items-center gap-4 border-t border-border pt-4"
+          aria-label="Analog sticks"
+        >
           {(["left", "right"] satisfies StickSide[]).map((side) => (
-            // biome-ignore format: preserving custom grid layout
-
-            <div
-              key={side}
-              className="grid grid-cols-3 grid-rows-3 place-items-center"
-            >
-              {/* prettier-ignore */}
-              <>
-                <ControlButton {...stickControlProps(side, "up")} label="" accessibleLabel={`${side} stick up`} icon={<GenericStickUp className="size-full" />} className="col-start-2" />
-                <ControlButton {...stickControlProps(side, "left")} label="" accessibleLabel={`${side} stick left`} icon={<GenericStickLeft className="size-full" />} className="row-start-2" />
-                <div className="size-10" />
-                <div className="size-10" />
-                <ControlButton {...stickControlProps(side, "right")} label="" accessibleLabel={`${side} stick right`} icon={<GenericStickRight className="size-full" />} />
-                <ControlButton {...stickControlProps(side, "down")} label="" accessibleLabel={`${side} stick down`} icon={<GenericStickDown className="size-full" />} className="col-start-2" />
-              </>
+            <div key={side} className="flex flex-col items-center gap-3">
+              {stickMode === "drag" ? (
+                <AnalogStick
+                  aria-label={`${side} stick, drag to move or click for ${side === "left" ? "L3" : "R3"}`}
+                  value={analogPositions[side] ?? [0, 0]}
+                  onChange={
+                    side === "left" ? changeLeftStick : changeRightStick
+                  }
+                  onStickClick={() => {
+                    press(STICK_BUTTONS[side]);
+                    release(STICK_BUTTONS[side]);
+                  }}
+                  disabled={disabled}
+                />
+              ) : (
+                <div className="grid size-36 grid-cols-3 grid-rows-3 place-items-center">
+                  <ControlButton
+                    {...stickControlProps(side, "up")}
+                    label=""
+                    accessibleLabel={`${side} stick up`}
+                    icon={<GenericStickUp className="size-full" />}
+                    className="col-start-2 row-start-1 size-12"
+                  />
+                  <ControlButton
+                    {...stickControlProps(side, "left")}
+                    label=""
+                    accessibleLabel={`${side} stick left`}
+                    icon={<GenericStickLeft className="size-full" />}
+                    className="col-start-1 row-start-2 size-12"
+                  />
+                  <ControlButton
+                    {...controlProps(STICK_BUTTONS[side])}
+                    label={side === "left" ? "L3" : "R3"}
+                    accessibleLabel={`${side} stick click`}
+                    icon={<GenericButtonCircleFill className="size-full" />}
+                    className="col-start-2 row-start-2 size-12"
+                  />
+                  <ControlButton
+                    {...stickControlProps(side, "right")}
+                    label=""
+                    accessibleLabel={`${side} stick right`}
+                    icon={<GenericStickRight className="size-full" />}
+                    className="col-start-3 row-start-2 size-12"
+                  />
+                  <ControlButton
+                    {...stickControlProps(side, "down")}
+                    label=""
+                    accessibleLabel={`${side} stick down`}
+                    icon={<GenericStickDown className="size-full" />}
+                    className="col-start-2 row-start-3 size-12"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
+        <label className="mx-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Drag</span>
+          <Switch
+            size="sm"
+            checked={stickMode === "buttons"}
+            onCheckedChange={(checked) =>
+              changeStickMode(checked ? "buttons" : "drag")
+            }
+            aria-label="Stick input style"
+          />
+          <span>Buttons</span>
+        </label>
       </div>
     </section>
   );
