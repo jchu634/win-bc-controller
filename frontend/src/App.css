@@ -59,7 +59,7 @@
     --muted-foreground: oklch(0.708 0 0);
     --accent: oklch(0.455 0.188 13.697);
     --accent-foreground: oklch(0.969 0.015 12.422);
-    --destructive: oklch(0.704 0.191 22.216);
+    --destructive: oklch(0.504 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
@@ -143,15 +143,24 @@
     --container-media-xl: 36rem;
     --container-media-2xl: 42rem;
     --container-media-dialog: var(--media-dialog-max-width);
-    --text-media-xs: .7em;
+    --text-media-xs: 0.7em;
     --text-media-sm: calc(var(--media-spacing) * 2.75);
     --text-media: calc(var(--media-spacing) * 3.25);
     --text-media-lg: calc(var(--media-spacing) * 3.75);
     --text-media-xl: calc(var(--media-spacing) * 4.25);
-    --spacing-media-icon-sm: calc(var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 7 / 9);
-    --spacing-media-icon: var(--media-icon-size, calc(var(--media-spacing) * 4.5));
-    --spacing-media-icon-lg: calc(var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 1.5);
-    --spacing-media-icon-xl: calc(var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 2);
+    --spacing-media-icon-sm: calc(
+        var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 7 / 9
+    );
+    --spacing-media-icon: var(
+        --media-icon-size,
+        calc(var(--media-spacing) * 4.5)
+    );
+    --spacing-media-icon-lg: calc(
+        var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 1.5
+    );
+    --spacing-media-icon-xl: calc(
+        var(--media-icon-size, calc(var(--media-spacing) * 4.5)) * 2
+    );
     --spacing-media-control: var(--media-control-size);
     --spacing-media-dialog-width: var(--media-dialog-width);
     --radius-media-control: var(--media-control-radius);
@@ -191,7 +200,9 @@
     --blur-media-hidden: var(--media-hidden-blur);
     --blur-media-hidden-popup: var(--media-hidden-popup-blur);
     --spacing-media-hidden-offset: var(--media-hidden-offset);
-    --spacing-media-hidden-indicator-offset: var(--media-hidden-indicator-offset);
+    --spacing-media-hidden-indicator-offset: var(
+        --media-hidden-indicator-offset
+    );
     --spacing-media-hidden-preview-offset: var(--media-hidden-preview-offset);
     --spacing-media-hidden-seek-offset: var(--media-hidden-seek-offset);
 }
@@ -230,136 +241,117 @@
 }
 
 @utility font-media {
-    font-family: var(--media-font-family, "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif);
+    font-family: var(
+        --media-font-family,
+        "Inter Variable",
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        sans-serif
+    );
 }
 
 @custom-variant media-opaque {
-
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-
-@slot ;
+    @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+        @slot;
     }
 }
 
 @custom-variant media-xs {
-
-@container media-root (width >= theme(--container-media-xs)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-xs)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-xs {
-
-@container media-root (width < theme(--container-media-xs)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-xs)) {
+        @slot;
     }
 }
 
 @custom-variant media-sm {
-
-@container media-root (width >= theme(--container-media-sm)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-sm)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-sm {
-
-@container media-root (width < theme(--container-media-sm)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-sm)) {
+        @slot;
     }
 }
 
 @custom-variant media-md {
-
-@container media-root (width >= theme(--container-media-md)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-md)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-md {
-
-@container media-root (width < theme(--container-media-md)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-md)) {
+        @slot;
     }
 }
 
 @custom-variant media-lg {
-
-@container media-root (width >= theme(--container-media-lg)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-lg)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-lg {
-
-@container media-root (width < theme(--container-media-lg)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-lg)) {
+        @slot;
     }
 }
 
 @custom-variant media-xl {
-
-@container media-root (width >= theme(--container-media-xl)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-xl)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-xl {
-
-@container media-root (width < theme(--container-media-xl)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-xl)) {
+        @slot;
     }
 }
 
 @custom-variant media-2xl {
-
-@container media-root (width >= theme(--container-media-2xl)) {
-
-@slot ;
+    @container media-root (width >= theme(--container-media-2xl)) {
+        @slot;
     }
 }
 
 @custom-variant media-max-2xl {
-
-@container media-root (width < theme(--container-media-2xl)) {
-
-@slot ;
+    @container media-root (width < theme(--container-media-2xl)) {
+        @slot;
     }
 }
 
 @custom-variant media-highlighted {
-  &:where(:focus-visible, [aria-expanded="true"], [data-highlighted]):where(:not([aria-disabled="true"])) {
-    @slot;
+    &:where(:focus-visible, [aria-expanded="true"], [data-highlighted]):where(
+            :not([aria-disabled="true"])
+        ) {
+        @slot;
     }
 
-@media (hover: hover) {
-  &:hover:where(:not([aria-disabled="true"])) {
-    @slot;
+    @media (hover: hover) {
+        &:hover:where(:not([aria-disabled="true"])) {
+            @slot;
         }
     }
 }
 
 @custom-variant media-transitioning {
-  &:is([data-starting-style], [data-ending-style]) {
-    @slot;
+    &:is([data-starting-style], [data-ending-style]) {
+        @slot;
     }
 }
 
 @custom-variant media-anchored {
-
-@supports (top: anchor(top)) {
-
-@slot ;
+    @supports (top: anchor(top)) {
+        @slot;
     }
 }
 
@@ -369,7 +361,9 @@
 }
 
 @utility surface-media {
-    box-shadow: 0 0 0 1px var(--media-surface-border, var(--media-border)), var(--media-shadow-surface);
+    box-shadow:
+        0 0 0 1px var(--media-surface-border, var(--media-border)),
+        var(--media-shadow-surface);
     backdrop-filter: var(--media-backdrop-filter-surface);
 }
 
@@ -400,7 +394,12 @@
 }
 
 @utility mask-media-volume-open {
-    mask-image: linear-gradient(to right, transparent 10%, black 25%, black 100%);
+    mask-image: linear-gradient(
+        to right,
+        transparent 10%,
+        black 25%,
+        black 100%
+    );
     mask-position: 0 0;
 }
 
@@ -430,7 +429,10 @@
 
 @utility transition-media-menu-resize {
     transition-property: opacity, filter, transform, scale, width, height;
-    transition-duration: var(--media-duration-fast), var(--media-duration-fast), var(--media-duration-fast), var(--media-duration-fast), var(--media-duration-menu), var(--media-duration-menu);
+    transition-duration:
+        var(--media-duration-fast), var(--media-duration-fast),
+        var(--media-duration-fast), var(--media-duration-fast),
+        var(--media-duration-menu), var(--media-duration-menu);
 }
 
 @utility motion-media-* {
@@ -450,33 +452,69 @@
 }
 
 @utility clip-media-x-* {
-    left: calc(var(--media-slider-chapter-start, 0%) + var(--media-spacing) * var(--media-chapter-inset-start, 0));
-    right: max( calc(100% - var(--value([*]))), calc(100% - var(--media-slider-chapter-end, 100%) + var(--media-spacing) * var(--media-chapter-inset-end, 0)) );
+    left: calc(
+        var(--media-slider-chapter-start, 0%) + var(--media-spacing) *
+            var(--media-chapter-inset-start, 0)
+    );
+    right: max(
+        calc(100% - var(--value([*]))),
+        calc(
+            100% - var(--media-slider-chapter-end, 100%) +
+                var(--media-spacing) * var(--media-chapter-inset-end, 0)
+        )
+    );
     clip-path: inset(-1px 0);
 }
 
 @utility clip-media-y-* {
-    bottom: calc(var(--media-slider-chapter-start, 0%) + var(--media-spacing) * var(--media-chapter-inset-start, 0));
-    top: max( calc(100% - var(--value([*]))), calc(100% - var(--media-slider-chapter-end, 100%) + var(--media-spacing) * var(--media-chapter-inset-end, 0)) );
+    bottom: calc(
+        var(--media-slider-chapter-start, 0%) + var(--media-spacing) *
+            var(--media-chapter-inset-start, 0)
+    );
+    top: max(
+        calc(100% - var(--value([*]))),
+        calc(
+            100% - var(--media-slider-chapter-end, 100%) +
+                var(--media-spacing) * var(--media-chapter-inset-end, 0)
+        )
+    );
     clip-path: inset(0 -1px);
 }
 
 @utility clip-media-chapter-x {
-    clip-path: inset(0 calc(100% - var(--media-slider-chapter-end)) 0 var(--media-slider-chapter-start));
+    clip-path: inset(
+        0 calc(100% - var(--media-slider-chapter-end)) 0
+            var(--media-slider-chapter-start)
+    );
 }
 
 @utility clip-media-chapter-y {
-    clip-path: inset(calc(100% - var(--media-slider-chapter-end)) 0 var(--media-slider-chapter-start) 0);
+    clip-path: inset(
+        calc(100% - var(--media-slider-chapter-end)) 0
+            var(--media-slider-chapter-start) 0
+    );
 }
 
 @utility clip-media-chapter-track-x {
-    left: calc(var(--media-slider-chapter-start) + var(--media-spacing) * var(--media-chapter-inset-start));
-    right: calc(100% - var(--media-slider-chapter-end) + var(--media-spacing) * var(--media-chapter-inset-end));
+    left: calc(
+        var(--media-slider-chapter-start) + var(--media-spacing) *
+            var(--media-chapter-inset-start)
+    );
+    right: calc(
+        100% - var(--media-slider-chapter-end) + var(--media-spacing) *
+            var(--media-chapter-inset-end)
+    );
     clip-path: inset(-1px);
 }
 
 @utility clip-media-chapter-track-y {
-    top: calc(100% - var(--media-slider-chapter-end) + var(--media-spacing) * var(--media-chapter-inset-end));
-    bottom: calc(var(--media-slider-chapter-start) + var(--media-spacing) * var(--media-chapter-inset-start));
+    top: calc(
+        100% - var(--media-slider-chapter-end) + var(--media-spacing) *
+            var(--media-chapter-inset-end)
+    );
+    bottom: calc(
+        var(--media-slider-chapter-start) + var(--media-spacing) *
+            var(--media-chapter-inset-start)
+    );
     clip-path: inset(-1px);
 }
