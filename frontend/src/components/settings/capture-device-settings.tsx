@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { SpinnerGapIcon } from "@phosphor-icons/react";
+import { Effect } from "effect";
+import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import {
-  useCaptureControls,
-  useCaptureInput,
-  useCaptureStream,
-} from "@/src/hooks/use-capture";
+  CameraError,
+  acquireStream,
+  describeError,
+  releaseStream,
+} from "@/src/lib/webcam";
 import { Button } from "@/src/components/ui/button";
 import {
   Select,
@@ -16,66 +19,102 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 
-export function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
+export function CaptureDeviceSettings({
+  disabled,
+  draftInputId,
+  onDraftInputChange,
+}: {
+  disabled: boolean;
+  draftInputId: string;
+  onDraftInputChange: (deviceId: string) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const startedForPreview = useRef(false);
   const [visible, setVisible] = useState(false);
-  const stream = useCaptureStream();
-  const {
-    error,
-    start,
-    starting,
-    stop,
-    streaming,
-    permission,
-    requestAccess,
-    requestingPermission,
-  } = useCaptureControls();
-  const { cameras, selectedInputId, selectInput } = useCaptureInput();
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+  const [previewStarting, setPreviewStarting] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewRequestedRef = useRef(false);
+  const previewStreamRef = useRef<MediaStream | null>(null);
+  const { permission, requestAccess, requestingPermission } =
+    useCaptureControls();
+  const { cameras } = useCaptureInput();
   const selectedInputLabel = cameras.find(
-    (camera) => camera.deviceId === selectedInputId,
+    (camera) => camera.deviceId === draftInputId,
   )?.label;
-
-  const stopRef = useRef(stop);
-  stopRef.current = stop;
 
   useEffect(() => {
     if (disabled) {
+      previewRequestedRef.current = false;
       setVisible(false);
-      startedForPreview.current = false;
+      const current = previewStreamRef.current;
+      previewStreamRef.current = null;
+      setPreviewStream(null);
+      if (current) void Effect.runPromise(releaseStream(current));
     }
   }, [disabled]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.srcObject = visible ? stream : null;
+    video.srcObject = visible ? previewStream : null;
     return () => {
       video.srcObject = null;
     };
-  }, [stream, visible]);
+  }, [previewStream, visible]);
+
+  const releasePreview = () => {
+    const current = previewStreamRef.current;
+    previewStreamRef.current = null;
+    setPreviewStream(null);
+    if (current) void Effect.runPromise(releaseStream(current));
+  };
+
+  previewStreamRef.current = previewStream;
 
   useEffect(
     () => () => {
-      if (startedForPreview.current) stopRef.current();
+      const current = previewStreamRef.current;
+      if (current) void Effect.runPromise(releaseStream(current));
     },
     [],
   );
 
   const togglePreview = async () => {
     if (visible) {
+      previewRequestedRef.current = false;
       setVisible(false);
-      if (startedForPreview.current) {
-        startedForPreview.current = false;
-        stop();
-      }
+      releasePreview();
       return;
     }
 
+    previewRequestedRef.current = true;
     setVisible(true);
-    if (!streaming) {
-      startedForPreview.current = true;
-      await start(selectedInputId);
+    setPreviewError(null);
+    setPreviewStarting(true);
+    try {
+      const audioDeviceId = (() => {
+        try {
+          return localStorage.getItem("win-bc-controller.audio-input") ?? "";
+        } catch {
+          return "";
+        }
+      })();
+      const nextStream = await Effect.runPromise(
+        acquireStream(draftInputId, audioDeviceId),
+      );
+      if (!previewRequestedRef.current) {
+        void Effect.runPromise(releaseStream(nextStream));
+        return;
+      }
+      previewStreamRef.current = nextStream;
+      setPreviewStream(nextStream);
+    } catch (cause: unknown) {
+      const captureError = cause instanceof CameraError ? cause : null;
+      setPreviewError(
+        captureError ? describeError(captureError) : "Unable to access camera.",
+      );
+    } finally {
+      setPreviewStarting(false);
     }
   };
 
@@ -95,9 +134,16 @@ export function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
       <div className="flex w-full flex-wrap items-center gap-2">
         <Select
           disabled={disabled}
-          value={selectedInputId}
+          value={draftInputId}
           onValueChange={(deviceId) => {
-            if (deviceId !== null) selectInput(deviceId);
+            if (deviceId !== null) {
+              onDraftInputChange(deviceId);
+              if (visible) {
+                previewRequestedRef.current = false;
+                setVisible(false);
+                releasePreview();
+              }
+            }
           }}
         >
           <SelectTrigger className="w-1/2 min-w-64">
@@ -120,10 +166,10 @@ export function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
         <Button
           type="button"
           variant="outline"
-          disabled={disabled || !selectedInputId || starting}
+          disabled={disabled || !draftInputId || previewStarting}
           onClick={() => void togglePreview()}
         >
-          {starting && (
+          {previewStarting && (
             <SpinnerGapIcon className="animate-spin" weight="bold" />
           )}
           {visible ? "Hide preview" : "Show preview"}
@@ -131,7 +177,7 @@ export function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
       </div>
 
       <div className="aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-border bg-black">
-        {!disabled && visible && stream ? (
+        {!disabled && visible && previewStream ? (
           <video
             ref={videoRef}
             autoPlay
@@ -145,8 +191,8 @@ export function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
             {disabled
               ? "Capture controls are disabled while the controls-only homepage is enabled."
               : visible
-                ? (error ??
-                  (starting ? "Starting preview..." : "Preview unavailable"))
+                ? (previewError ??
+                  (previewStarting ? "Starting preview..." : "Preview unavailable"))
                 : "Preview disabled"}
           </div>
         )}

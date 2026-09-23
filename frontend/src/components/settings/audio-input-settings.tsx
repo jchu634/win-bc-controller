@@ -10,17 +10,14 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 
-const STORAGE_KEY = "win-bc-controller.audio-input";
-
-export function AudioInputSettings() {
+export function AudioInputSettings({
+  selectedId,
+  onSelectedIdChange,
+}: {
+  selectedId: string;
+  onSelectedIdChange: (deviceId: string) => void;
+}) {
   const [inputs, setInputs] = useState<MediaDeviceInfo[]>([]);
-  const [selectedId, setSelectedId] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  });
   const [error, setError] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [level, setLevel] = useState(0);
@@ -124,13 +121,7 @@ export function AudioInputSettings() {
           onValueChange={(id) => {
             if (id === null) return;
             stopTest();
-            setSelectedId(id);
-            try {
-              localStorage.setItem(STORAGE_KEY, id);
-            } catch {
-              /* Storage is optional. */
-            }
-            window.dispatchEvent(new Event("audioinputchange"));
+            onSelectedIdChange(id);
           }}
         >
           <SelectTrigger className="w-1/2 min-w-64" aria-label="Audio input">
