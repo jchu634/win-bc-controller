@@ -23,10 +23,7 @@ import { GearSixIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useCaptureControls } from "@/src/hooks/use-capture";
 import { Checkbox } from "@/src/components/ui/checkbox";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/src/components/ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
 import { Separator } from "@/src/components/ui/separator";
 import { Label } from "@/src/components/ui/label";
 import { AudioInputSettings } from "@/src/components/settings/audio-input-settings";
@@ -45,10 +42,7 @@ export function SettingsDialog() {
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
-  const theme = useSelector(
-    generalSettingsStore,
-    (settings) => settings.theme,
-  );
+  const theme = useSelector(generalSettingsStore, (settings) => settings.theme);
   const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] =
     useState(controlsOnlyHomepage);
   const { stop, starting } = useCaptureControls();
@@ -69,7 +63,7 @@ export function SettingsDialog() {
       }}
     >
       <DialogTrigger>
-        <Button className="bg-muted-foreground fixed top-5 right-4">
+        <Button className="bg-muted-foreground dark:text-gray-900 fixed top-5 right-4">
           General Settings
           <GearSixIcon weight="fill" className="size-5" />
         </Button>
@@ -144,9 +138,7 @@ export function SettingsDialog() {
                 onValueChange={(value) => {
                   const selected = value.find(
                     (item) =>
-                      item === "dark" ||
-                      item === "light" ||
-                      item === "system",
+                      item === "dark" || item === "light" || item === "system",
                   );
                   if (
                     selected === "dark" ||
