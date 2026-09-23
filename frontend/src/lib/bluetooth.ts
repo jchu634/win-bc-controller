@@ -4,6 +4,8 @@ export type BluetoothStatus = {
   state: "disconnected" | "connecting" | "reconnecting" | "connected";
   address: string | null;
   peers: string[];
+  failure_id: number;
+  failure: string | null;
 };
 
 function isBluetoothStatus(value: unknown): value is BluetoothStatus {
@@ -15,7 +17,9 @@ function isBluetoothStatus(value: unknown): value is BluetoothStatus {
       value.state === "connected") &&
     "address" in value && (value.address === null || typeof value.address === "string") &&
     "peers" in value && Array.isArray(value.peers) &&
-    value.peers.every((peer: unknown) => typeof peer === "string");
+    value.peers.every((peer: unknown) => typeof peer === "string") &&
+    "failure_id" in value && Number.isInteger(value.failure_id) &&
+    "failure" in value && (value.failure === null || typeof value.failure === "string");
 }
 
 export async function requestStatus(init?: RequestInit): Promise<BluetoothStatus> {
@@ -27,19 +31,19 @@ export async function requestStatus(init?: RequestInit): Promise<BluetoothStatus
       signal: AbortSignal.timeout(init?.method ? 35000 : 5000),
     });
   } catch {
-    throw new Error("Cannot reach the backend. Check that main.py is running and the API proxy points to it.");
+    throw new Error("Cannot reach the backend.");
   }
   if (response.status === 404 || response.status === 405) {
-    throw new Error("This backend does not support Bluetooth controls. Restart main.py to load the updated API.");
+    throw new Error("This backend does not support Bluetooth controls.");
   }
   if (response.status === 502 || response.status === 504) {
-    throw new Error("The API proxy cannot reach the backend. Check that main.py is running.");
+    throw new Error("The API proxy cannot reach the backend.");
   }
   let body: unknown;
   try {
     body = await response.json();
   } catch {
-    throw new Error(`Bluetooth status returned an invalid response (HTTP ${response.status}). Check the backend URL and restart main.py.`);
+    throw new Error(`Bluetooth status returned an invalid response (HTTP ${response.status}).`);
   }
   if (!response.ok) {
     const message = typeof body === "object" && body !== null &&

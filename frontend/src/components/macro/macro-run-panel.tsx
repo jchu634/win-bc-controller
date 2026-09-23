@@ -71,22 +71,8 @@ export function MacroRunPanel({
   return (
     <section className="flex w-full flex-col gap-3 text-left">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col items-start gap-1.5">
-          <h2 className="text-lg font-semibold text-foreground">Macros</h2>
-          <span
-            className={cn(
-              "w-80 truncate text-sm font-medium",
-              !macroActive && "text-foreground",
-              macroActive && !isPaused && "text-green-600",
-              isPaused && "text-orange-600",
-            )}
-          >
-            Currently{" "}
-            {macroActive
-              ? `${isPaused ? "paused" : "running"} "${macro?.name}"`
-              : "doing nothing"}
-          </span>
-        </div>
+        <h2 className="text-lg font-semibold text-foreground">Macros</h2>
+
         <Button render={<Link to="/macros" />} variant="outline" size="sm">
           <PencilSimpleIcon size={14} /> Edit macros
         </Button>
@@ -180,7 +166,11 @@ export function MacroRunPanel({
                   key={name}
                   className={cn(
                     "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/60 focus-within:bg-muted/60",
-                    selected === name ? "bg-muted/60" : isActive ? "bg-primary/5" : "bg-background",
+                    selected === name
+                      ? "bg-muted/60"
+                      : isActive
+                        ? "bg-primary/5"
+                        : "bg-background",
                   )}
                 >
                   <button

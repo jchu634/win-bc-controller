@@ -13,17 +13,22 @@ class BluetoothService:
         self.connected = False
         self.pairing = False
         self.reconnecting = False
+        self.failure_id = 0
+        self.failure = None
+        self._intentional_disconnect = False
         self._lock = asyncio.Lock()
 
     def attach(self, device, state, channel_handler):
         self.device = device
         self.state = state
         self.channel_handler = channel_handler
+        state.on_hid_close = self.record_hid_channel_closed
         self.pairing = device.discoverable
         device.on("connection", self._on_connection)
 
     def _on_connection(self, connection):
         self.connection = connection
+        self._intentional_disconnect = False
 
         def disconnected(_reason):
             if self.connection is connection:
@@ -32,6 +37,11 @@ class BluetoothService:
                 self.state.session_stop.set()
 
         connection.on("disconnection", disconnected)
+
+    def record_hid_channel_closed(self):
+        if not self._intentional_disconnect:
+            self.failure_id += 1
+            self.failure = "The controller's HID channels closed unexpectedly."
 
     async def status(self):
         peers = []
@@ -53,6 +63,8 @@ class BluetoothService:
             ),
             "address": str(self.connection.peer_address) if self.connection else None,
             "peers": peers,
+            "failure_id": self.failure_id,
+            "failure": self.failure,
         }
 
     async def set_pairing(self, enabled):
@@ -65,6 +77,7 @@ class BluetoothService:
             await self.device.set_connectable(enabled)
             self.pairing = enabled
             if not enabled and self.connection and not self.connected:
+                self._intentional_disconnect = True
                 await self.connection.disconnect()
 
     async def disconnect(self):
@@ -78,6 +91,7 @@ class BluetoothService:
         await self.device.set_connectable(False)
         self.pairing = False
         if self.connection is not None:
+            self._intentional_disconnect = True
             await self.connection.disconnect()
 
     async def forget(self, address):

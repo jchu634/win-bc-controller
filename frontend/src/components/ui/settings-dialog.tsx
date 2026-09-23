@@ -247,9 +247,8 @@ export function SettingsDialog() {
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
-  const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] = useState(
-    controlsOnlyHomepage,
-  );
+  const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] =
+    useState(controlsOnlyHomepage);
   const { stop, starting } = useCaptureControls();
 
   return (

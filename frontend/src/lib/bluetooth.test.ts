@@ -8,6 +8,7 @@ describe("Bluetooth status requests", () => {
     const status = {
       available: true, pairing: false, state: "disconnected", address: null,
       peers: ["12:34:56:78:90:AB/P"],
+      failure_id: 0, failure: null,
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(status)));
     await expect(requestStatus()).resolves.toEqual(status);
@@ -15,7 +16,7 @@ describe("Bluetooth status requests", () => {
 
   it("identifies a backend that has not loaded the new route", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Not found", { status: 404 })));
-    await expect(requestStatus()).rejects.toThrow("Restart main.py");
+    await expect(requestStatus()).rejects.toThrow("does not support Bluetooth controls");
   });
 
   it("preserves a backend Bluetooth error", async () => {

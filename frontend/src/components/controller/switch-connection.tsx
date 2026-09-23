@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PlugsConnectedIcon,
   PlugsIcon,
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
+import { toast } from "@/src/components/ui/toast";
 import {
   Tooltip,
   TooltipContent,
@@ -84,8 +85,29 @@ export function useSwitchConnection() {
   const [status, setStatus] = useState<BluetoothStatus | null>(null);
   const [selected, setSelected] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const lastFailureId = useRef<number | null>(null);
+
+  function acceptStatus(next: BluetoothStatus) {
+    if (
+      lastFailureId.current !== null &&
+      next.failure_id > lastFailureId.current &&
+      next.failure
+    ) {
+      toast.add({
+        type: "warning",
+        priority: "high",
+        title: "Controller disconnected",
+        description: `${next.failure} Try connecting again. If the issue persists, restart the app.`,
+        timeout: 5000,
+      });
+    }
+    lastFailureId.current = Math.max(
+      lastFailureId.current ?? next.failure_id,
+      next.failure_id,
+    );
+    setStatus(next);
+  }
 
   useEffect(() => {
     let disposed = false;
@@ -94,7 +116,7 @@ export function useSwitchConnection() {
       try {
         const next = await requestStatus();
         if (!disposed) {
-          setStatus(next);
+          acceptStatus(next);
           setStatusError(null);
         }
       } catch (cause) {
@@ -120,9 +142,8 @@ export function useSwitchConnection() {
     body: { pairing: boolean } | { address: string } | { action: "disconnect" },
   ) {
     setBusy(true);
-    setError(null);
     try {
-      setStatus(
+      acceptStatus(
         await requestStatus({
           method,
           headers: { "Content-Type": "application/json" },
@@ -130,9 +151,13 @@ export function useSwitchConnection() {
         }),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Bluetooth operation failed",
-      );
+      toast.add({
+        type: "error",
+        priority: "high",
+        title: "Connection error",
+        description: `${cause instanceof Error ? cause.message : "Bluetooth operation failed"} Try connecting again. If the issue persists, restart the app.`,
+        timeout: 5000,
+      });
     } finally {
       setBusy(false);
     }
@@ -152,7 +177,6 @@ export function useSwitchConnection() {
     selected: address,
     setSelected,
     busy,
-    error,
     statusError,
     disabled,
     active,
@@ -171,7 +195,6 @@ export function SwitchConnection({ connection }: SwitchConnectionProps) {
     status,
     selected: address,
     setSelected,
-    error,
     statusError,
     disabled,
     active,
@@ -311,11 +334,6 @@ export function SwitchConnection({ connection }: SwitchConnectionProps) {
       {status?.pairing && (
         <p className="mt-2 text-sm text-muted-foreground">
           On the Switch, open Controllers → Change Grip/Order.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="mt-2 text-sm text-destructive">
-          {error}
         </p>
       )}
     </section>
