@@ -26,16 +26,39 @@ type CaptureContextValue = {
   readonly error: string | null;
   readonly permission: CameraPermissionState;
   readonly requestingPermission: boolean;
+  readonly selectedAudioInputId: string;
   readonly selectedInputId: string;
   readonly starting: boolean;
   readonly stream: MediaStream | null;
   readonly selectInput: (deviceId: string) => void;
+  readonly selectInputs: (inputs: {
+    readonly audioDeviceId: string;
+    readonly videoDeviceId: string;
+  }) => void;
   readonly requestAccess: () => Promise<void>;
   readonly start: (deviceId: string) => Promise<void>;
   readonly stop: () => void;
 };
 
 const CaptureContext = createContext<CaptureContextValue | null>(null);
+
+const AUDIO_INPUT_STORAGE_KEY = "win-bc-controller.audio-input";
+
+function readSavedAudioInputId(): string {
+  try {
+    return localStorage.getItem(AUDIO_INPUT_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveAudioInputId(deviceId: string): void {
+  try {
+    localStorage.setItem(AUDIO_INPUT_STORAGE_KEY, deviceId);
+  } catch {
+    // Capture still works when storage is unavailable.
+  }
+}
 
 function useCaptureContext(): CaptureContextValue {
   const context = useContext(CaptureContext);
@@ -56,6 +79,9 @@ export function CaptureProvider({
   );
   const activeStreamRef = useRef<MediaStream | null>(null);
   const [cameras, setCameras] = useState<readonly CameraDevice[]>([]);
+  const [selectedAudioInputId, setSelectedAudioInputId] = useState(
+    readSavedAudioInputId,
+  );
   const [selectedInputId, setSelectedInputId] = useState("");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [starting, setStarting] = useState(false);
@@ -82,7 +108,10 @@ export function CaptureProvider({
     if (current) void Effect.runPromise(releaseStream(current));
   };
 
-  const start = async (deviceId: string) => {
+  const startWithInputs = async (
+    deviceId: string,
+    audioDeviceId: string,
+  ) => {
     setError(null);
     setStarting(true);
     const previous = activeStreamRef.current;
@@ -90,11 +119,9 @@ export function CaptureProvider({
     if (previous) await Effect.runPromise(releaseStream(previous));
 
     try {
-      const audioDeviceId = (() => {
-        try { return localStorage.getItem("win-bc-controller.audio-input") ?? ""; }
-        catch { return ""; }
-      })();
-      const nextStream = await Effect.runPromise(acquireStream(deviceId, audioDeviceId));
+      const nextStream = await Effect.runPromise(
+        acquireStream(deviceId, audioDeviceId),
+      );
       syncActiveStream(nextStream);
       setPermission("granted");
       await refreshCameras();
@@ -108,6 +135,9 @@ export function CaptureProvider({
       setStarting(false);
     }
   };
+
+  const start = (deviceId: string) =>
+    startWithInputs(deviceId, selectedAudioInputId);
 
   const requestAccess = useCallback(async () => {
     setError(null);
@@ -131,16 +161,25 @@ export function CaptureProvider({
 
   const selectInput = (deviceId: string) => {
     setSelectedInputId(deviceId);
-    if (activeStreamRef.current) void start(deviceId);
+    if (activeStreamRef.current) {
+      void startWithInputs(deviceId, selectedAudioInputId);
+    }
   };
 
-  useEffect(() => {
-    const handleAudioInputChange = () => {
-      if (activeStreamRef.current) void start(selectedInputId);
-    };
-    window.addEventListener("audioinputchange", handleAudioInputChange);
-    return () => window.removeEventListener("audioinputchange", handleAudioInputChange);
-  }, [selectedInputId]);
+  const selectInputs = ({
+    audioDeviceId,
+    videoDeviceId,
+  }: {
+    readonly audioDeviceId: string;
+    readonly videoDeviceId: string;
+  }) => {
+    setSelectedInputId(videoDeviceId);
+    setSelectedAudioInputId(audioDeviceId);
+    saveAudioInputId(audioDeviceId);
+    if (activeStreamRef.current) {
+      void startWithInputs(videoDeviceId, audioDeviceId);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -204,10 +243,12 @@ export function CaptureProvider({
         error,
         permission,
         requestingPermission,
+        selectedAudioInputId,
         selectedInputId,
         starting,
         stream,
         selectInput,
+        selectInputs,
         requestAccess,
         start,
         stop,
@@ -242,9 +283,22 @@ export function useCaptureControls() {
 }
 
 export function useCaptureInput() {
-  const { cameras, permission, selectedInputId, selectInput } =
-    useCaptureContext();
-  return { cameras, permission, selectedInputId, selectInput } as const;
+  const {
+    cameras,
+    permission,
+    selectedAudioInputId,
+    selectedInputId,
+    selectInput,
+    selectInputs,
+  } = useCaptureContext();
+  return {
+    cameras,
+    permission,
+    selectedAudioInputId,
+    selectedInputId,
+    selectInput,
+    selectInputs,
+  } as const;
 }
 
 export function useCaptureStream(): MediaStream | null {

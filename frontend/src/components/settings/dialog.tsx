@@ -34,17 +34,8 @@ import { CaptureDeviceSettings } from "@/src/components/settings/capture-device-
 const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   general: "General settings.",
   controller: "Choose a controller and manage its mapping presets.",
+  credits: "Acknowledgements and License text",
 };
-
-const AUDIO_INPUT_STORAGE_KEY = "win-bc-controller.audio-input";
-
-function readSavedAudioInputId() {
-  try {
-    return localStorage.getItem(AUDIO_INPUT_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
 
 export function SettingsDialog() {
   const [open, setOpen] = useState(false);
@@ -57,16 +48,16 @@ export function SettingsDialog() {
   const theme = useSelector(generalSettingsStore, (settings) => settings.theme);
   const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] =
     useState(controlsOnlyHomepage);
-  const { selectedInputId, selectInput } = useCaptureInput();
-  const [savedAudioInputId, setSavedAudioInputId] = useState(
-    readSavedAudioInputId,
+  const { selectedAudioInputId, selectedInputId, selectInputs } =
+    useCaptureInput();
+  const [draftAudioInputId, setDraftAudioInputId] = useState(
+    selectedAudioInputId,
   );
-  const [draftAudioInputId, setDraftAudioInputId] = useState(savedAudioInputId);
   const [draftCaptureInputId, setDraftCaptureInputId] =
     useState(selectedInputId);
   const { stop, starting } = useCaptureControls();
   const hasUnsavedInputChanges =
-    draftAudioInputId !== savedAudioInputId ||
+    draftAudioInputId !== selectedAudioInputId ||
     draftCaptureInputId !== selectedInputId;
 
   return (
@@ -77,7 +68,7 @@ export function SettingsDialog() {
           if (nextOpen) {
             setOpen(true);
             setDraftControlsOnlyHomepage(controlsOnlyHomepage);
-            setDraftAudioInputId(readSavedAudioInputId());
+            setDraftAudioInputId(selectedAudioInputId);
             setDraftCaptureInputId(selectedInputId);
             return;
           }
@@ -137,20 +128,14 @@ export function SettingsDialog() {
                 />
                 <Button
                   disabled={
-                    draftAudioInputId === savedAudioInputId &&
+                    draftAudioInputId === selectedAudioInputId &&
                     draftCaptureInputId === selectedInputId
                   }
                   onClick={() => {
-                    const captureInputChanged =
-                      draftCaptureInputId !== selectedInputId;
-                    const audioInputChanged =
-                      draftAudioInputId !== savedAudioInputId;
-                    
-                    if (captureInputChanged) selectInput(draftCaptureInputId);
-                    if (audioInputChanged && !captureInputChanged) {
-                      window.dispatchEvent(new Event("audioinputchange"));
-                    }
-                    setSavedAudioInputId(draftAudioInputId);
+                    selectInputs({
+                      audioDeviceId: draftAudioInputId,
+                      videoDeviceId: draftCaptureInputId,
+                    });
                   }}
                   className="w-50"
                 >
