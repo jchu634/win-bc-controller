@@ -50,7 +50,7 @@ function PreviewPage() {
     permission === "granted" || permission === "unsupported";
 
   return (
-    <div className="flex h-full w-full flex-col gap-6 px-4">
+    <div className="flex h-full w-full flex-col gap-6 px-4 bg-background">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SettingsDialog />
       </div>

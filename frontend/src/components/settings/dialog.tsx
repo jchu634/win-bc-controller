@@ -17,11 +17,16 @@ import { useSelector } from "@tanstack/react-store";
 import {
   generalSettingsStore,
   setControlsOnlyHomepage,
+  setTheme,
 } from "@/src/stores/general-settings";
 import { GearSixIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useCaptureControls } from "@/src/hooks/use-capture";
 import { Checkbox } from "@/src/components/ui/checkbox";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/src/components/ui/toggle-group";
 import { Separator } from "@/src/components/ui/separator";
 import { Label } from "@/src/components/ui/label";
 import { AudioInputSettings } from "@/src/components/settings/audio-input-settings";
@@ -39,6 +44,10 @@ export function SettingsDialog() {
   const controlsOnlyHomepage = useSelector(
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
+  );
+  const theme = useSelector(
+    generalSettingsStore,
+    (settings) => settings.theme,
   );
   const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] =
     useState(controlsOnlyHomepage);
@@ -82,6 +91,7 @@ export function SettingsDialog() {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="controller">Controller</TabsTrigger>
+            <TabsTrigger value="credits">Credits</TabsTrigger>
           </TabsList>
           <TabsContent
             className="min-w-0 space-y-4 overflow-y-auto p-2"
@@ -116,12 +126,61 @@ export function SettingsDialog() {
                 onCheckedChange={setDraftControlsOnlyHomepage}
               />
             </div>
+            <Separator />
+            <div className="flex w-180 items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <Label id="theme-label">Appearance</Label>
+                <p
+                  id="theme-description"
+                  className="text-sm text-muted-foreground"
+                >
+                  Choose light, dark, or follow your system setting.
+                </p>
+              </div>
+              <ToggleGroup
+                aria-labelledby="theme-label"
+                aria-describedby="theme-description"
+                value={[theme]}
+                onValueChange={(value) => {
+                  const selected = value.find(
+                    (item) =>
+                      item === "dark" ||
+                      item === "light" ||
+                      item === "system",
+                  );
+                  if (
+                    selected === "dark" ||
+                    selected === "light" ||
+                    selected === "system"
+                  ) {
+                    setTheme(selected);
+                  }
+                }}
+                className="inline-flex rounded-md border border-input bg-background p-1"
+              >
+                {(["light", "dark", "system"] as const).map((option) => (
+                  <ToggleGroupItem
+                    key={option}
+                    value={option}
+                    className="capitalize"
+                  >
+                    {option}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </div>
           </TabsContent>
           <TabsContent
             className="min-h-0 min-w-0 overflow-y-auto p-2"
             value="controller"
           >
             <ControllerSettings />
+          </TabsContent>
+          <TabsContent
+            className="min-h-0 min-w-0 overflow-y-auto p-2"
+            value="credits"
+          >
+            This PLACEHOLDER NAME application was developed by JCHU634
           </TabsContent>
         </Tabs>
       </DialogContent>

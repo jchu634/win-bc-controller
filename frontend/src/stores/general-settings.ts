@@ -1,20 +1,51 @@
 import { createStore } from "@tanstack/react-store";
 
-const STORAGE_KEY = "win-bc-controller.controls-only-homepage";
+const CONTROLS_ONLY_STORAGE_KEY = "win-bc-controller.controls-only-homepage";
+const THEME_STORAGE_KEY = "win-bc-controller.theme";
+
+export type Theme = "dark" | "light" | "system";
 
 type GeneralSettings = {
   controlsOnlyHomepage: boolean;
+  theme: Theme;
 };
+
+function isTheme(value: string | null): value is Theme {
+  return value === "dark" || value === "light" || value === "system";
+}
 
 function loadSettings(): GeneralSettings {
   try {
-    return { controlsOnlyHomepage: localStorage.getItem(STORAGE_KEY) === "true" };
+    return {
+      controlsOnlyHomepage:
+        localStorage.getItem(CONTROLS_ONLY_STORAGE_KEY) === "true",
+      theme: getStoredTheme(),
+    };
   } catch {
-    return { controlsOnlyHomepage: false };
+    return { controlsOnlyHomepage: false, theme: "system" };
   }
 }
 
+function getStoredTheme(): Theme {
+  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  return isTheme(storedTheme) ? storedTheme : "system";
+}
+
 export const generalSettingsStore = createStore(loadSettings());
+
+const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+function applyTheme(theme: Theme) {
+  document.documentElement.classList.toggle(
+    "dark",
+    theme === "dark" || (theme === "system" && systemTheme.matches),
+  );
+}
+
+applyTheme(generalSettingsStore.state.theme);
+systemTheme.addEventListener("change", () => {
+  if (generalSettingsStore.state.theme === "system") applyTheme("system");
+});
 
 export function setControlsOnlyHomepage(enabled: boolean) {
   generalSettingsStore.setState((settings) => ({
@@ -22,7 +53,20 @@ export function setControlsOnlyHomepage(enabled: boolean) {
     controlsOnlyHomepage: enabled,
   }));
   try {
-    localStorage.setItem(STORAGE_KEY, String(enabled));
+    localStorage.setItem(CONTROLS_ONLY_STORAGE_KEY, String(enabled));
+  } catch {
+    // Keep the setting usable for this session if storage is unavailable.
+  }
+}
+
+export function setTheme(theme: Theme) {
+  generalSettingsStore.setState((settings) => ({
+    ...settings,
+    theme,
+  }));
+  applyTheme(theme);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     // Keep the setting usable for this session if storage is unavailable.
   }
