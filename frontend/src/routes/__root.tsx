@@ -12,12 +12,10 @@ function RootComponent() {
   return (
     <SocketProvider>
       <CaptureProvider>
-        {/*<AppShell>*/}
         <TooltipProvider>
           <Outlet />
           <Toaster />
         </TooltipProvider>
-        {/*</AppShell>*/}
       </CaptureProvider>
       {/*<TanStackRouterDevtools position="bottom-right" />*/}
     </SocketProvider>
