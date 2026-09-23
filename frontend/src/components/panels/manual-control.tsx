@@ -26,6 +26,7 @@ import {
 } from "@/src/assets/input-prompts/xbox";
 import { useSocket } from "@/src/hooks/use-socket";
 import type { ButtonName } from "@/src/lib/types";
+import { Button } from "@/src/components/ui/button";
 import { cn } from "cnfast";
 
 type ControlButtonProps = {
@@ -99,14 +100,14 @@ function ControlButton({
   };
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="icon-lg"
       aria-label={accessibleLabel}
       aria-pressed={pressed}
       disabled={disabled}
       className={cn(
-        "relative flex size-14 touch-none select-none items-center justify-center rounded-xl bg-transparent text-foreground transition-[transform,color]",
-        "hover:text-primary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-40",
+        "relative size-14 touch-none rounded-xl border-0 bg-transparent p-0 text-foreground transition-[transform,color] hover:bg-transparent hover:text-primary active:translate-y-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-40",
         pressed && "scale-90 text-primary",
         className,
       )}
@@ -130,7 +131,7 @@ function ControlButton({
       >
         {label}
       </span>
-    </button>
+    </Button>
   );
 }
 

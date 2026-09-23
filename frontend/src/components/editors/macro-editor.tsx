@@ -26,6 +26,8 @@ import {
   WarningIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -614,33 +616,23 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
           </div>
         )}
 
-        <div
-          className="inline-flex w-fit rounded-full bg-muted p-1"
-          role="tablist"
-          aria-label="Macro editor mode"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={editorMode === "blocks"}
-            className="rounded-full px-3 py-1 text-sm text-muted-foreground aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-sm"
-            onClick={() => {
+        <Tabs
+          value={editorMode}
+          onValueChange={(value) => {
+            if (value === "blocks") {
               if (editorMode === "json") showBlocks();
-            }}
-          >
-            Blocks
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={editorMode === "json"}
-            className="rounded-full px-3 py-1 text-sm text-muted-foreground aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-sm"
-            onClick={() => setEditorMode("json")}
-            disabled={editorMode === "blocks" && !blockValid}
-          >
-            JSON
-          </button>
-        </div>
+            } else if (value === "json") {
+              setEditorMode("json");
+            }
+          }}
+        >
+          <TabsList aria-label="Macro editor mode">
+            <TabsTrigger value="blocks">Blocks</TabsTrigger>
+            <TabsTrigger value="json" disabled={editorMode === "blocks" && !blockValid}>
+              JSON
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {loading ? (
           <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground">
@@ -686,7 +678,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
                   : `A macro named "${overwriteName}" already exists. Do you want to overwrite it with "${name}"?`}
               </DialogDescription>
             </DialogHeader>
-            {overwriteName === null && <input
+            {overwriteName === null && <Input
               autoFocus
               aria-label="Macro name"
               value={newName}
@@ -696,7 +688,7 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(
               onKeyDown={(event) => {
                 if (event.key === "Enter" && newName.trim() && newName.trim() !== name) void rename();
               }}
-              className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="rounded-4xl border-border bg-background"
             />}
             {renameError !== null && <p role="alert" className="text-sm text-destructive">{renameError}</p>}
             <DialogFooter>

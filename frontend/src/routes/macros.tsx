@@ -3,6 +3,7 @@ import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { Effect } from "effect";
 import { ArrowLeftIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
 import {
   MacroEditor,
   type MacroEditorHandle,
@@ -167,7 +168,7 @@ function MacrosPage() {
                   Choose a name. You can add actions after the macro is created.
                 </DialogDescription>
               </DialogHeader>
-              <input
+              <Input
                 autoFocus
                 value={newName}
                 onChange={(event) => setNewName(event.target.value)}
@@ -176,7 +177,7 @@ function MacrosPage() {
                 }}
                 placeholder="Macro name"
                 aria-label="New macro name"
-                className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                className="rounded-4xl border-border bg-background"
               />
               {createError !== null && (
                 <p role="alert" className="text-sm text-destructive">

@@ -95,6 +95,8 @@ import {
 } from "@/src/assets/input-prompts/playstation";
 import { errorMessage } from "@/src/lib/errors";
 import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -553,7 +555,7 @@ export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(
                 save it as a new preset.
               </DialogDescription>
             </DialogHeader>
-            <input
+            <Input
               autoFocus
               value={saveAsName}
               onChange={(event) => setSaveAsName(event.target.value)}
@@ -562,7 +564,7 @@ export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(
               }}
               placeholder="Preset name"
               aria-label="New preset name"
-              className="h-9 w-full rounded-4xl border border-border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="rounded-4xl border-border bg-background"
             />
             {saveAsError !== null && (
               <p role="alert" className="text-sm text-destructive">
@@ -1181,23 +1183,26 @@ function PresetMappingEditor({
             <h3 className="text-sm font-semibold">Controller mapping</h3>
           </div>
         </div>
-        <label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <Label className="ms-auto flex items-center gap-2 text-xs text-muted-foreground">
           Controller layout
-          <select
+          <Select
             value={controllerLayout}
-            onChange={(event) => {
-              if (isControllerLayout(event.target.value))
-                setControllerLayout(event.target.value);
+            onValueChange={(value) => {
+              if (isControllerLayout(value)) setControllerLayout(value);
             }}
-            className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60"
           >
-            {CONTROLLER_LAYOUTS.map((layout) => (
-              <option key={layout.value} value={layout.value}>
-                {layout.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <SelectTrigger className="h-8 rounded-md border-border bg-background px-2 text-xs text-foreground">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {CONTROLLER_LAYOUTS.map((layout) => (
+                <SelectItem key={layout.value} value={layout.value}>
+                  {layout.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Label>
       </div>
 
       <div className="flex justify-between p-4">

@@ -21,6 +21,7 @@ import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { useSocket } from "@/src/hooks/use-socket";
 import { listMacros } from "@/src/lib/api";
 import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 import { cn } from "cnfast";
 
 export function MacroRunPanel({
@@ -96,7 +97,7 @@ export function MacroRunPanel({
 
       <div className="flex min-h-28 flex-col rounded-md border border-border bg-muted/30 p-2">
         <div className="mb-2 flex items-center gap-2">
-          <label className="relative min-w-0 flex-1">
+          <Label className="relative min-w-0 flex-1">
             <span className="sr-only">Search macros</span>
             <MagnifyingGlassIcon
               size={14}
@@ -108,7 +109,7 @@ export function MacroRunPanel({
               placeholder="Search macros"
               className="h-8 w-full rounded-md border border-input bg-background pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
-          </label>
+          </Label>
           {isPaused ? (
             <Button size="sm" variant="outline" onClick={resume}>
               <PlayIcon size={14} weight="fill" /> Resume
@@ -173,15 +174,15 @@ export function MacroRunPanel({
                         : "bg-background",
                   )}
                 >
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 cursor-pointer px-1 text-left font-mono font-normal outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                  <Button
+                    variant="ghost"
+                    className="relative z-0 h-auto min-w-0 flex-1 cursor-pointer justify-start rounded-none border-0 bg-transparent px-1 py-0 text-left font-mono font-normal hover:bg-transparent active:translate-y-0 after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
                     aria-pressed={selected === name}
                     onClick={() => onSelect(name)}
                     title={name}
                   >
                     <span className="block truncate">{name}</span>
-                  </button>
+                  </Button>
                   <Button
                     render={<Link to="/macros" hash={name} />}
                     size="xs"
