@@ -66,7 +66,7 @@ function PreviewPage() {
                 onClick={streaming ? stop : () => void start(selectedInputId)}
                 variant={streaming ? "destructive" : "tertiary"}
                 disabled={starting || !selectedInputId}
-                className="h-10 flex-1 text-lg"
+                className="h-10 flex-1 2xl:text-lg text-sm"
               >
                 {starting ? (
                   <SpinnerGapIcon
@@ -114,7 +114,7 @@ function PreviewPage() {
                   action: "disconnect",
                 })
               }
-              className="h-10 shrink-0 text-lg"
+              className="h-10 shrink-0 2xl:text-lg text-sm"
             />
           </div>
           <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />

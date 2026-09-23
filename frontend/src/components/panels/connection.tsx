@@ -66,11 +66,11 @@ export function ConnectionToggleButton({
       className={className}
     >
       {busy ? (
-        <SpinnerGapIcon className="animate-spin" />
+        <SpinnerGapIcon className="animate-spin 2xl:block hidden" />
       ) : active ? (
-        <PlugsIcon weight="fill" />
+        <PlugsIcon weight="fill" className="2xl:block hidden" />
       ) : (
-        <PlugsConnectedIcon weight="fill" />
+        <PlugsConnectedIcon weight="fill" className="2xl:block hidden" />
       )}
       {busy
         ? "Connecting…"
