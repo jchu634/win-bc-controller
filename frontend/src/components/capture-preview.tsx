@@ -50,7 +50,6 @@ export function CapturePreview() {
         ref={videoRef}
         autoPlay
         playsInline
-        muted
         disablePictureInPicture
         className="size-full object-contain"
       />

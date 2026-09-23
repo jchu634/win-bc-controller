@@ -90,7 +90,11 @@ export function CaptureProvider({
     if (previous) await Effect.runPromise(releaseStream(previous));
 
     try {
-      const nextStream = await Effect.runPromise(acquireStream(deviceId));
+      const audioDeviceId = (() => {
+        try { return localStorage.getItem("win-bc-controller.audio-input") ?? ""; }
+        catch { return ""; }
+      })();
+      const nextStream = await Effect.runPromise(acquireStream(deviceId, audioDeviceId));
       syncActiveStream(nextStream);
       setPermission("granted");
       await refreshCameras();
@@ -129,6 +133,14 @@ export function CaptureProvider({
     setSelectedInputId(deviceId);
     if (activeStreamRef.current) void start(deviceId);
   };
+
+  useEffect(() => {
+    const handleAudioInputChange = () => {
+      if (activeStreamRef.current) void start(selectedInputId);
+    };
+    window.addEventListener("audioinputchange", handleAudioInputChange);
+    return () => window.removeEventListener("audioinputchange", handleAudioInputChange);
+  }, [selectedInputId]);
 
   useEffect(() => {
     let cancelled = false;

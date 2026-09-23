@@ -43,6 +43,7 @@ import {
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { Separator } from "@/src/components/ui/separator";
 import { Label } from "@/src/components/ui/label";
+import { AudioInputSettings } from "@/src/components/ui/audio-input-settings";
 
 const SETTINGS_DESCRIPTIONS: Record<string, string> = {
   general: "General settings.",
@@ -215,7 +216,7 @@ function CaptureDeviceSettings({ disabled }: { disabled: boolean }) {
         </Button>
       </div>
 
-      <div className="aspect-video w-1/2 min-w-80 overflow-hidden rounded-lg border border-border bg-black">
+      <div className="aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-border bg-black">
         {!disabled && visible && stream ? (
           <video
             ref={videoRef}
@@ -294,10 +295,9 @@ export function SettingsDialog() {
             className="min-w-0 space-y-4 overflow-y-auto p-2"
             value="general"
           >
-            <div className="flex flex-col gap-3">
-              <h2 className="text-lg font-semibold text-foreground">
-                Current Video Capture Device
-              </h2>
+            <div className="flex flex-col gap-4">
+              <h2 className="text-lg font-semibold text-foreground">Input Settings</h2>
+              <AudioInputSettings />
               <CaptureDeviceSettings disabled={draftControlsOnlyHomepage} />
             </div>
             <Separator />

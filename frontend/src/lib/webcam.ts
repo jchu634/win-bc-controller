@@ -77,7 +77,7 @@ export const enumerateCameras = Effect.gen(function* () {
     })) satisfies ReadonlyArray<CameraDevice>;
 });
 
-export const acquireStream = (deviceId: string) =>
+export const acquireStream = (deviceId: string, audioDeviceId: string) =>
   Effect.gen(function* () {
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) {
@@ -87,7 +87,9 @@ export const acquireStream = (deviceId: string) =>
       try: () =>
         md.getUserMedia({
           video: deviceId ? { deviceId: { exact: deviceId } } : true,
-          audio: false,
+          audio: audioDeviceId
+            ? { deviceId: { exact: audioDeviceId } }
+            : true,
         }),
       catch: (e) => toCameraError(e),
     });
