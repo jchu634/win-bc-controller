@@ -117,7 +117,7 @@ import {
   JsonEditor,
   type JsonEditorHandle,
   type JsonMarker,
-} from "@/src/components/json-editor/json-editor";
+} from "@/src/components/editors/json-editor";
 import { activatePreset, getPreset, putPreset } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";
 import {

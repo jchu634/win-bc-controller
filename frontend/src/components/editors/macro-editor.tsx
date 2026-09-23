@@ -38,8 +38,8 @@ import {
   JsonEditor,
   type JsonEditorHandle,
   type JsonMarker,
-} from "@/src/components/json-editor/json-editor";
-import { MacroBlocklyEditor } from "@/src/components/macro/blockly/macro-blockly-editor";
+} from "@/src/components/editors/json-editor";
+import { MacroBlocklyEditor } from "@/src/components/editors/blockly/macro-blockly-editor";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { deleteMacro, getMacro, listMacros, putMacro, renameMacro } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";

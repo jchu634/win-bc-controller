@@ -1,7 +1,7 @@
 import * as Blockly from "blockly/core";
 import { BUTTON_NAMES, type ButtonName, type MacroAction, type MacroDoc } from "@/src/lib/types";
 import { MACRO_VERSION, type MacroPath } from "@/src/lib/macro-document";
-import { MACRO_BLOCK_TYPES, registerMacroBlocks } from "@/src/components/macro/blockly/macro-blocks";
+import { MACRO_BLOCK_TYPES, registerMacroBlocks } from "@/src/components/editors/blockly/macro-blocks";
 
 export type WorkspaceIssue = {
   blockId: string | null;

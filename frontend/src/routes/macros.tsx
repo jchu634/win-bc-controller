@@ -6,8 +6,8 @@ import { Button } from "@/src/components/ui/button";
 import {
   MacroEditor,
   type MacroEditorHandle,
-} from "@/src/components/macro/macro-editor";
-import { MacroPicker } from "@/src/components/macro/macro-picker";
+} from "@/src/components/editors/macro-editor";
+import { MacroPicker } from "@/src/components/panels/macro-picker";
 import {
   Dialog,
   DialogClose,

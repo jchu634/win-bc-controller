@@ -13,7 +13,6 @@
  *   host value from `editor.getText()`.
  * - Validation failures become inline markers via `editor.setMarkers`.
  *
- * Deliberately free of app concerns: macros and presets both reuse it.
  */
 
 import {
@@ -26,13 +25,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import { EditProvider, File as DiffsFile } from "@pierre/diffs/react";
-import type {
-  FileContents,
-} from "@pierre/diffs/react";
-import type {
-  Editor as DiffsEditor,
-  EditorOptions,
-} from "@pierre/diffs/edit";
+import type { FileContents } from "@pierre/diffs/react";
+import type { Editor as DiffsEditor, EditorOptions } from "@pierre/diffs/edit";
 
 type AnyEditor = DiffsEditor<undefined>;
 import { cn } from "cnfast";
@@ -150,9 +144,7 @@ export function JsonEditor({
         message: m.message,
       };
     });
-    editor.setMarkers(
-      docs as Parameters<AnyEditor["setMarkers"]>[0],
-    );
+    editor.setMarkers(docs as Parameters<AnyEditor["setMarkers"]>[0]);
   }, [markers, editing]);
 
   // Clear markers whenever the marker list empties or session detaches.

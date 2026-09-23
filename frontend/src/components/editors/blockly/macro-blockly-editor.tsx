@@ -6,11 +6,11 @@ import { cn } from "@/src/lib/utils";
 import {
   MACRO_TOOLBOX,
   registerMacroBlocks,
-} from "@/src/components/macro/blockly/macro-blocks";
+} from "@/src/components/editors/blockly/macro-blocks";
 import {
   loadMacroWorkspace,
   readMacroWorkspace,
-} from "@/src/components/macro/blockly/macro-workspace";
+} from "@/src/components/editors/blockly/macro-workspace";
 
 const englishMessages: Record<string, string> = {};
 for (const [key, value] of Object.entries(English)) {
@@ -112,7 +112,8 @@ export function MacroBlocklyEditor({
         callbacks.current.onChange(result.document);
         return;
       }
-      const message = result.issues[0]?.message ?? "The block workspace is invalid.";
+      const message =
+        result.issues[0]?.message ?? "The block workspace is invalid.";
       setIssue(message);
       callbacks.current.onValidityChange(false);
     };
@@ -123,7 +124,9 @@ export function MacroBlocklyEditor({
     };
     workspace.addChangeListener(changeListener);
 
-    const resizeObserver = new ResizeObserver(() => Blockly.svgResize(workspace));
+    const resizeObserver = new ResizeObserver(() =>
+      Blockly.svgResize(workspace),
+    );
     resizeObserver.observe(element);
 
     const syncTheme = () => {

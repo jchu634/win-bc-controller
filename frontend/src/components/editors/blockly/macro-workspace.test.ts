@@ -4,11 +4,11 @@ import type { MacroAction, MacroDoc } from "@/src/lib/types";
 import {
   MACRO_BLOCK_TYPES,
   registerMacroBlocks,
-} from "@/src/components/macro/blockly/macro-blocks";
+} from "@/src/components/editors/blockly/macro-blocks";
 import {
   loadMacroWorkspace,
   readMacroWorkspace,
-} from "@/src/components/macro/blockly/macro-workspace";
+} from "@/src/components/editors/blockly/macro-workspace";
 
 const workspaces: Blockly.Workspace[] = [];
 

@@ -6,17 +6,17 @@ import {
   StopIcon,
   VideoCameraIcon,
 } from "@phosphor-icons/react";
-import { CapturePreview } from "@/src/components/capture-preview";
-import { MacroRunPanel } from "@/src/components/macro/macro-run-panel";
-import { ManualControl } from "@/src/components/controller/manual-control";
+import { CapturePreview } from "@/src/components/panels/capture-preview";
+import { MacroRunPanel } from "@/src/components/panels/macro-runner";
+import { ManualControl } from "@/src/components/panels/manual-control";
 import {
   ConnectionToggleButton,
   SwitchConnection,
   useSwitchConnection,
-} from "@/src/components/controller/switch-connection";
+} from "@/src/components/panels/connection";
 import { Button } from "@/src/components/ui/button";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
-import { SettingsDialog } from "@/src/components/ui/settings-dialog";
+import { SettingsDialog } from "@/src/components/settings/dialog";
 import { useSelector } from "@tanstack/react-store";
 import { generalSettingsStore } from "@/src/stores/general-settings";
 import "@/src/App.css";
@@ -117,10 +117,7 @@ function PreviewPage() {
               className="h-10 shrink-0 text-lg"
             />
           </div>
-          <MacroRunPanel
-            selected={selectedMacro}
-            onSelect={setSelectedMacro}
-          />
+          <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
           <ManualControl />
         </div>
       </div>
