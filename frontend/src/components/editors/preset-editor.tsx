@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -7,6 +6,7 @@ import {
   useRef,
   useState,
   type ComponentType,
+  type Ref,
   type SVGProps,
 } from "react";
 import { Effect } from "effect";
@@ -136,6 +136,7 @@ export type PresetEditorProps = {
   name: string | null;
   builtin: boolean;
   onSaved: (name: string) => void;
+  ref?: Ref<PresetEditorHandle>;
 };
 
 export type PresetEditorHandle = {
@@ -144,10 +145,7 @@ export type PresetEditorHandle = {
 
 type SaveResult = "saved" | "save-as-required" | "failed";
 
-export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(function PresetEditor(
-  { name, builtin, onSaved },
-  ref,
-) {
+export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps) {
   const [value, setValue] = useState("");
   const [savedText, setSavedText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -583,7 +581,7 @@ export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(fu
       </Dialog>
     </section>
   );
-});
+}
 
 type PresetMappingEditorProps = {
   value: string;
@@ -1100,7 +1098,6 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
             </section>
           ))}
         </div>
-
         <div className="h-100% center flex flex-col items-center justify-center p-5 2.5xl:w-3/5">
           {controller.image === null ? (
             <GameControllerIcon weight="light" className="size-32 text-muted-foreground" />
