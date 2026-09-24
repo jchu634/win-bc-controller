@@ -275,6 +275,18 @@ export const MacroEditor = forwardRef<MacroEditorHandle, MacroEditorProps>(funct
     return "failed";
   }, [name, value, editorMode, blockValid, syntaxPrecheck, buildMarkers]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+      event.preventDefault();
+      if (!event.repeat && dirty && !saving && !loading && (editorMode !== "blocks" || blockValid)) {
+        void save();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dirty, saving, loading, editorMode, blockValid, save]);
+
   const rename = useCallback(
     async (confirmedName?: string) => {
       if (name === null || renaming) return;

@@ -305,6 +305,16 @@ export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps)
     return "failed";
   }, [name, builtin, value, syntaxPrecheck, buildMarkers, onSaved]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+      event.preventDefault();
+      if (!event.repeat && dirty && !saving && !loading && !saveAsOpen) void save();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dirty, saving, loading, saveAsOpen, save]);
+
   const activate = useCallback(async () => {
     if (name === null) return;
     if (dirty) {

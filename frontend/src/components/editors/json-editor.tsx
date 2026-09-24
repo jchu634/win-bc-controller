@@ -1,20 +1,3 @@
-/**
- * Generic JSON editor surface built on Pierre Diffs' edit mode
- * (https://diffs.com/edit).
- *
- * - Renders a `File` from `@pierre/diffs/react` with JSON highlighting.
- * - On first use, lazy-loads `@pierre/diffs/edit` and wraps the surface
- *   in a permanently-mounted `EditProvider` (one shared `Editor`
- *   instance, `persistState` keyed by `cacheKey`, so edits and history
- *   survive file switches).
- * - While a session is attached, the surface DOM is owned by the editor;
- *   the `contents` prop is ignored in favour of the editor's cached
- *   document (Diffs' documented behaviour), so `onAttach` re-syncs the
- *   host value from `editor.getText()`.
- * - Validation failures become inline markers via `editor.setMarkers`.
- *
- */
-
 import {
   useCallback,
   useEffect,
@@ -31,8 +14,7 @@ import type { Editor as DiffsEditor, EditorOptions } from "@pierre/diffs/edit";
 type AnyEditor = DiffsEditor<undefined>;
 import { cn } from "cnfast";
 
-// The edit entry point is a standalone bundle; load it lazily once per
-// session (docs: "Lazy Importing").
+// Lazy load edit entry point once per session
 type EditModule = typeof import("@pierre/diffs/edit");
 let editModulePromise: Promise<EditModule> | null = null;
 const loadEditModule = (): Promise<EditModule> => {
@@ -42,7 +24,7 @@ const loadEditModule = (): Promise<EditModule> => {
 
 export type JsonMarkerSeverity = "error" | "warning";
 
-/** Application-level marker: 1-based line (col optional). */
+/** 1-based line (col optional). */
 export type JsonMarker = {
   line: number;
   col?: number;
@@ -51,9 +33,7 @@ export type JsonMarker = {
 };
 
 export type JsonEditorProps = {
-  /** Display filename (header + language inference). */
   fileName: string;
-  /** Unique, stable persist key, e.g. `macro:press-a-three-times`. */
   cacheKey: string;
   /** Raw text. Treated as the source of truth while *not* editing. */
   value: string;
@@ -126,7 +106,6 @@ export function JsonEditor({
   }, []);
 
   const valueRef = useRef(value);
-  valueRef.current = value;
 
   // Push markers into the attached editor (must be attached first).
   useEffect(() => {
@@ -216,7 +195,12 @@ export function JsonEditor({
   );
 
   return (
-    <div className={cn("overflow-auto rounded-xl border border-border bg-background", className)}>
+    <div
+      className={cn(
+        "overflow-auto rounded-xl border border-border bg-background",
+        className,
+      )}
+    >
       {editModule !== null ? (
         <EditProvider createEditor={createEditor}>{surface}</EditProvider>
       ) : (
