@@ -1,5 +1,6 @@
 import { useState, type MouseEventHandler, type PointerEvent } from "react";
 import { cn } from "cnfast";
+import { Button } from "@/src/components/ui/button";
 import {
   XboxDpadNone,
   XboxDpadUpOutline,
@@ -7,6 +8,8 @@ import {
   XboxDpadLeftOutline,
   XboxDpadRightOutline,
 } from "@/src/assets/input-prompts/xbox";
+
+export type DpadDirection = "up" | "down" | "left" | "right";
 
 export type DpadProps = {
   className?: string;
@@ -20,25 +23,12 @@ export type DpadProps = {
   onDirectionRelease?: (direction: DpadDirection) => void;
 };
 
-export type DpadDirection = "up" | "down" | "left" | "right";
-
+// prettier-ignore
 const directions = [
-  {
-    name: "up", handler: "onUpClick", icon: XboxDpadUpOutline,
-    x: 23, y: 8, width: 18, height: 15,
-  },
-  {
-    name: "down", handler: "onDownClick", icon: XboxDpadDownOutline,
-    x: 23, y: 41, width: 18, height: 15,
-  },
-  {
-    name: "left", handler: "onLeftClick", icon: XboxDpadLeftOutline,
-    x: 8, y: 23, width: 15, height: 18,
-  },
-  {
-    name: "right", handler: "onRightClick", icon: XboxDpadRightOutline,
-    x: 41, y: 23, width: 15, height: 18,
-  },
+  { name: "up",   handler: "onUpClick",   icon: XboxDpadUpOutline,    x: 23, y: 8, width: 18, height: 15, },
+  { name: "down", handler: "onDownClick", icon: XboxDpadDownOutline,  x: 23, y: 41, width: 18, height: 15, },
+  { name: "left", handler: "onLeftClick", icon: XboxDpadLeftOutline,  x: 8, y: 23, width: 15, height: 18, },
+  { name: "right", handler: "onRightClick", icon: XboxDpadRightOutline, x: 41, y: 23, width: 15, height: 18, },
 ] satisfies {
   name: DpadDirection;
   handler: `on${Capitalize<DpadDirection>}Click`;
@@ -49,7 +39,6 @@ const directions = [
   height: number;
 }[];
 
-/** A neutral Xbox outline with independently clickable directional arms. */
 export function Dpad({
   className,
   disabled = false,
@@ -59,7 +48,10 @@ export function Dpad({
   ...handlers
 }: DpadProps) {
   const [hovered, setHovered] = useState<DpadDirection | null>(null);
-  const releasePointer = (event: PointerEvent<HTMLButtonElement>, direction: DpadDirection) => {
+  const releasePointer = (
+    event: PointerEvent<HTMLButtonElement>,
+    direction: DpadDirection,
+  ) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -67,7 +59,7 @@ export function Dpad({
   };
   const Icon = disabled
     ? XboxDpadNone
-    : directions.find(({ name }) => name === hovered)?.icon ?? XboxDpadNone;
+    : (directions.find(({ name }) => name === hovered)?.icon ?? XboxDpadNone);
 
   return (
     <div
@@ -79,14 +71,19 @@ export function Dpad({
         className,
       )}
     >
-      <Icon className="pointer-events-none absolute inset-0 size-full" aria-hidden="true" />
+      <Icon
+        className="pointer-events-none absolute inset-0 size-full"
+        aria-hidden="true"
+      />
       {directions.map(({ name, handler, x, y, width, height }) => (
-        <button
+        <Button
           key={name}
           type="button"
+          variant="ghost_no_hover"
+          size="icon"
           aria-label={`D-pad ${name}`}
           disabled={disabled}
-          className="absolute touch-none select-none cursor-pointer rounded-sm border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
+          className="absolute touch-none cursor-pointer rounded-sm border-0 bg-transparent p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
           style={{
             left: `${(x / 64) * 100}%`,
             top: `${(y / 64) * 100}%`,
@@ -110,12 +107,21 @@ export function Dpad({
           }}
           onLostPointerCapture={() => onDirectionRelease?.(name)}
           onKeyDown={(event) => {
-            if (!onDirectionPress || (event.key !== " " && event.key !== "Enter")) return;
+            if (
+              !onDirectionPress ||
+              (event.key !== " " && event.key !== "Enter")
+            ) {
+              return;
+            }
             event.preventDefault();
             if (!event.repeat) onDirectionPress(name);
           }}
           onKeyUp={(event) => {
-            if (!onDirectionRelease || (event.key !== " " && event.key !== "Enter")) return;
+            if (
+              !onDirectionRelease ||
+              (event.key !== " " && event.key !== "Enter")
+            )
+              return;
             event.preventDefault();
             onDirectionRelease(name);
           }}

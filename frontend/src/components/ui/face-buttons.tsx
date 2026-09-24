@@ -1,5 +1,6 @@
 import { useState, type MouseEventHandler, type PointerEvent } from "react";
 import { cn } from "cnfast";
+import { Button } from "@/src/components/ui/button";
 import {
   SwitchButtons,
   SwitchButtonsUp,
@@ -36,7 +37,6 @@ const buttons = [
   y: number;
 }[];
 
-/** One Switch face-button cluster with four independent hit targets. */
 export function FaceButtons({
   className,
   disabled = false,
@@ -77,13 +77,15 @@ export function FaceButtons({
         aria-hidden="true"
       />
       {buttons.map(({ name, handler, x, y }) => (
-        <button
+        <Button
           key={name}
           type="button"
+          variant="ghost_no_hover"
+          size="icon"
           aria-label={name}
           aria-pressed={pressedButtons?.has(name) ?? false}
           disabled={disabled}
-          className="absolute size-1/4 touch-none select-none cursor-pointer rounded-full border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
+          className="absolute size-1/4 touch-none cursor-pointer rounded-full border-0 bg-transparent p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
           style={{ left: `${(x / 64) * 100}%`, top: `${(y / 64) * 100}%` }}
           onPointerEnter={(event) => {
             if (event.pointerType !== "touch") setHovered(name);
