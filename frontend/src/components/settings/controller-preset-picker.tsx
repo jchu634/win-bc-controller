@@ -122,7 +122,7 @@ export function PresetPicker({
             <li
               key={p.filename}
               className={cn(
-                "flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
+                "flex flex-wrap group items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
                 p.active && "bg-primary/40",
                 selected === p.filename && "bg-blue-200 text-black",
               )}
@@ -184,8 +184,8 @@ export function PresetPicker({
                   }
                   className={cn(
                     "",
-                    p.active && "bg-transparent",
-                    selected === p.filename && "text-black",
+                    p.active && "bg-transparent group-hover:text-black",
+                    p.active && selected === p.filename && "text-black",
                   )}
                 >
                   {busy === p.filename ? (
