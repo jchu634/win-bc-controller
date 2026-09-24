@@ -1047,7 +1047,10 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
               : `Press a controller button for ${BUTTON_LABELS[target]}`
           }
           aria-label={listening ? "Cancel controller input" : `Listen for ${BUTTON_LABELS[target]}`}
-          className={cn("rounded-md", !listening && "text-muted-foreground hover:text-foreground")}
+          className={cn(
+            "rounded-md dark:bg-white",
+            !listening && "text-muted-foreground hover:text-foreground",
+          )}
         >
           {listening ? <SpinnerGapIcon className="animate-spin" /> : <GameControllerIcon />}
         </Button>

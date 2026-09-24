@@ -96,7 +96,7 @@ export function PresetPicker({
   }, [deleting, onDeleted, refresh]);
 
   return (
-    <section className="flex flex-col gap-3 text-left">
+    <section className="flex flex-col gap-3 text-left w-full max-w-100">
       <h2 className="text-lg font-semibold text-foreground">Presets</h2>
 
       {error !== null && (
@@ -147,6 +147,7 @@ export function PresetPicker({
                     className={cn(
                       "truncate text-xs text-muted-foreground",
                       selected === p.filename && "text-muted-background",
+                      p.active && "text-muted-background/10",
                     )}
                   >
                     {p.description}
@@ -181,6 +182,11 @@ export function PresetPicker({
                       ? "Presets are locked while a macro runs"
                       : "Activate this preset"
                   }
+                  className={cn(
+                    "",
+                    p.active && "bg-transparent",
+                    selected === p.filename && "text-black",
+                  )}
                 >
                   {busy === p.filename ? (
                     <SpinnerGapIcon size={12} className="animate-spin" />
