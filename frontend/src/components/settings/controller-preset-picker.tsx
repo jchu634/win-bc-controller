@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Effect } from "effect";
 import { SpinnerGapIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
@@ -34,21 +34,32 @@ export function PresetPicker({
   const [busy, setBusy] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<PresetInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
   const { macroActive } = useMacroRunner();
 
   const refresh = useCallback(() => {
+    const id = ++requestId.current;
     setLoading(true);
     Effect.runPromise(listPresets())
       .then((r) => {
+        if (id !== requestId.current) return;
         setPresets(r.presets);
         setError(null);
       })
-      .catch((error: unknown) => setError(errorMessage(error)))
-      .finally(() => setLoading(false));
+      .catch((error: unknown) => {
+        if (id === requestId.current) setError(errorMessage(error));
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false);
+      });
+
+    return () => {
+      if (id === requestId.current) requestId.current++;
+    };
   }, []);
 
   useEffect(() => {
-    refresh();
+    return refresh();
   }, [refresh, refreshKey]);
 
   const activate = useCallback(
@@ -80,8 +91,8 @@ export function PresetPicker({
     setBusy(null);
     if (!ok) return;
     setDeleting(null);
-    onDeleted?.(filename);
-    refresh();
+    if (onDeleted) onDeleted(filename);
+    else refresh();
   }, [deleting, onDeleted, refresh]);
 
   return (
@@ -112,34 +123,36 @@ export function PresetPicker({
               key={p.filename}
               className={cn(
                 "flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
-                p.active && "bg-primary/5",
-                selected === p.filename && "bg-blue-200",
+                p.active && "bg-primary/40",
+                selected === p.filename && "bg-blue-200 text-black",
               )}
+              onClick={() => onSelect(p)}
             >
-              <Button
-                variant="ghost"
-                className="h-auto min-w-0 flex-1 justify-start rounded-none p-0 text-left font-normal hover:bg-transparent"
-                onClick={() => onSelect(p)}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono">
-                    {p.name}
-                    {p.builtin && (
-                      <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
-                        built-in
-                      </span>
-                    )}
-                    {p.active && (
-                      <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
-                        active
-                      </span>
-                    )}
-                  </p>
-                  {p.description && (
-                    <p className="truncate text-xs text-muted-foreground">{p.description}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-mono">
+                  {p.name}
+                  {p.builtin && (
+                    <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
+                      built-in
+                    </span>
                   )}
-                </div>
-              </Button>
+                  {p.active && (
+                    <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
+                      active
+                    </span>
+                  )}
+                </p>
+                {p.description && (
+                  <p
+                    className={cn(
+                      "truncate text-xs text-muted-foreground",
+                      selected === p.filename && "text-muted-background",
+                    )}
+                  >
+                    {p.description}
+                  </p>
+                )}
+              </div>
               <div className="flex items-center gap-1.5">
                 {!p.builtin && (
                   <Button
@@ -164,7 +177,9 @@ export function PresetPicker({
                   }}
                   disabled={p.active || macroActive || busy !== null}
                   title={
-                    macroActive ? "Presets are locked while a macro runs" : "Activate this preset"
+                    macroActive
+                      ? "Presets are locked while a macro runs"
+                      : "Activate this preset"
                   }
                 >
                   {busy === p.filename ? (
@@ -198,9 +213,17 @@ export function PresetPicker({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-            <Button variant="destructive" onClick={() => void remove()} disabled={busy !== null}>
-              {busy === deleting?.filename && <SpinnerGapIcon size={14} className="animate-spin" />}
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={() => void remove()}
+              disabled={busy !== null}
+            >
+              {busy === deleting?.filename && (
+                <SpinnerGapIcon size={14} className="animate-spin" />
+              )}
               Delete
             </Button>
           </DialogFooter>
