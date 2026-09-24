@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import {
-  GenericButtonCircle,
-  GenericButtonCircleFill,
-  GenericButtonCircleOutline,
-  GenericButtonSquare,
-  GenericButtonSquareOutline,
-  GenericButtonTriggerA,
-  GenericButtonTriggerAOutline,
-  GenericButtonTriggerB,
-  GenericButtonTriggerBOutline,
-  GenericStickDown,
-  GenericStickLeft,
-  GenericStickRight,
-  GenericStickUp,
-} from "@/src/assets/input-prompts/generic";
+  SwitchButtonHome,
+  SwitchButtonHomeOutline,
+  SwitchButtonL,
+  SwitchButtonLOutline,
+  SwitchButtonR,
+  SwitchButtonROutline,
+  SwitchButtonSync,
+  SwitchButtonSyncOutline,
+  SwitchButtonZl,
+  SwitchButtonZlOutline,
+  SwitchButtonZr,
+  SwitchButtonZrOutline,
+  SwitchStickLDown,
+  SwitchStickLLeft,
+  SwitchStickLPress,
+  SwitchStickLRight,
+  SwitchStickLUp,
+  SwitchStickRDown,
+  SwitchStickRLeft,
+  SwitchStickRPress,
+  SwitchStickRRight,
+  SwitchStickRUp,
+} from "@/src/assets/input-prompts/switch";
 import { Dpad, type DpadDirection } from "@/src/components/ui/dpad";
+import { FaceButtons, type FaceButtonName } from "@/src/components/ui/face-buttons";
 import { AnalogStick } from "@/src/components/ui/analog-stick";
 import type { StickPosition } from "@/src/lib/analog-stick";
 import { useSocket } from "@/src/hooks/use-socket";
@@ -25,10 +35,9 @@ import { Switch } from "@/src/components/ui/switch";
 import { cn } from "cnfast";
 
 type ControlButtonProps = {
-  label: string;
   icon: ReactNode;
   pressedIcon?: ReactNode;
-  accessibleLabel?: string;
+  accessibleLabel: string;
   pressed: boolean;
   disabled: boolean;
   className?: string;
@@ -38,7 +47,7 @@ type ControlButtonProps = {
 
 type ButtonVisual = { button: ButtonName } & Pick<
   ControlButtonProps,
-  "label" | "accessibleLabel" | "icon" | "pressedIcon"
+  "accessibleLabel" | "icon" | "pressedIcon"
 >;
 
 type StickSide = "left" | "right";
@@ -54,8 +63,8 @@ function loadStickMode(): StickMode {
     );
     if (saved === "drag" || saved === "buttons") return saved;
     if (typeof saved !== "object" || saved === null) return "drag";
-    return "left" in saved && saved.left === "buttons" ||
-      "right" in saved && saved.right === "buttons"
+    return ("left" in saved && saved.left === "buttons") ||
+      ("right" in saved && saved.right === "buttons")
       ? "buttons"
       : "drag";
   } catch {
@@ -87,10 +96,9 @@ function stickPosition(
 }
 
 function ControlButton({
-  label,
   icon,
   pressedIcon = icon,
-  accessibleLabel = label,
+  accessibleLabel,
   pressed,
   disabled,
   className,
@@ -126,13 +134,13 @@ function ControlButton({
 
   return (
     <Button
-      variant="ghost"
+      variant="ghost_no_hover"
       size="icon-lg"
       aria-label={accessibleLabel}
       aria-pressed={pressed}
       disabled={disabled}
       className={cn(
-        "relative size-14 touch-none rounded-xl border-0 bg-transparent p-0 text-foreground transition-[transform,color] hover:bg-transparent hover:text-primary active:translate-y-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-40",
+        "relative size-14 touch-none rounded-xl border-0 bg-transparent p-0 text-foreground hover:bg-transparent transition-[transform,color] hover:text-primary active:translate-y-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-40",
         pressed && "scale-90 text-primary",
         className,
       )}
@@ -147,15 +155,6 @@ function ControlButton({
       <span className="absolute inset-0" aria-hidden="true">
         {pressed ? pressedIcon : icon}
       </span>
-      <span
-        className={cn(
-          "relative text-xs font-bold",
-          pressed && "text-primary-foreground",
-        )}
-        aria-hidden="true"
-      >
-        {label}
-      </span>
     </Button>
   );
 }
@@ -164,47 +163,41 @@ const BUTTON_GROUPS = {
   shoulders: [
     {
       button: "ZL",
-      label: "ZL",
-      icon: (
-        <GenericButtonTriggerBOutline className="size-full -scale-x-100 translate-x-2px" />
-      ),
-      pressedIcon: <GenericButtonTriggerB className="size-full -scale-x-100" />,
+      accessibleLabel: "ZL",
+      icon: <SwitchButtonZlOutline className="size-full" />,
+      pressedIcon: <SwitchButtonZl className="size-full" />,
     },
     {
       button: "L",
-      label: "L",
-      icon: <GenericButtonTriggerAOutline className="size-full" />,
-      pressedIcon: <GenericButtonTriggerA className="size-full" />,
+      accessibleLabel: "L",
+      icon: <SwitchButtonLOutline className="size-full" />,
+      pressedIcon: <SwitchButtonL className="size-full" />,
     },
     {
       button: "R",
-      label: "R",
-      icon: <GenericButtonTriggerAOutline className="size-full -scale-x-100" />,
-      pressedIcon: <GenericButtonTriggerA className="size-full -scale-x-100" />,
+      accessibleLabel: "R",
+      icon: <SwitchButtonROutline className="size-full" />,
+      pressedIcon: <SwitchButtonR className="size-full" />,
     },
     {
       button: "ZR",
-      label: "ZR",
-      icon: (
-        <GenericButtonTriggerBOutline className="size-full translate-x-2px" />
-      ),
-      pressedIcon: <GenericButtonTriggerB className="size-full " />,
+      accessibleLabel: "ZR",
+      icon: <SwitchButtonZrOutline className="size-full" />,
+      pressedIcon: <SwitchButtonZr className="size-full" />,
     },
   ],
   system: [
     {
       button: "CAPTURE",
-      label: "●",
       accessibleLabel: "Capture",
-      icon: <GenericButtonSquareOutline className="size-full" />,
-      pressedIcon: <GenericButtonSquare className="size-full" />,
+      icon: <SwitchButtonSyncOutline className="size-full" />,
+      pressedIcon: <SwitchButtonSync className="size-full" />,
     },
     {
       button: "HOME",
-      label: "⌂",
       accessibleLabel: "Home",
-      icon: <GenericButtonCircleOutline className="size-full" />,
-      pressedIcon: <GenericButtonCircle className="size-full" />,
+      icon: <SwitchButtonHomeOutline className="size-full" />,
+      pressedIcon: <SwitchButtonHome className="size-full" />,
     },
   ],
 } satisfies Record<string, ReadonlyArray<ButtonVisual>>;
@@ -409,23 +402,18 @@ export function ManualControl() {
                 key={button}
                 {...controlProps(button)}
                 {...visual}
-                className="size-9"
+                className="size-12"
               />
             ))}
           </div>
 
-          <div
-            className="grid grid-cols-2 place-items-center size-28"
-            aria-label="Face buttons"
-          >
-            {/* prettier-ignore */}
-            <>
-              <ControlButton {...controlProps("X")} label="X" icon={<GenericButtonCircleOutline className="size-full" />} pressedIcon={<GenericButtonCircle className="size-full" />} className="text-blue-600" />
-              <ControlButton {...controlProps("A")} label="A" icon={<GenericButtonCircleOutline className="size-full" />} pressedIcon={<GenericButtonCircle className="size-full" />} className="text-emerald-600" />
-              <ControlButton {...controlProps("Y")} label="Y" icon={<GenericButtonCircleOutline className="size-full" />} pressedIcon={<GenericButtonCircle className="size-full" />} className="text-amber-600" />
-              <ControlButton {...controlProps("B")} label="B" icon={<GenericButtonCircleOutline className="size-full" />} pressedIcon={<GenericButtonCircle className="size-full" />} className="text-red-600" />
-            </>
-          </div>
+          <FaceButtons
+            className="size-28"
+            disabled={disabled}
+            pressedButtons={pressedButtons}
+            onButtonPress={(button: FaceButtonName) => press(button)}
+            onButtonRelease={(button: FaceButtonName) => release(button)}
+          />
         </div>
 
         <div
@@ -451,37 +439,62 @@ export function ManualControl() {
                 <div className="grid size-36 grid-cols-3 grid-rows-3 place-items-center">
                   <ControlButton
                     {...stickControlProps(side, "up")}
-                    label=""
                     accessibleLabel={`${side} stick up`}
-                    icon={<GenericStickUp className="size-full" />}
+                    icon={
+                      side === "left" ? (
+                        <SwitchStickLUp className="size-full" />
+                      ) : (
+                        <SwitchStickRUp className="size-full" />
+                      )
+                    }
                     className="col-start-2 row-start-1 size-12"
                   />
                   <ControlButton
                     {...stickControlProps(side, "left")}
-                    label=""
                     accessibleLabel={`${side} stick left`}
-                    icon={<GenericStickLeft className="size-full" />}
+                    icon={
+                      side === "left" ? (
+                        <SwitchStickLLeft className="size-full" />
+                      ) : (
+                        <SwitchStickRLeft className="size-full" />
+                      )
+                    }
                     className="col-start-1 row-start-2 size-12"
                   />
                   <ControlButton
                     {...controlProps(STICK_BUTTONS[side])}
-                    label={side === "left" ? "L3" : "R3"}
                     accessibleLabel={`${side} stick click`}
-                    icon={<GenericButtonCircleFill className="size-full" />}
+                    icon={
+                      side === "left" ? (
+                        <SwitchStickLPress className="size-full" />
+                      ) : (
+                        <SwitchStickRPress className="size-full" />
+                      )
+                    }
                     className="col-start-2 row-start-2 size-12"
                   />
                   <ControlButton
                     {...stickControlProps(side, "right")}
-                    label=""
                     accessibleLabel={`${side} stick right`}
-                    icon={<GenericStickRight className="size-full" />}
+                    icon={
+                      side === "left" ? (
+                        <SwitchStickLRight className="size-full" />
+                      ) : (
+                        <SwitchStickRRight className="size-full" />
+                      )
+                    }
                     className="col-start-3 row-start-2 size-12"
                   />
                   <ControlButton
                     {...stickControlProps(side, "down")}
-                    label=""
                     accessibleLabel={`${side} stick down`}
-                    icon={<GenericStickDown className="size-full" />}
+                    icon={
+                      side === "left" ? (
+                        <SwitchStickLDown className="size-full" />
+                      ) : (
+                        <SwitchStickRDown className="size-full" />
+                      )
+                    }
                     className="col-start-2 row-start-3 size-12"
                   />
                 </div>

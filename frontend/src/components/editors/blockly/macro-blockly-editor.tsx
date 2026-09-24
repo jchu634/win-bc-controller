@@ -156,7 +156,7 @@ export function MacroBlocklyEditor({
         ref={container}
         aria-label="Visual macro workspace"
         className={cn(
-          "h-[60vh] min-h-[32rem] w-full overflow-hidden rounded-xl border border-border",
+          "h-[60vh] min-h-128 w-full overflow-hidden rounded-xl border border-border",
           className,
         )}
       />

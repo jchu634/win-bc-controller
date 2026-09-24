@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { requestStatus } from "./bluetooth";
+import { requestStatus } from "@/src/lib/bluetooth";
 
 afterEach(() => vi.unstubAllGlobals());
 

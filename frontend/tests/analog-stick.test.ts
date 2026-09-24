@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampStick } from "./analog-stick";
+import { clampStick } from "@/src/lib/analog-stick";
 
 describe("analog stick range", () => {
   it("preserves the center and partial deflection", () => {
