@@ -1,8 +1,13 @@
+import type { ComponentType, SVGProps } from "react";
+import PlayStation5Controller from "../assets/controllers/PlayStation5Controller";
+import SwitchProController from "../assets/controllers/SwitchProController";
+import XboxSeriesController from "../assets/controllers/XboxSeriesController";
+
 export type ControllerLayout = "generic" | "switch" | "xbox" | "playstation";
 export type ControllerLayoutDefinition = {
   value: ControllerLayout;
   label: string;
-  image: string | null;
+  image: ComponentType<SVGProps<SVGSVGElement>> | null;
   buttonNames: readonly string[];
   axisNames: readonly string[];
 };
@@ -20,7 +25,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
   {
     value: "switch",
     label: "Switch Pro",
-    image: "/assets/controllers/switch-pro.svg",
+    image: SwitchProController,
     buttonNames: [
       "A",
       "B",
@@ -44,7 +49,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
   {
     value: "xbox",
     label: "Xbox Series",
-    image: "/assets/controllers/xbox-series.svg",
+    image: XboxSeriesController,
     buttonNames: [
       "A",
       "B",
@@ -70,7 +75,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
   {
     value: "playstation",
     label: "PlayStation",
-    image: "/assets/controllers/playstation-5.svg",
+    image: PlayStation5Controller,
     buttonNames: [
       "Cross",
       "Circle",

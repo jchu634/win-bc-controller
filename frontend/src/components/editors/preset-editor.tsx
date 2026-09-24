@@ -941,6 +941,7 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
   const axisOptions = Array.from({ length: gamepadAxisCount }, (_, index) => index);
   const controllerLayout = inferControllerLayout(parsed.document);
   const controller = controllerLayoutDefinition(controllerLayout);
+  const ControllerImage = controller.image;
 
   const setControllerLayout = (layout: ControllerLayout) => {
     if (disabled) return;
@@ -1099,12 +1100,12 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
           ))}
         </div>
         <div className="h-100% center flex flex-col items-center justify-center p-5 2.5xl:w-3/5">
-          {controller.image === null ? (
+          {ControllerImage === null ? (
             <GameControllerIcon weight="light" className="size-32 text-muted-foreground" />
           ) : (
-            <img
-              src={controller.image}
-              alt={`${controller.label} controller layout`}
+            <ControllerImage
+              role="img"
+              aria-label={`${controller.label} controller layout`}
               className="w-full max-w-56 opacity-80 brightness-0 dark:invert"
             />
           )}
