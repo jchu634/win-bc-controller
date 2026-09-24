@@ -57,16 +57,22 @@ export function AnalogStick({
     if (disabled || pointer.current !== event.pointerId) return;
     const origin = start.current;
     if (origin === null) return;
-    if (!origin.dragged && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 6) return;
+    if (
+      !origin.dragged &&
+      Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 6
+    )
+      return;
     origin.dragged = true;
     const bounds = event.currentTarget.getBoundingClientRect();
     // The visible thumb radius is 18% of the pad, leaving 32% of travel.
     const radius = Math.min(bounds.width, bounds.height) * 0.32;
     if (radius <= 0) return;
-    onChange(clampStick(
-      (event.clientX - bounds.left - bounds.width / 2) / radius,
-      (bounds.top + bounds.height / 2 - event.clientY) / radius,
-    ));
+    onChange(
+      clampStick(
+        (event.clientX - bounds.left - bounds.width / 2) / radius,
+        (bounds.top + bounds.height / 2 - event.clientY) / radius,
+      ),
+    );
   };
 
   return (
@@ -78,7 +84,7 @@ export function AnalogStick({
       aria-disabled={disabled}
       className={cn(
         "relative size-36 touch-none select-none rounded-full border-2 border-border bg-muted/30",
-        disabled ? "opacity-50" : "cursor-grab active:cursor-grabbing",
+        disabled ? "opacity-50" : "group cursor-grab active:cursor-grabbing",
         className,
       )}
       onPointerDown={(event) => {
@@ -102,7 +108,8 @@ export function AnalogStick({
         if (pointer.current === event.pointerId) release();
       }}
       onKeyDown={(event) => {
-        if (!disabled && (event.key === " " || event.key === "Enter")) event.preventDefault();
+        if (!disabled && (event.key === " " || event.key === "Enter"))
+          event.preventDefault();
       }}
       onKeyUp={(event) => {
         if (disabled || (event.key !== " " && event.key !== "Enter")) return;
@@ -113,8 +120,11 @@ export function AnalogStick({
     >
       <GenericButtonCircleFill
         aria-hidden="true"
-        className="pointer-events-none absolute size-[48%] -translate-x-1/2 -translate-y-1/2 text-foreground"
-        style={{ left: `${50 + value[0] * 32}%`, top: `${50 - value[1] * 32}%` }}
+        className="pointer-events-none absolute size-[48%] -translate-x-1/2 -translate-y-1/2 text-foreground transition-colors group-hover:text-primary"
+        style={{
+          left: `${50 + value[0] * 32}%`,
+          top: `${50 - value[1] * 32}%`,
+        }}
       />
     </div>
   );
