@@ -1,17 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { socket, type ConnectionState } from "@/src/lib/ws";
-import type {
-  ControllersFrame,
-  ErrorFrame,
-  StatusFrame,
-  WsInbound,
-} from "@/src/lib/types";
+import type { ControllersFrame, ErrorFrame, StatusFrame, WsInbound } from "@/src/lib/types";
 
 type SocketContextValue = {
   connection: ConnectionState;
@@ -25,15 +14,9 @@ type SocketContextValue = {
 const SocketContext = createContext<SocketContextValue | null>(null);
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const [connection, setConnection] = useState<ConnectionState>(
-    socket.getState(),
-  );
-  const [status, setStatus] = useState<StatusFrame | null>(
-    socket.getStatus(),
-  );
-  const [controllers, setControllers] = useState<ControllersFrame | null>(
-    socket.getControllers(),
-  );
+  const [connection, setConnection] = useState<ConnectionState>(socket.getState());
+  const [status, setStatus] = useState<StatusFrame | null>(socket.getStatus());
+  const [controllers, setControllers] = useState<ControllersFrame | null>(socket.getControllers());
   const [lastError, setLastError] = useState<ErrorFrame | null>(null);
 
   useEffect(() => {

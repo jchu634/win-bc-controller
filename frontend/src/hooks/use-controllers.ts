@@ -22,26 +22,23 @@ export function useControllers() {
   const controllers = data?.controllers ?? [];
   const active = data?.active ?? null;
 
-  const select = useCallback(
-    async (ident: string | number): Promise<boolean> => {
-      setBusy(true);
-      setError(null);
-      const ok = await Effect.runPromise(selectController(ident))
-        .then(() => true)
-        .catch((error: unknown) => {
-          setError(errorMessage(error));
-          return false;
-        });
-      setBusy(false);
-      // The WS broadcast updates the frame; nudge via REST in case the
-      // socket is down.
-      Effect.runPromise(getControllers())
-        .then(setRestFrame)
-        .catch(() => {});
-      return ok;
-    },
-    [],
-  );
+  const select = useCallback(async (ident: string | number): Promise<boolean> => {
+    setBusy(true);
+    setError(null);
+    const ok = await Effect.runPromise(selectController(ident))
+      .then(() => true)
+      .catch((error: unknown) => {
+        setError(errorMessage(error));
+        return false;
+      });
+    setBusy(false);
+    // The WS broadcast updates the frame; nudge via REST in case the
+    // socket is down.
+    Effect.runPromise(getControllers())
+      .then(setRestFrame)
+      .catch(() => {});
+    return ok;
+  }, []);
 
   const activeInfo = controllers.find((c) => c.guid === active) ?? null;
 

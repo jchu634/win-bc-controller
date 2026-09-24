@@ -66,44 +66,34 @@ const requestJson = <T>(path: string, init?: RequestInit): Effect.Effect<T, ApiE
 export const getConfig = () => requestJson<ConfigSnapshot>("/api/config");
 
 export const patchConfig = (changes: ConfigSnapshot) =>
-  requestJson<{ changed: ConfigSnapshot; config: ConfigSnapshot }>(
-    "/api/config",
-    { method: "PATCH", body: JSON.stringify(changes) },
-  );
+  requestJson<{ changed: ConfigSnapshot; config: ConfigSnapshot }>("/api/config", {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
 
-export const listMacros = () =>
-  requestJson<{ names: string[] }>("/api/macros");
+export const listMacros = () => requestJson<{ names: string[] }>("/api/macros");
 
 export const getMacro = (name: string) =>
-  requestJson<{ name: string; contents: string }>(
-    `/api/macros/${encodeURIComponent(name)}`,
-  );
+  requestJson<{ name: string; contents: string }>(`/api/macros/${encodeURIComponent(name)}`);
 
 export const putMacro = (name: string, contents: string) =>
-  requestJson<{ name: string; saved: boolean }>(
-    `/api/macros/${encodeURIComponent(name)}`,
-    { method: "PUT", body: JSON.stringify({ contents }) },
-  );
+  requestJson<{ name: string; saved: boolean }>(`/api/macros/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify({ contents }),
+  });
 
 export const deleteMacro = (name: string) =>
-  requestJson<{ name: string; deleted: boolean }>(
-    `/api/macros/${encodeURIComponent(name)}`,
-    { method: "DELETE" },
-  );
+  requestJson<{ name: string; deleted: boolean }>(`/api/macros/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
 
-export const getControllers = () =>
-  requestJson<ControllersFrame>("/api/controllers");
+export const getControllers = () => requestJson<ControllersFrame>("/api/controllers");
 
 export const selectController = (ident: string | number) =>
-  requestJson<ControllersFrame & { applied?: string }>(
-    "/api/controllers/active",
-    {
-      method: "PUT",
-      body: JSON.stringify(
-        typeof ident === "number" ? { index: ident } : { guid: ident },
-      ),
-    },
-  );
+  requestJson<ControllersFrame & { applied?: string }>("/api/controllers/active", {
+    method: "PUT",
+    body: JSON.stringify(typeof ident === "number" ? { index: ident } : { guid: ident }),
+  });
 
 export type ControllerSelection = {
   controllers: ControllerInfo[];
@@ -114,21 +104,18 @@ export const listPresets = () =>
   requestJson<{ presets: PresetInfo[]; active: string }>("/api/presets");
 
 export const getPreset = (name: string) =>
-  requestJson<{ name: string; contents: string }>(
-    `/api/presets/${encodeURIComponent(name)}`,
-  );
+  requestJson<{ name: string; contents: string }>(`/api/presets/${encodeURIComponent(name)}`);
 
 export const putPreset = (name: string, contents: string) =>
-  requestJson<{ name: string; saved: boolean }>(
-    `/api/presets/${encodeURIComponent(name)}`,
-    { method: "PUT", body: JSON.stringify({ contents }) },
-  );
+  requestJson<{ name: string; saved: boolean }>(`/api/presets/${encodeURIComponent(name)}`, {
+    method: "PUT",
+    body: JSON.stringify({ contents }),
+  });
 
 export const deletePreset = (name: string) =>
-  requestJson<{ name: string; deleted: boolean }>(
-    `/api/presets/${encodeURIComponent(name)}`,
-    { method: "DELETE" },
-  );
+  requestJson<{ name: string; deleted: boolean }>(`/api/presets/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
 
 export const activatePreset = (name: string) =>
   requestJson<ControllersFrame & { applied: string }>(
@@ -137,7 +124,7 @@ export const activatePreset = (name: string) =>
   );
 
 export const renameMacro = (name: string, newName: string) =>
-  requestJson<{ name: string }>(
-    `/api/macros/${encodeURIComponent(name)}`,
-    { method: "PATCH", body: JSON.stringify({ name: newName }) },
-  );
+  requestJson<{ name: string }>(`/api/macros/${encodeURIComponent(name)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name: newName }),
+  });

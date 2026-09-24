@@ -9,7 +9,7 @@ from bumble.keys import JsonKeyStore, MemoryKeyStore, PairingKeys
 import main as application
 from lib.bluetooth import BluetoothService
 from lib.config import Config
-from main import SessionState, run_until_disconnected
+from main import SessionState, make_l2cap_handler, run_until_disconnected
 
 ADDRESS = "12:34:56:78:90:AB"
 
@@ -153,6 +153,32 @@ def test_failed_reconnect_cleans_up_and_allows_retry():
         connection.authenticate.side_effect = None
         await service.reconnect(ADDRESS)
         assert service.connection is connection
+
+    asyncio.run(scenario())
+
+
+def test_hid_close_reports_one_failure_but_manual_disconnect_does_not():
+    async def scenario():
+        service, _, connection = await setup_service()
+        service._on_connection(connection)
+        state = service.state
+        control = SimpleNamespace(state="closed", State=SimpleNamespace(OPEN="open"), on=Mock())
+        interrupt = SimpleNamespace(state="closed", State=SimpleNamespace(OPEN="open"), on=Mock())
+        make_l2cap_handler(0x11, state)(control)
+        make_l2cap_handler(0x13, state)(interrupt)
+
+        state.hid_opened = True
+        control.on.call_args_list[1].args[1]()
+        interrupt.on.call_args_list[1].args[1]()
+        status = await service.status()
+        assert status["failure_id"] == 1
+        assert "HID channels closed" in status["failure"]
+
+        service._on_connection(connection)
+        state.hid_opened = True
+        await service.disconnect()
+        control.on.call_args_list[1].args[1]()
+        assert (await service.status())["failure_id"] == 1
 
     asyncio.run(scenario())
 

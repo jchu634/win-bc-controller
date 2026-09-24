@@ -1,7 +1,5 @@
 import type { SVGProps } from "react";
-const SvgPlaystationButtonColorTriangleOutline = (
-  props: SVGProps<SVGSVGElement>
-) => (
+const SvgPlaystationButtonColorTriangleOutline = (props: SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={64} height={64} viewBox="0 0 64 64" {...props}>
     <path
       fill="#40E2A0"

@@ -106,8 +106,7 @@ function tokenize(text: string): Token[] | null {
   return tokens;
 }
 
-const isValueStart = (t: Token | undefined): boolean =>
-  t !== undefined && t.kind !== "punct";
+const isValueStart = (t: Token | undefined): boolean => t !== undefined && t.kind !== "punct";
 
 /** Index just past the value starting at token index `t`. */
 function skipValue(tokens: Token[], t: number): number {
@@ -137,10 +136,7 @@ function skipValue(tokens: Token[], t: number): number {
  * numbers. Returns null when the text is not well-formed JSON or the
  * path does not resolve.
  */
-export function locatePathLine(
-  text: string,
-  path: (string | number)[],
-): number | null {
+export function locatePathLine(text: string, path: (string | number)[]): number | null {
   const tokens = tokenize(text);
   if (tokens === null || tokens.length === 0) return null;
 

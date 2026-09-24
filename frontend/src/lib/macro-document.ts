@@ -1,9 +1,4 @@
-import {
-  BUTTON_NAMES,
-  type ButtonName,
-  type MacroAction,
-  type MacroDoc,
-} from "@/src/lib/types";
+import { BUTTON_NAMES, type ButtonName, type MacroAction, type MacroDoc } from "@/src/lib/types";
 
 export type MacroPath = (string | number)[];
 
@@ -33,10 +28,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isButtonName(value: unknown): value is ButtonName {
-  return (
-    typeof value === "string" &&
-    BUTTON_NAMES.some((buttonName) => buttonName === value)
-  );
+  return typeof value === "string" && BUTTON_NAMES.some((buttonName) => buttonName === value);
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -68,40 +60,25 @@ function parseActions(
       case "press":
       case "release":
         if (!isButtonName(candidate.button)) {
-          return invalid(
-            `Unknown button for '${candidate.do}'.`,
-            [...actionPath, "button"],
-          );
+          return invalid(`Unknown button for '${candidate.do}'.`, [...actionPath, "button"]);
         }
         actions.push({ do: candidate.do, button: candidate.button });
         break;
       case "wait":
         if (!isFiniteNumber(candidate.ms) || candidate.ms < 0) {
-          return invalid(
-            "Wait duration must be a non-negative number.",
-            [...actionPath, "ms"],
-          );
+          return invalid("Wait duration must be a non-negative number.", [...actionPath, "ms"]);
         }
         actions.push({ do: "wait", ms: candidate.ms });
         break;
       case "stick":
         if (candidate.side !== "left" && candidate.side !== "right") {
-          return invalid(
-            "Stick side must be 'left' or 'right'.",
-            [...actionPath, "side"],
-          );
+          return invalid("Stick side must be 'left' or 'right'.", [...actionPath, "side"]);
         }
         if (!isFiniteNumber(candidate.x)) {
-          return invalid("Stick X must be a finite number.", [
-            ...actionPath,
-            "x",
-          ]);
+          return invalid("Stick X must be a finite number.", [...actionPath, "x"]);
         }
         if (!isFiniteNumber(candidate.y)) {
-          return invalid("Stick Y must be a finite number.", [
-            ...actionPath,
-            "y",
-          ]);
+          return invalid("Stick Y must be a finite number.", [...actionPath, "y"]);
         }
         actions.push({
           do: "stick",
@@ -116,16 +93,9 @@ function parseActions(
           !Number.isInteger(candidate.count) ||
           candidate.count < 0
         ) {
-          return invalid("Loop count must be a non-negative integer.", [
-            ...actionPath,
-            "count",
-          ]);
+          return invalid("Loop count must be a non-negative integer.", [...actionPath, "count"]);
         }
-        const nested = parseActions(
-          candidate.actions,
-          [...actionPath, "actions"],
-          depth + 1,
-        );
+        const nested = parseActions(candidate.actions, [...actionPath, "actions"], depth + 1);
         if (!Array.isArray(nested)) return nested;
         actions.push({ do: "loop", count: candidate.count, actions: nested });
         break;
@@ -149,10 +119,7 @@ function findUnknownKey(
   return key === undefined ? null : [...path, key];
 }
 
-function findUnsupportedActionKey(
-  actions: unknown[],
-  path: MacroPath,
-): MacroPath | null {
+function findUnsupportedActionKey(actions: unknown[], path: MacroPath): MacroPath | null {
   for (const [index, candidate] of actions.entries()) {
     if (!isRecord(candidate)) continue;
     const actionPath = [...path, index];
@@ -169,10 +136,7 @@ function findUnsupportedActionKey(
     const unknown = findUnknownKey(candidate, ACTION_KEYS[kind], actionPath);
     if (unknown !== null) return unknown;
     if (kind === "loop" && Array.isArray(candidate.actions)) {
-      const nested = findUnsupportedActionKey(candidate.actions, [
-        ...actionPath,
-        "actions",
-      ]);
+      const nested = findUnsupportedActionKey(candidate.actions, [...actionPath, "actions"]);
       if (nested !== null) return nested;
     }
   }
@@ -186,10 +150,7 @@ export function parseMacroDocument(text: string): MacroDocumentParseResult {
   } catch (cause) {
     return {
       kind: "invalid-json",
-      error:
-        cause instanceof SyntaxError
-          ? cause
-          : new SyntaxError("The macro is not valid JSON."),
+      error: cause instanceof SyntaxError ? cause : new SyntaxError("The macro is not valid JSON."),
     };
   }
 
@@ -204,9 +165,7 @@ export function parseMacroDocument(text: string): MacroDocumentParseResult {
   }
   if (
     value.repeat !== undefined &&
-    (typeof value.repeat !== "number" ||
-      !Number.isInteger(value.repeat) ||
-      value.repeat < 0)
+    (typeof value.repeat !== "number" || !Number.isInteger(value.repeat) || value.repeat < 0)
   ) {
     return invalid("Repeat must be a non-negative integer.", ["repeat"]);
   }
@@ -229,9 +188,7 @@ export function parseVisualMacroDocument(text: string): VisualMacroParseResult {
   const rootUnknown = findUnknownKey(raw, ROOT_KEYS, []);
   const unsupported =
     rootUnknown ??
-    (Array.isArray(raw.actions)
-      ? findUnsupportedActionKey(raw.actions, ["actions"])
-      : null);
+    (Array.isArray(raw.actions) ? findUnsupportedActionKey(raw.actions, ["actions"]) : null);
   if (unsupported === null) return parsed;
 
   return {

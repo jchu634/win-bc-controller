@@ -62,10 +62,7 @@ class ControllerSocket {
   private scheduleReconnect(): void {
     this.setState(this.started ? "connecting" : "closed");
     if (this.retryTimer !== null) return;
-    const delay = Math.min(
-      BACKOFF_BASE_MS * 2 ** this.attempts,
-      BACKOFF_MAX_MS,
-    );
+    const delay = Math.min(BACKOFF_BASE_MS * 2 ** this.attempts, BACKOFF_MAX_MS);
     this.attempts += 1;
     this.retryTimer = setTimeout(() => {
       this.retryTimer = null;

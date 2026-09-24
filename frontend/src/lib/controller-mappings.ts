@@ -39,14 +39,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Capture",
     ],
-    axisNames: [
-      "Left stick X",
-      "Left stick Y",
-      "Right stick X",
-      "Right stick Y",
-      "ZL",
-      "ZR",
-    ],
+    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "ZL", "ZR"],
   },
   {
     value: "xbox",
@@ -96,13 +89,6 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Touch pad",
     ],
-    axisNames: [
-      "Left stick X",
-      "Left stick Y",
-      "Right stick X",
-      "Right stick Y",
-      "L2",
-      "R2",
-    ],
+    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "L2", "R2"],
   },
 ];

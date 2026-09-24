@@ -239,8 +239,11 @@ class SessionState:
         self.ctrl_ready = asyncio.Event()
         self.intr_ready = asyncio.Event()
         self.session_stop = asyncio.Event()
+        self.hid_opened = False
+        self.on_hid_close = lambda: None
 
     def reset_for_session(self):
+        self.hid_opened = False
         self.ctrl_channel = None
         self.intr_channel = None
         self.ctrl_ready.clear()
@@ -265,6 +268,9 @@ def make_l2cap_handler(psm, state):
             state.intr_ready.set()
 
     def on_close():
+        if state.hid_opened:
+            state.hid_opened = False
+            state.on_hid_close()
         if psm == HID_INTERRUPT_PSM:
             logger.warning("HID Interrupt channel closed")
             state.intr_ready.clear()
@@ -573,6 +579,7 @@ async def main():
                     continue
 
                 logger.info("Both HID channels open; starting controller session.")
+                state.hid_opened = True
                 protocol = ControllerProtocol(
                     ControllerTypes.PRO_CONTROLLER, config.bt_address
                 )
