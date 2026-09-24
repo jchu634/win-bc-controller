@@ -5,10 +5,7 @@ const SvgKeyboardArrowsDown = (props: SVGProps<SVGSVGElement>) => (
       fill="currentColor"
       d="M29 17h6q4 0 4 4v6q0 4-4 4h-6q-4 0-4-4v-6q0-4 4-4m16 16h6q4 0 4 4v6q0 4-4 4h-6q-4 0-4-4v-6q0-4 4-4m-32 0h6q4 0 4 4v6q0 4-4 4h-6q-4 0-4-4v-6q0-4 4-4"
     />
-    <path
-      fill="#E73246"
-      d="M29 33h6q4 0 4 4v6q0 4-4 4h-6q-4 0-4-4v-6q0-4 4-4"
-    />
+    <path fill="#E73246" d="M29 33h6q4 0 4 4v6q0 4-4 4h-6q-4 0-4-4v-6q0-4 4-4" />
   </svg>
 );
 export default SvgKeyboardArrowsDown;

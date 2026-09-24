@@ -1,9 +1,5 @@
 import { useCallback } from "react";
-import {
-  GameControllerIcon,
-  SpinnerGapIcon,
-  WarningIcon,
-} from "@phosphor-icons/react";
+import { GameControllerIcon, SpinnerGapIcon, WarningIcon } from "@phosphor-icons/react";
 import {
   Select,
   SelectContent,
@@ -15,12 +11,9 @@ import { useControllers } from "@/src/hooks/use-controllers";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 
 export function ControllerPanel() {
-  const { available, controllers, active, busy, error, select } =
-    useControllers();
+  const { available, controllers, active, busy, error, select } = useControllers();
   const { macroActive } = useMacroRunner();
-  const activeController = controllers.find(
-    (controller) => controller.guid === active,
-  );
+  const activeController = controllers.find((controller) => controller.guid === active);
 
   const handleChange = useCallback(
     (value: string) => {
@@ -44,10 +37,7 @@ export function ControllerPanel() {
           <GameControllerIcon size={20} className="shrink-0" />
           <p>
             Controller service is not running — start the backend with{" "}
-            <code className="rounded bg-muted px-1 font-mono">
-              --input controller
-            </code>
-            .
+            <code className="rounded bg-muted px-1 font-mono">--input controller</code>.
           </p>
         </div>
       ) : (

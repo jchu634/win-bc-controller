@@ -21,26 +21,16 @@ export interface SettingsMenuProps extends Omit<Menu.RootProps, "children"> {
   children?: Menu.ContentProps["children"];
 }
 
-export function SettingsMenu({
-  children,
-  className,
-  ...props
-}: SettingsMenuProps) {
+export function SettingsMenu({ children, className, ...props }: SettingsMenuProps) {
   return (
     <Menu.Root side="top" align="center" {...props}>
       <ButtonTooltip
-        label={
-          <TextPrimitive token={settingsText.key}>
-            {settingsText.text}
-          </TextPrimitive>
-        }
+        label={<TextPrimitive token={settingsText.key}>{settingsText.text}</TextPrimitive>}
         side="top"
       >
         <Menu.Trigger
           render={<Button />}
-          className={(state) =>
-            cn("group/settings", resolveClassName(className, state))
-          }
+          className={(state) => cn("group/settings", resolveClassName(className, state))}
         >
           <GearIconPrimitive
             className={cn(
@@ -58,16 +48,16 @@ export function SettingsMenu({
         keepMounted
         className={cn(
           "m-0 overflow-visible border-0 text-inherit",
-          "media-transitioning:opacity-0 media-transitioning:blur-media-hidden-popup media-transitioning:scale-media-hidden-popup",
+          "media-transitioning:scale-media-hidden-popup media-transitioning:opacity-0 media-transitioning:blur-media-hidden-popup",
           "data-starting-style:[transform:translate(var(--media-popup-translate-x-distance,0),var(--media-popup-translate-y-distance,0))]",
           "data-ending-style:transform-none",
-          "data-[side=top]:origin-bottom data-[side=bottom]:origin-top data-[side=left]:origin-end data-[side=right]:origin-start",
+          "data-[side=left]:origin-end data-[side=right]:origin-start data-[side=bottom]:origin-top data-[side=top]:origin-bottom",
           "data-[side=top]:[--media-popup-translate-y-distance:var(--media-popup-translate-distance)]",
           "data-[side=bottom]:[--media-popup-translate-y-distance:calc(var(--media-popup-translate-distance)*-1)]",
           "data-[side=left]:[--media-popup-translate-x-distance:var(--media-popup-translate-distance)]",
           "data-[side=right]:[--media-popup-translate-x-distance:calc(var(--media-popup-translate-distance)*-1)]",
           "bg-media-popover text-media-popover-foreground surface-media after:surface-media-inset",
-          "m-0 min-w-44 max-w-(--media-menu-available-width) overflow-hidden! rounded-media-popup border-0 p-1 [--media-popup-side-offset:var(--media-popover-side-offset)]",
+          "m-0 max-w-(--media-menu-available-width) min-w-44 overflow-hidden! rounded-media-popup border-0 p-1 [--media-popup-side-offset:var(--media-popover-side-offset)]",
           "max-h-[min(var(--media-menu-available-height,--spacing(56)),--spacing(56))] overscroll-none",
           "h-(--media-menu-height) w-(--media-menu-width)",
           "transition-media-popup media-transitioning:transition-media-popup",
@@ -89,7 +79,7 @@ export function SettingsMenu({
             "not-data-submenu:data-child-open:before:hidden",
             "data-submenu:inset-x-0 data-submenu:top-0 data-submenu:z-10 data-submenu:max-h-[inherit] data-submenu:p-1",
             "data-submenu:media-transitioning:pointer-events-none data-submenu:media-transitioning:overflow-hidden",
-            "data-submenu:media-transitioning:translate-x-full rtl:data-submenu:media-transitioning:-translate-x-full data-submenu:media-transitioning:rtl:-translate-x-full rtl:data-submenu:media-transitioning:rtl:translate-x-full",
+            "data-submenu:media-transitioning:translate-x-full data-submenu:media-transitioning:rtl:-translate-x-full rtl:data-submenu:media-transitioning:-translate-x-full rtl:data-submenu:media-transitioning:rtl:translate-x-full",
             "data-submenu:media-transitioning:blur-media-hidden",
           )}
         >

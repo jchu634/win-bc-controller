@@ -122,11 +122,7 @@ import {
 } from "@/src/components/editors/json-editor";
 import { activatePreset, getPreset, putPreset } from "@/src/lib/api";
 import { ApiError } from "@/src/lib/api";
-import {
-  BUTTON_NAMES,
-  type ButtonName,
-  type ValidationBody,
-} from "@/src/lib/types";
+import { BUTTON_NAMES, type ButtonName, type ValidationBody } from "@/src/lib/types";
 import { locatePathLine, positionToLineCol } from "@/src/lib/json-locate";
 import {
   CONTROLLER_LAYOUTS,
@@ -148,485 +144,446 @@ export type PresetEditorHandle = {
 
 type SaveResult = "saved" | "save-as-required" | "failed";
 
-export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(
-  function PresetEditor({ name, builtin, onSaved }, ref) {
-    const [value, setValue] = useState("");
-    const [savedText, setSavedText] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [saveAsOpen, setSaveAsOpen] = useState(false);
-    const [saveAsName, setSaveAsName] = useState("");
-    const [savingAs, setSavingAs] = useState(false);
-    const [saveAsError, setSaveAsError] = useState<string | null>(null);
-    const [activating, setActivating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [notice, setNotice] = useState<string | null>(null);
-    const [markers, setMarkers] = useState<JsonMarker[]>([]);
-    const [advanced, setAdvanced] = useState(false);
-    const [navigationPromptOpen, setNavigationPromptOpen] = useState(false);
-    const editorHandle = useRef<JsonEditorHandle | null>(null);
-    const pendingNavigation = useRef<(() => void) | null>(null);
-    const saveAsForNavigation = useRef(false);
+export const PresetEditor = forwardRef<PresetEditorHandle, PresetEditorProps>(function PresetEditor(
+  { name, builtin, onSaved },
+  ref,
+) {
+  const [value, setValue] = useState("");
+  const [savedText, setSavedText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
+  const [saveAsName, setSaveAsName] = useState("");
+  const [savingAs, setSavingAs] = useState(false);
+  const [saveAsError, setSaveAsError] = useState<string | null>(null);
+  const [activating, setActivating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [markers, setMarkers] = useState<JsonMarker[]>([]);
+  const [advanced, setAdvanced] = useState(false);
+  const [navigationPromptOpen, setNavigationPromptOpen] = useState(false);
+  const editorHandle = useRef<JsonEditorHandle | null>(null);
+  const pendingNavigation = useRef<(() => void) | null>(null);
+  const saveAsForNavigation = useRef(false);
 
-    useEffect(() => {
-      if (name === null) return;
-      setLoading(true);
-      setError(null);
-      setNotice(null);
-      setMarkers([]);
-      setSavedText(null);
-      setAdvanced(false);
-      Effect.runPromise(getPreset(name))
-        .then((r) => {
-          setValue(r.contents);
-          setSavedText(r.contents);
-        })
-        .catch((error: unknown) => {
-          setValue("");
-          setError(errorMessage(error));
-        })
-        .finally(() => setLoading(false));
-    }, [name]);
+  useEffect(() => {
+    if (name === null) return;
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+    setMarkers([]);
+    setSavedText(null);
+    setAdvanced(false);
+    Effect.runPromise(getPreset(name))
+      .then((r) => {
+        setValue(r.contents);
+        setSavedText(r.contents);
+      })
+      .catch((error: unknown) => {
+        setValue("");
+        setError(errorMessage(error));
+      })
+      .finally(() => setLoading(false));
+  }, [name]);
 
-    const dirty = savedText !== null && value !== savedText;
+  const dirty = savedText !== null && value !== savedText;
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        requestNavigation(navigate) {
-          if (!dirty) {
-            navigate();
-            return;
-          }
-          pendingNavigation.current = navigate;
-          setNavigationPromptOpen(true);
+  useImperativeHandle(
+    ref,
+    () => ({
+      requestNavigation(navigate) {
+        if (!dirty) {
+          navigate();
+          return;
+        }
+        pendingNavigation.current = navigate;
+        setNavigationPromptOpen(true);
+      },
+    }),
+    [dirty],
+  );
+
+  const cancelNavigation = useCallback(() => {
+    pendingNavigation.current = null;
+    setNavigationPromptOpen(false);
+  }, []);
+
+  const finishNavigation = useCallback(() => {
+    const navigate = pendingNavigation.current;
+    pendingNavigation.current = null;
+    saveAsForNavigation.current = false;
+    setNavigationPromptOpen(false);
+    navigate?.();
+  }, []);
+
+  const syntaxPrecheck = useCallback((text: string): JsonMarker[] => {
+    try {
+      JSON.parse(text);
+      return [];
+    } catch (e) {
+      const msg = e instanceof SyntaxError ? e.message : String(e);
+      const pos = /position (\d+)/i.exec(msg)?.[1];
+      const lc = pos !== undefined ? positionToLineCol(text, Number(pos)) : null;
+      return [
+        {
+          line: lc?.line ?? 1,
+          col: lc?.col,
+          severity: "error",
+          message: `Invalid JSON: ${msg}`,
         },
-      }),
-      [dirty],
-    );
+      ];
+    }
+  }, []);
 
-    const cancelNavigation = useCallback(() => {
-      pendingNavigation.current = null;
-      setNavigationPromptOpen(false);
-    }, []);
-
-    const finishNavigation = useCallback(() => {
-      const navigate = pendingNavigation.current;
-      pendingNavigation.current = null;
-      saveAsForNavigation.current = false;
-      setNavigationPromptOpen(false);
-      navigate?.();
-    }, []);
-
-    const syntaxPrecheck = useCallback((text: string): JsonMarker[] => {
-      try {
-        JSON.parse(text);
-        return [];
-      } catch (e) {
-        const msg = e instanceof SyntaxError ? e.message : String(e);
-        const pos = /position (\d+)/i.exec(msg)?.[1];
-        const lc =
-          pos !== undefined ? positionToLineCol(text, Number(pos)) : null;
+  const buildMarkers = useCallback((body: ValidationBody, text: string): JsonMarker[] => {
+    if (body.line !== undefined) {
+      return [
+        {
+          line: body.line,
+          col: body.col,
+          severity: "error",
+          message: body.detail ?? body.error,
+        },
+      ];
+    }
+    if (body.path !== undefined) {
+      const line = locatePathLine(text, body.path);
+      if (line !== null) {
         return [
           {
-            line: lc?.line ?? 1,
-            col: lc?.col,
+            line,
             severity: "error",
-            message: `Invalid JSON: ${msg}`,
+            message: body.detail ?? body.error,
           },
         ];
       }
-    }, []);
-
-    const buildMarkers = useCallback(
-      (body: ValidationBody, text: string): JsonMarker[] => {
-        if (body.line !== undefined) {
-          return [
-            {
-              line: body.line,
-              col: body.col,
-              severity: "error",
-              message: body.detail ?? body.error,
-            },
-          ];
-        }
-        if (body.path !== undefined) {
-          const line = locatePathLine(text, body.path);
-          if (line !== null) {
-            return [
-              {
-                line,
-                severity: "error",
-                message: body.detail ?? body.error,
-              },
-            ];
-          }
-        }
-        return [];
-      },
-      [],
-    );
-
-    const save = useCallback(async (): Promise<SaveResult> => {
-      if (name === null) return "failed";
-      const local = syntaxPrecheck(value);
-      if (local.length > 0) {
-        setMarkers(local);
-        setError("Invalid JSON — fix the highlighted line before saving.");
-        return "failed";
-      }
-      if (builtin) {
-        let suggestedName = name;
-        const document: unknown = JSON.parse(value);
-        if (
-          typeof document === "object" &&
-          document !== null &&
-          !Array.isArray(document) &&
-          "name" in document &&
-          typeof document.name === "string"
-        ) {
-          suggestedName = document.name;
-        }
-        setSaveAsName(`${suggestedName} copy`);
-        setSaveAsError(null);
-        setSaveAsOpen(true);
-        return "save-as-required";
-      }
-      setSaving(true);
-      const result = await Effect.runPromise(putPreset(name, value)).catch(
-        (e): null => {
-          if (e instanceof ApiError && e.body !== null) {
-            setMarkers(buildMarkers(e.body, value));
-            setError(
-              `${e.message}${e.body.detail ? ` — ${e.body.detail}` : ""}`,
-            );
-          } else {
-            setError(String(e));
-          }
-          return null;
-        },
-      );
-      setSaving(false);
-      if (result !== null) {
-        setSavedText(value);
-        setMarkers([]);
-        setError(null);
-        onSaved(name);
-        return "saved";
-      }
-      return "failed";
-    }, [name, builtin, value, syntaxPrecheck, buildMarkers, onSaved]);
-
-    const activate = useCallback(async () => {
-      if (name === null) return;
-      if (dirty) {
-        const saved = await save();
-        if (saved !== "saved") return;
-      }
-      setActivating(true);
-      await Effect.runPromise(activatePreset(name))
-        .then(() => setNotice(`Preset '${name}' applied.`))
-        .catch((error: unknown) => setError(errorMessage(error)));
-      setActivating(false);
-    }, [name, dirty, save]);
-
-    const format = useCallback(() => {
-      try {
-        const pretty = `${JSON.stringify(JSON.parse(value), null, 2)}\n`;
-        if (!editorHandle.current?.replaceDocument(pretty)) {
-          setValue(pretty);
-        }
-        setMarkers([]);
-      } catch (e) {
-        const msg = e instanceof SyntaxError ? e.message : String(e);
-        const pos = /position (\d+)/i.exec(msg)?.[1];
-        const lc =
-          pos !== undefined ? positionToLineCol(value, Number(pos)) : null;
-        setMarkers([
-          {
-            line: lc?.line ?? 1,
-            col: lc?.col,
-            severity: "error",
-            message: `Cannot format: ${msg}`,
-          },
-        ]);
-      }
-    }, [value]);
-
-    const saveAsNewPreset = useCallback(async () => {
-      const targetName = saveAsName.trim();
-      if (targetName.length === 0) return;
-      setSavingAs(true);
-      setSaveAsError(null);
-      const targetFilename = `preset-${crypto.randomUUID()}`;
-      const succeeded = await Promise.resolve()
-        .then(() => {
-          const document: unknown = JSON.parse(value);
-          if (
-            typeof document !== "object" ||
-            document === null ||
-            Array.isArray(document)
-          ) {
-            throw new Error("Preset JSON must be an object.");
-          }
-          const contents = `${JSON.stringify({ ...document, name: targetName }, null, 2)}\n`;
-          return Effect.runPromise(putPreset(targetFilename, contents));
-        })
-        .then(() => true)
-        .catch((error: unknown) => {
-          setSaveAsError(errorMessage(error));
-          return false;
-        });
-      setSavingAs(false);
-      if (!succeeded) return;
-      setSaveAsOpen(false);
-      onSaved(targetFilename);
-      if (saveAsForNavigation.current) finishNavigation();
-    }, [saveAsName, value, onSaved, finishNavigation]);
-
-    const saveAndNavigate = useCallback(async () => {
-      saveAsForNavigation.current = builtin;
-      const result = await save();
-      switch (result) {
-        case "saved":
-          finishNavigation();
-          return;
-        case "save-as-required":
-          setNavigationPromptOpen(false);
-          return;
-        case "failed":
-          saveAsForNavigation.current = false;
-          return;
-      }
-    }, [builtin, finishNavigation, save]);
-
-    if (name === null) {
-      return (
-        <section className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
-          <p>Select a preset to inspect it.</p>
-        </section>
-      );
     }
+    return [];
+  }, []);
 
+  const save = useCallback(async (): Promise<SaveResult> => {
+    if (name === null) return "failed";
+    const local = syntaxPrecheck(value);
+    if (local.length > 0) {
+      setMarkers(local);
+      setError("Invalid JSON — fix the highlighted line before saving.");
+      return "failed";
+    }
+    if (builtin) {
+      let suggestedName = name;
+      const document: unknown = JSON.parse(value);
+      if (
+        typeof document === "object" &&
+        document !== null &&
+        !Array.isArray(document) &&
+        "name" in document &&
+        typeof document.name === "string"
+      ) {
+        suggestedName = document.name;
+      }
+      setSaveAsName(`${suggestedName} copy`);
+      setSaveAsError(null);
+      setSaveAsOpen(true);
+      return "save-as-required";
+    }
+    setSaving(true);
+    const result = await Effect.runPromise(putPreset(name, value)).catch((e): null => {
+      if (e instanceof ApiError && e.body !== null) {
+        setMarkers(buildMarkers(e.body, value));
+        setError(`${e.message}${e.body.detail ? ` — ${e.body.detail}` : ""}`);
+      } else {
+        setError(String(e));
+      }
+      return null;
+    });
+    setSaving(false);
+    if (result !== null) {
+      setSavedText(value);
+      setMarkers([]);
+      setError(null);
+      onSaved(name);
+      return "saved";
+    }
+    return "failed";
+  }, [name, builtin, value, syntaxPrecheck, buildMarkers, onSaved]);
+
+  const activate = useCallback(async () => {
+    if (name === null) return;
+    if (dirty) {
+      const saved = await save();
+      if (saved !== "saved") return;
+    }
+    setActivating(true);
+    await Effect.runPromise(activatePreset(name))
+      .then(() => setNotice(`Preset '${name}' applied.`))
+      .catch((error: unknown) => setError(errorMessage(error)));
+    setActivating(false);
+  }, [name, dirty, save]);
+
+  const format = useCallback(() => {
+    try {
+      const pretty = `${JSON.stringify(JSON.parse(value), null, 2)}\n`;
+      if (!editorHandle.current?.replaceDocument(pretty)) {
+        setValue(pretty);
+      }
+      setMarkers([]);
+    } catch (e) {
+      const msg = e instanceof SyntaxError ? e.message : String(e);
+      const pos = /position (\d+)/i.exec(msg)?.[1];
+      const lc = pos !== undefined ? positionToLineCol(value, Number(pos)) : null;
+      setMarkers([
+        {
+          line: lc?.line ?? 1,
+          col: lc?.col,
+          severity: "error",
+          message: `Cannot format: ${msg}`,
+        },
+      ]);
+    }
+  }, [value]);
+
+  const saveAsNewPreset = useCallback(async () => {
+    const targetName = saveAsName.trim();
+    if (targetName.length === 0) return;
+    setSavingAs(true);
+    setSaveAsError(null);
+    const targetFilename = `preset-${crypto.randomUUID()}`;
+    const succeeded = await Promise.resolve()
+      .then(() => {
+        const document: unknown = JSON.parse(value);
+        if (typeof document !== "object" || document === null || Array.isArray(document)) {
+          throw new Error("Preset JSON must be an object.");
+        }
+        const contents = `${JSON.stringify({ ...document, name: targetName }, null, 2)}\n`;
+        return Effect.runPromise(putPreset(targetFilename, contents));
+      })
+      .then(() => true)
+      .catch((error: unknown) => {
+        setSaveAsError(errorMessage(error));
+        return false;
+      });
+    setSavingAs(false);
+    if (!succeeded) return;
+    setSaveAsOpen(false);
+    onSaved(targetFilename);
+    if (saveAsForNavigation.current) finishNavigation();
+  }, [saveAsName, value, onSaved, finishNavigation]);
+
+  const saveAndNavigate = useCallback(async () => {
+    saveAsForNavigation.current = builtin;
+    const result = await save();
+    switch (result) {
+      case "saved":
+        finishNavigation();
+        return;
+      case "save-as-required":
+        setNavigationPromptOpen(false);
+        return;
+      case "failed":
+        saveAsForNavigation.current = false;
+        return;
+    }
+  }, [builtin, finishNavigation, save]);
+
+  if (name === null) {
     return (
-      <section className="flex w-full flex-col gap-3 text-left">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-mono text-lg font-semibold text-foreground">
-            {name}.json
-          </h2>
-          {builtin && (
-            <span className="rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
-              built-in
-            </span>
-          )}
-          {dirty && (
-            <span className="rounded-4xl bg-amber-500/15 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400">
-              unsaved
-            </span>
-          )}
-          {!builtin && savedText !== null && !dirty && (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-              <CheckIcon size={12} /> saved
-            </span>
-          )}
-          <div className="ms-auto flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              variant={advanced ? "secondary" : "outline"}
-              onClick={() => setAdvanced((current) => !current)}
-            >
-              {advanced ? (
-                <SlidersHorizontalIcon size={14} />
-              ) : (
-                <CodeIcon size={14} />
-              )}
-              {advanced ? "Visual Editor" : "JSON Editor"}
-            </Button>
-            {advanced && (
-              <Button size="sm" variant="ghost" onClick={format} title="Format">
-                <MagicWandIcon size={14} />
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (savedText === null) return;
-                // While an edit session is attached the editor's
-                // document is authoritative — route through it.
-                if (!editorHandle.current?.replaceDocument(savedText)) {
-                  setValue(savedText);
-                }
-                setMarkers([]);
-                setError(null);
-              }}
-              disabled={!dirty}
-              title="Revert"
-            >
-              Undo
-              <ArrowCounterClockwiseIcon size={14} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void activate()}
-              disabled={activating}
-            >
-              {activating ? (
-                <SpinnerGapIcon size={14} className="animate-spin" />
-              ) : (
-                <PlayIcon size={14} weight="fill" />
-              )}
-              Activate
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => void save()}
-              disabled={saving || !dirty}
-            >
-              {saving ? (
-                <SpinnerGapIcon size={14} className="animate-spin" />
-              ) : (
-                <FloppyDiskIcon size={14} weight="fill" />
-              )}
-              Save
-            </Button>
-          </div>
-        </div>
-
-        {error !== null && (
-          <div
-            role="alert"
-            className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
-          >
-            <WarningIcon
-              size={16}
-              className="mt-0.5 shrink-0 text-destructive"
-            />
-            <p className="flex-1">{error}</p>
-            <Button size="xs" variant="ghost" onClick={() => setError(null)}>
-              Dismiss
-            </Button>
-          </div>
-        )}
-        {notice !== null && (
-          <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
-            {notice}
-          </p>
-        )}
-
-        {loading ? (
-          <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground">
-            <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
-          </div>
-        ) : advanced ? (
-          <JsonEditor
-            ref={editorHandle}
-            fileName={`${name}.json`}
-            cacheKey={`preset:${name}`}
-            value={value}
-            onChange={setValue}
-            editing
-            markers={markers}
-            className="max-h-[60vh] min-h-64"
-          />
-        ) : (
-          <PresetMappingEditor
-            value={value}
-            onChange={setValue}
-            disabled={false}
-          />
-        )}
-        <Dialog
-          open={saveAsOpen}
-          onOpenChange={(open) => {
-            setSaveAsOpen(open);
-            if (!open && saveAsForNavigation.current) {
-              saveAsForNavigation.current = false;
-              cancelNavigation();
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Save as new preset</DialogTitle>
-              <DialogDescription>
-                Built-in presets cannot be overwritten. Name your edited copy to
-                save it as a new preset.
-              </DialogDescription>
-            </DialogHeader>
-            <Input
-              autoFocus
-              value={saveAsName}
-              onChange={(event) => setSaveAsName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") void saveAsNewPreset();
-              }}
-              placeholder="Preset name"
-              aria-label="New preset name"
-              className="rounded-4xl border-border bg-background"
-            />
-            {saveAsError !== null && (
-              <p role="alert" className="text-sm text-destructive">
-                {saveAsError}
-              </p>
-            )}
-            <DialogFooter>
-              <DialogClose
-                render={<Button variant="outline" />}
-                onClick={() => {
-                  if (saveAsForNavigation.current) cancelNavigation();
-                  saveAsForNavigation.current = false;
-                }}
-              >
-                Cancel
-              </DialogClose>
-              <Button
-                onClick={() => void saveAsNewPreset()}
-                disabled={savingAs || saveAsName.trim().length === 0}
-              >
-                {savingAs && (
-                  <SpinnerGapIcon size={14} className="animate-spin" />
-                )}
-                Save new preset
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog
-          open={navigationPromptOpen}
-          onOpenChange={(open) => {
-            if (!open) cancelNavigation();
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Leave without saving?</DialogTitle>
-              <DialogDescription>
-                You have unsaved changes to this preset. Save them before
-                opening another preset?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={cancelNavigation}>
-                Go back
-              </Button>
-              <Button variant="destructive" onClick={finishNavigation}>
-                Exit without saving
-              </Button>
-              <Button onClick={() => void saveAndNavigate()} disabled={saving}>
-                {saving && (
-                  <SpinnerGapIcon size={14} className="animate-spin" />
-                )}
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <section className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
+        <p>Select a preset to inspect it.</p>
       </section>
     );
-  },
-);
+  }
+
+  return (
+    <section className="flex w-full flex-col gap-3 text-left">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="font-mono text-lg font-semibold text-foreground">{name}.json</h2>
+        {builtin && (
+          <span className="rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
+            built-in
+          </span>
+        )}
+        {dirty && (
+          <span className="rounded-4xl bg-amber-500/15 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+            unsaved
+          </span>
+        )}
+        {!builtin && savedText !== null && !dirty && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <CheckIcon size={12} /> saved
+          </span>
+        )}
+        <div className="ms-auto flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant={advanced ? "secondary" : "outline"}
+            onClick={() => setAdvanced((current) => !current)}
+          >
+            {advanced ? <SlidersHorizontalIcon size={14} /> : <CodeIcon size={14} />}
+            {advanced ? "Visual Editor" : "JSON Editor"}
+          </Button>
+          {advanced && (
+            <Button size="sm" variant="ghost" onClick={format} title="Format">
+              <MagicWandIcon size={14} />
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (savedText === null) return;
+              // While an edit session is attached the editor's
+              // document is authoritative — route through it.
+              if (!editorHandle.current?.replaceDocument(savedText)) {
+                setValue(savedText);
+              }
+              setMarkers([]);
+              setError(null);
+            }}
+            disabled={!dirty}
+            title="Revert"
+          >
+            Undo
+            <ArrowCounterClockwiseIcon size={14} />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void activate()} disabled={activating}>
+            {activating ? (
+              <SpinnerGapIcon size={14} className="animate-spin" />
+            ) : (
+              <PlayIcon size={14} weight="fill" />
+            )}
+            Activate
+          </Button>
+          <Button size="sm" onClick={() => void save()} disabled={saving || !dirty}>
+            {saving ? (
+              <SpinnerGapIcon size={14} className="animate-spin" />
+            ) : (
+              <FloppyDiskIcon size={14} weight="fill" />
+            )}
+            Save
+          </Button>
+        </div>
+      </div>
+
+      {error !== null && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
+        >
+          <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
+          <p className="flex-1">{error}</p>
+          <Button size="xs" variant="ghost" onClick={() => setError(null)}>
+            Dismiss
+          </Button>
+        </div>
+      )}
+      {notice !== null && (
+        <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
+          {notice}
+        </p>
+      )}
+
+      {loading ? (
+        <div className="flex h-64 items-center justify-center gap-2 rounded-xl border border-border text-sm text-muted-foreground">
+          <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
+        </div>
+      ) : advanced ? (
+        <JsonEditor
+          ref={editorHandle}
+          fileName={`${name}.json`}
+          cacheKey={`preset:${name}`}
+          value={value}
+          onChange={setValue}
+          editing
+          markers={markers}
+          className="max-h-[60vh] min-h-64"
+        />
+      ) : (
+        <PresetMappingEditor value={value} onChange={setValue} disabled={false} />
+      )}
+      <Dialog
+        open={saveAsOpen}
+        onOpenChange={(open) => {
+          setSaveAsOpen(open);
+          if (!open && saveAsForNavigation.current) {
+            saveAsForNavigation.current = false;
+            cancelNavigation();
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as new preset</DialogTitle>
+            <DialogDescription>
+              Built-in presets cannot be overwritten. Name your edited copy to save it as a new
+              preset.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={saveAsName}
+            onChange={(event) => setSaveAsName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void saveAsNewPreset();
+            }}
+            placeholder="Preset name"
+            aria-label="New preset name"
+            className="rounded-4xl border-border bg-background"
+          />
+          {saveAsError !== null && (
+            <p role="alert" className="text-sm text-destructive">
+              {saveAsError}
+            </p>
+          )}
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" />}
+              onClick={() => {
+                if (saveAsForNavigation.current) cancelNavigation();
+                saveAsForNavigation.current = false;
+              }}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              onClick={() => void saveAsNewPreset()}
+              disabled={savingAs || saveAsName.trim().length === 0}
+            >
+              {savingAs && <SpinnerGapIcon size={14} className="animate-spin" />}
+              Save new preset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={navigationPromptOpen}
+        onOpenChange={(open) => {
+          if (!open) cancelNavigation();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave without saving?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes to this preset. Save them before opening another preset?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelNavigation}>
+              Go back
+            </Button>
+            <Button variant="destructive" onClick={finishNavigation}>
+              Exit without saving
+            </Button>
+            <Button onClick={() => void saveAndNavigate()} disabled={saving}>
+              {saving && <SpinnerGapIcon size={14} className="animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+});
 
 type PresetMappingEditorProps = {
   value: string;
@@ -643,13 +600,9 @@ type ParsedPreset =
     }
   | { kind: "invalid"; message: string };
 
-type PhysicalSource =
-  { kind: "button"; index: string } | { kind: "trigger"; index: string };
+type PhysicalSource = { kind: "button"; index: string } | { kind: "trigger"; index: string };
 
-type SupportedButtonName = Exclude<
-  ButtonName,
-  "SL_L" | "SR_L" | "SL_R" | "SR_R"
->;
+type SupportedButtonName = Exclude<ButtonName, "SL_L" | "SR_L" | "SL_R" | "SR_R">;
 
 const MAPPING_GROUPS = [
   { title: "Shoulder controls", controls: ["ZL", "ZR", "L", "R"] },
@@ -686,10 +639,7 @@ const BUTTON_LABELS: Record<SupportedButtonName, string> = {
   STICK_R: "Right stick click",
 };
 
-const BUTTON_ICONS: Record<
-  SupportedButtonName,
-  ComponentType<SVGProps<SVGSVGElement>>
-> = {
+const BUTTON_ICONS: Record<SupportedButtonName, ComponentType<SVGProps<SVGSVGElement>>> = {
   A: SwitchButtonA,
   B: SwitchButtonB,
   X: SwitchButtonX,
@@ -712,9 +662,7 @@ const BUTTON_ICONS: Record<
 
 type InputIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
-const CONTROLLER_BUTTON_ICONS: Partial<
-  Record<ControllerLayout, readonly InputIcon[]>
-> = {
+const CONTROLLER_BUTTON_ICONS: Partial<Record<ControllerLayout, readonly InputIcon[]>> = {
   switch: [
     SwitchButtonA,
     SwitchButtonB,
@@ -766,9 +714,7 @@ const CONTROLLER_BUTTON_ICONS: Partial<
   ],
 };
 
-const CONTROLLER_AXIS_ICONS: Partial<
-  Record<ControllerLayout, readonly InputIcon[]>
-> = {
+const CONTROLLER_AXIS_ICONS: Partial<Record<ControllerLayout, readonly InputIcon[]>> = {
   switch: [
     SwitchStickLHorizontal,
     SwitchStickLVertical,
@@ -795,14 +741,9 @@ const CONTROLLER_AXIS_ICONS: Partial<
   ],
 };
 
-function physicalInputIcon(
-  source: PhysicalSource,
-  layout: ControllerLayout,
-): InputIcon {
+function physicalInputIcon(source: PhysicalSource, layout: ControllerLayout): InputIcon {
   const icons =
-    source.kind === "button"
-      ? CONTROLLER_BUTTON_ICONS[layout]
-      : CONTROLLER_AXIS_ICONS[layout];
+    source.kind === "button" ? CONTROLLER_BUTTON_ICONS[layout] : CONTROLLER_AXIS_ICONS[layout];
   return icons?.[Number(source.index)] ?? GameControllerIcon;
 }
 
@@ -810,15 +751,9 @@ const isButtonName = (value: unknown): value is ButtonName =>
   typeof value === "string" && BUTTON_NAMES.some((name) => name === value);
 
 const isControllerLayout = (value: unknown): value is ControllerLayout =>
-  value === "generic" ||
-  value === "switch" ||
-  value === "xbox" ||
-  value === "playstation";
+  value === "generic" || value === "switch" || value === "xbox" || value === "playstation";
 
-const MAPPING_FIELDS: ReadonlyArray<"buttons" | "triggers"> = [
-  "buttons",
-  "triggers",
-];
+const MAPPING_FIELDS: ReadonlyArray<"buttons" | "triggers"> = ["buttons", "triggers"];
 
 function parsePreset(value: string): ParsedPreset {
   let parsed: unknown;
@@ -842,11 +777,7 @@ function parsePreset(value: string): ParsedPreset {
   for (const field of MAPPING_FIELDS) {
     const rawMappings = document[field];
     if (rawMappings === undefined) continue;
-    if (
-      typeof rawMappings !== "object" ||
-      rawMappings === null ||
-      Array.isArray(rawMappings)
-    ) {
+    if (typeof rawMappings !== "object" || rawMappings === null || Array.isArray(rawMappings)) {
       return {
         kind: "invalid",
         message: `The preset "${field}" field must be an object.`,
@@ -870,16 +801,10 @@ function sourceFor(
   triggers: Record<string, ButtonName>,
   target: ButtonName,
 ): PhysicalSource | null {
-  const buttonIndex = Object.entries(buttons).find(
-    ([, button]) => button === target,
-  )?.[0];
+  const buttonIndex = Object.entries(buttons).find(([, button]) => button === target)?.[0];
   if (buttonIndex !== undefined) return { kind: "button", index: buttonIndex };
-  const triggerIndex = Object.entries(triggers).find(
-    ([, button]) => button === target,
-  )?.[0];
-  return triggerIndex === undefined
-    ? null
-    : { kind: "trigger", index: triggerIndex };
+  const triggerIndex = Object.entries(triggers).find(([, button]) => button === target)?.[0];
+  return triggerIndex === undefined ? null : { kind: "trigger", index: triggerIndex };
 }
 
 function sourceValue(source: PhysicalSource | null): string {
@@ -893,13 +818,9 @@ function parseSourceValue(value: string): PhysicalSource | null {
   return null;
 }
 
-function inferControllerLayout(
-  document: Record<string, unknown>,
-): ControllerLayout {
-  if (isControllerLayout(document.controller_layout))
-    return document.controller_layout;
-  const identity =
-    `${document.name ?? ""} ${document.description ?? ""}`.toLowerCase();
+function inferControllerLayout(document: Record<string, unknown>): ControllerLayout {
+  if (isControllerLayout(document.controller_layout)) return document.controller_layout;
+  const identity = `${document.name ?? ""} ${document.description ?? ""}`.toLowerCase();
   if (
     identity.includes("playstation") ||
     identity.includes("dualshock") ||
@@ -923,29 +844,21 @@ function physicalInputLabel(
   controller: ControllerLayoutDefinition,
 ): string {
   const prefix = kind === "button" ? "Button" : "Axis";
-  const names =
-    kind === "button" ? controller.buttonNames : controller.axisNames;
+  const names = kind === "button" ? controller.buttonNames : controller.axisNames;
   const name = names[index];
   return name === undefined ? `${prefix} ${index}` : `${name}`;
 }
 
-function controllerLayoutDefinition(
-  layout: ControllerLayout,
-): ControllerLayoutDefinition {
+function controllerLayoutDefinition(layout: ControllerLayout): ControllerLayoutDefinition {
   return (
     CONTROLLER_LAYOUTS.find((controller) => controller.value === layout) ??
     GENERIC_CONTROLLER_LAYOUT
   );
 }
 
-function PresetMappingEditor({
-  value,
-  onChange,
-  disabled,
-}: PresetMappingEditorProps) {
+function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorProps) {
   const parsed = useMemo(() => parsePreset(value), [value]);
-  const [listeningTarget, setListeningTarget] =
-    useState<SupportedButtonName | null>(null);
+  const [listeningTarget, setListeningTarget] = useState<SupportedButtonName | null>(null);
   const [gamepadButtonCount, setGamepadButtonCount] = useState(16);
   const [gamepadAxisCount, setGamepadAxisCount] = useState(6);
   const pressedAtStart = useRef<Set<number>>(new Set());
@@ -956,15 +869,13 @@ function PresetMappingEditor({
       const nextButtons = Object.fromEntries(
         Object.entries(parsed.buttons).filter(
           ([index, button]) =>
-            !(source?.kind === "button" && index === source.index) &&
-            button !== target,
+            !(source?.kind === "button" && index === source.index) && button !== target,
         ),
       );
       const nextTriggers = Object.fromEntries(
         Object.entries(parsed.triggers).filter(
           ([index, button]) =>
-            !(source?.kind === "trigger" && index === source.index) &&
-            button !== target,
+            !(source?.kind === "trigger" && index === source.index) && button !== target,
         ),
       );
       if (source?.kind === "button") nextButtons[source.index] = target;
@@ -983,9 +894,7 @@ function PresetMappingEditor({
     if (listeningTarget === null) return;
     let animationFrame = 0;
     const poll = () => {
-      const gamepad = Array.from(navigator.getGamepads()).find(
-        (item) => item !== null,
-      );
+      const gamepad = Array.from(navigator.getGamepads()).find((item) => item !== null);
       if (gamepad !== undefined) {
         setGamepadButtonCount(Math.max(16, gamepad.buttons.length));
         setGamepadAxisCount(Math.max(6, gamepad.axes.length));
@@ -993,9 +902,7 @@ function PresetMappingEditor({
         gamepad.buttons.forEach((button, index) => {
           if (button.pressed) pressed.add(index);
         });
-        const newlyPressed = [...pressed].find(
-          (index) => !pressedAtStart.current.has(index),
-        );
+        const newlyPressed = [...pressed].find((index) => !pressedAtStart.current.has(index));
         if (newlyPressed !== undefined) {
           assign(listeningTarget, {
             kind: "button",
@@ -1013,13 +920,9 @@ function PresetMappingEditor({
   }, [assign, listeningTarget]);
 
   const startListening = (target: SupportedButtonName) => {
-    const gamepad = Array.from(navigator.getGamepads()).find(
-      (item) => item !== null,
-    );
+    const gamepad = Array.from(navigator.getGamepads()).find((item) => item !== null);
     pressedAtStart.current = new Set(
-      gamepad?.buttons.flatMap((button, index) =>
-        button.pressed ? [index] : [],
-      ) ?? [],
+      gamepad?.buttons.flatMap((button, index) => (button.pressed ? [index] : [])) ?? [],
     );
     if (gamepad !== undefined) {
       setGamepadButtonCount(Math.max(16, gamepad.buttons.length));
@@ -1036,30 +939,21 @@ function PresetMappingEditor({
     );
   }
 
-  const buttonOptions = Array.from(
-    { length: gamepadButtonCount },
-    (_, index) => index,
-  );
-  const axisOptions = Array.from(
-    { length: gamepadAxisCount },
-    (_, index) => index,
-  );
+  const buttonOptions = Array.from({ length: gamepadButtonCount }, (_, index) => index);
+  const axisOptions = Array.from({ length: gamepadAxisCount }, (_, index) => index);
   const controllerLayout = inferControllerLayout(parsed.document);
   const controller = controllerLayoutDefinition(controllerLayout);
 
   const setControllerLayout = (layout: ControllerLayout) => {
     if (disabled) return;
-    onChange(
-      `${JSON.stringify({ ...parsed.document, controller_layout: layout }, null, 2)}\n`,
-    );
+    onChange(`${JSON.stringify({ ...parsed.document, controller_layout: layout }, null, 2)}\n`);
   };
 
   const mappingRow = (target: SupportedButtonName) => {
     const source = sourceFor(parsed.buttons, parsed.triggers, target);
     const listening = listeningTarget === target;
     const Icon = BUTTON_ICONS[target];
-    const SelectedInputIcon =
-      source === null ? null : physicalInputIcon(source, controllerLayout);
+    const SelectedInputIcon = source === null ? null : physicalInputIcon(source, controllerLayout);
     return (
       <div
         key={target}
@@ -1069,12 +963,12 @@ function PresetMappingEditor({
           title={BUTTON_LABELS[target]}
           className="flex size-8 shrink-0 items-center justify-center text-primary-foreground"
         >
-          <Icon className="size-7 " />
+          <Icon className="size-7" />
         </span>
         <ArrowLeftIcon
           aria-hidden="true"
           weight="bold"
-          className="size-4 shrink-0 text-primary-foreground "
+          className="size-4 shrink-0 text-primary-foreground"
         />
         <Select
           value={sourceValue(source)}
@@ -1145,30 +1039,17 @@ function PresetMappingEditor({
         <Button
           size="icon-sm"
           variant={listening ? "default" : "outline"}
-          onClick={() =>
-            listening ? setListeningTarget(null) : startListening(target)
-          }
+          onClick={() => (listening ? setListeningTarget(null) : startListening(target))}
           disabled={listeningTarget !== null && !listening}
           title={
             listening
               ? "Cancel controller input"
               : `Press a controller button for ${BUTTON_LABELS[target]}`
           }
-          aria-label={
-            listening
-              ? "Cancel controller input"
-              : `Listen for ${BUTTON_LABELS[target]}`
-          }
-          className={cn(
-            "rounded-md",
-            !listening && "text-muted-foreground hover:text-foreground",
-          )}
+          aria-label={listening ? "Cancel controller input" : `Listen for ${BUTTON_LABELS[target]}`}
+          className={cn("rounded-md", !listening && "text-muted-foreground hover:text-foreground")}
         >
-          {listening ? (
-            <SpinnerGapIcon className="animate-spin" />
-          ) : (
-            <GameControllerIcon />
-          )}
+          {listening ? <SpinnerGapIcon className="animate-spin" /> : <GameControllerIcon />}
         </Button>
       </div>
     );
@@ -1176,7 +1057,7 @@ function PresetMappingEditor({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="flex flex-wrap items-center  border-b border-border bg-muted/30 px-4 py-3">
+      <div className="order-b flex flex-wrap items-center border-border bg-muted/30 px-4 py-3">
         <div className="flex items-center gap-2">
           <GameControllerIcon size={18} />
           <div>
@@ -1208,31 +1089,23 @@ function PresetMappingEditor({
       <div className="flex justify-between p-4">
         <div className="min-w-0 space-y-3">
           {MAPPING_GROUPS.map((group) => (
-            <section
-              key={group.title}
-              className="min-w-0 rounded-xl border bg-primary p-2"
-            >
+            <section key={group.title} className="min-w-0 rounded-xl border bg-primary p-2">
               <h4 className="px-2 py-1 text-xs font-semibold text-primary-foreground">
                 {group.title}
               </h4>
-              <div className="lg:grid lg:grid-cols-2 ">
-                {group.controls.map(mappingRow)}
-              </div>
+              <div className="lg:grid lg:grid-cols-2">{group.controls.map(mappingRow)}</div>
             </section>
           ))}
         </div>
 
-        <div className="flex h-100% 2.5xl:w-3/5 flex-col items-center justify-center center p-5">
+        <div className="h-100% center flex flex-col items-center justify-center p-5 2.5xl:w-3/5">
           {controller.image === null ? (
-            <GameControllerIcon
-              weight="light"
-              className="size-32 text-muted-foreground"
-            />
+            <GameControllerIcon weight="light" className="size-32 text-muted-foreground" />
           ) : (
             <img
               src={controller.image}
               alt={`${controller.label} controller layout`}
-              className="w-full max-w-56 brightness-0 opacity-80 dark:invert"
+              className="w-full max-w-56 opacity-80 brightness-0 dark:invert"
             />
           )}
           <p className="mt-3 text-sm font-semibold">{controller.label}</p>

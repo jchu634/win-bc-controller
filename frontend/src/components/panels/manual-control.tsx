@@ -58,9 +58,7 @@ const STICK_MODES_KEY = "manual-control-stick-modes";
 
 function loadStickMode(): StickMode {
   try {
-    const saved: unknown = JSON.parse(
-      localStorage.getItem(STICK_MODES_KEY) ?? "null",
-    );
+    const saved: unknown = JSON.parse(localStorage.getItem(STICK_MODES_KEY) ?? "null");
     if (saved === "drag" || saved === "buttons") return saved;
     if (typeof saved !== "object" || saved === null) return "drag";
     return ("left" in saved && saved.left === "buttons") ||
@@ -84,14 +82,9 @@ const DPAD_BUTTONS = {
   right: "RIGHT",
 } satisfies Record<DpadDirection, ButtonName>;
 
-function stickPosition(
-  side: StickSide,
-  inputs: ReadonlySet<StickInput>,
-): [number, number] {
-  const x =
-    Number(inputs.has(`${side}-right`)) - Number(inputs.has(`${side}-left`));
-  const y =
-    Number(inputs.has(`${side}-up`)) - Number(inputs.has(`${side}-down`));
+function stickPosition(side: StickSide, inputs: ReadonlySet<StickInput>): [number, number] {
+  const x = Number(inputs.has(`${side}-right`)) - Number(inputs.has(`${side}-left`));
+  const y = Number(inputs.has(`${side}-up`)) - Number(inputs.has(`${side}-down`));
   return [x, y];
 }
 
@@ -140,7 +133,7 @@ function ControlButton({
       aria-pressed={pressed}
       disabled={disabled}
       className={cn(
-        "relative size-14 touch-none rounded-xl border-0 bg-transparent p-0 text-foreground hover:bg-transparent transition-[transform,color] hover:text-primary active:translate-y-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-40",
+        "relative size-14 touch-none rounded-xl border-0 bg-transparent p-0 text-foreground transition-[transform,color] hover:bg-transparent hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none active:translate-y-0 disabled:pointer-events-none disabled:opacity-40",
         pressed && "scale-90 text-primary",
         className,
       )}
@@ -212,12 +205,8 @@ export function ManualControl() {
   });
   const [analogPositions, setAnalogPositions] = useState(analogSticks.current);
   const [stickMode, setStickMode] = useState(loadStickMode);
-  const [pressedButtons, setPressedButtons] = useState<Set<ButtonName>>(
-    () => new Set(),
-  );
-  const [pressedSticks, setPressedSticks] = useState<Set<StickInput>>(
-    () => new Set(),
-  );
+  const [pressedButtons, setPressedButtons] = useState<Set<ButtonName>>(() => new Set());
+  const [pressedSticks, setPressedSticks] = useState<Set<StickInput>>(() => new Set());
   const disabled = connection !== "open" || status?.mode === "macro";
 
   useEffect(() => {
@@ -232,11 +221,8 @@ export function ManualControl() {
     send({
       type: "state",
       buttons: [...heldButtons.current],
-      left:
-        analogSticks.current.left ?? stickPosition("left", heldSticks.current),
-      right:
-        analogSticks.current.right ??
-        stickPosition("right", heldSticks.current),
+      left: analogSticks.current.left ?? stickPosition("left", heldSticks.current),
+      right: analogSticks.current.right ?? stickPosition("right", heldSticks.current),
     });
   }, [send]);
 
@@ -371,7 +357,7 @@ export function ManualControl() {
   };
 
   return (
-    <section className="w-full ">
+    <section className="w-full">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">Manual control</h2>
       </div>
@@ -388,7 +374,7 @@ export function ManualControl() {
           ))}
         </div>
 
-        <div className="flex w-full justify-between items-center gap-3">
+        <div className="flex w-full items-center justify-between gap-3">
           <Dpad
             className="size-28"
             disabled={disabled}
@@ -426,9 +412,7 @@ export function ManualControl() {
                 <AnalogStick
                   aria-label={`${side} stick, drag to move or click for ${side === "left" ? "L3" : "R3"}`}
                   value={analogPositions[side] ?? [0, 0]}
-                  onChange={
-                    side === "left" ? changeLeftStick : changeRightStick
-                  }
+                  onChange={side === "left" ? changeLeftStick : changeRightStick}
                   onStickClick={() => {
                     press(STICK_BUTTONS[side]);
                     release(STICK_BUTTONS[side]);
@@ -507,9 +491,7 @@ export function ManualControl() {
           <Switch
             size="sm"
             checked={stickMode === "buttons"}
-            onCheckedChange={(checked) =>
-              changeStickMode(checked ? "buttons" : "drag")
-            }
+            onCheckedChange={(checked) => changeStickMode(checked ? "buttons" : "drag")}
             aria-label="Stick input style"
           />
           <span>Buttons</span>

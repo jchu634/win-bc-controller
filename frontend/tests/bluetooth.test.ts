@@ -6,9 +6,13 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Bluetooth status requests", () => {
   it("accepts the live backend's saved public-address format", async () => {
     const status = {
-      available: true, pairing: false, state: "disconnected", address: null,
+      available: true,
+      pairing: false,
+      state: "disconnected",
+      address: null,
       peers: ["12:34:56:78:90:AB/P"],
-      failure_id: 0, failure: null,
+      failure_id: 0,
+      failure: null,
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(status)));
     await expect(requestStatus()).resolves.toEqual(status);
@@ -20,9 +24,14 @@ describe("Bluetooth status requests", () => {
   });
 
   it("preserves a backend Bluetooth error", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      Response.json({ error: "Cannot read saved Bluetooth devices" }, { status: 503 }),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json({ error: "Cannot read saved Bluetooth devices" }, { status: 503 }),
+        ),
+    );
     await expect(requestStatus()).rejects.toThrow("Cannot read saved Bluetooth devices");
   });
 

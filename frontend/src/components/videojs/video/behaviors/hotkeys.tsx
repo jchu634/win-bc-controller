@@ -1,6 +1,6 @@
-import { Hotkey } from '@videojs/react';
+import { Hotkey } from "@videojs/react";
 
-import { PlaybackHotkeys } from './playback-hotkeys';
+import { PlaybackHotkeys } from "./playback-hotkeys";
 
 export interface VideoHotkeysProps {
   disabled?: boolean | undefined;

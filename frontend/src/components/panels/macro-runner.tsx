@@ -40,8 +40,7 @@ export function MacroRunPanel({
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { macro, macroActive, isPaused, startByName, pause, resume, cancel } =
-    useMacroRunner();
+  const { macro, macroActive, isPaused, startByName, pause, resume, cancel } = useMacroRunner();
   const { lastError, clearError } = useSocket();
 
   const refresh = useCallback(() => {
@@ -59,15 +58,12 @@ export function MacroRunPanel({
     refresh();
   }, [refresh, refreshKey]);
 
-  const wsError =
-    lastError !== null && lastError.message !== "" ? lastError : null;
+  const wsError = lastError !== null && lastError.message !== "" ? lastError : null;
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredNames =
     normalizedSearch === ""
       ? names
-      : names.filter((name) =>
-          name.toLocaleLowerCase().includes(normalizedSearch),
-        );
+      : names.filter((name) => name.toLocaleLowerCase().includes(normalizedSearch));
 
   return (
     <section className="flex w-full flex-col gap-3 text-left">
@@ -115,21 +111,11 @@ export function MacroRunPanel({
               <PlayIcon size={14} weight="fill" /> Resume
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={pause}
-              disabled={!macroActive}
-            >
+            <Button size="sm" variant="outline" onClick={pause} disabled={!macroActive}>
               <PauseIcon size={14} weight="fill" /> Pause
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={cancel}
-            disabled={!macroActive}
-          >
+          <Button size="sm" variant="destructive" onClick={cancel} disabled={!macroActive}>
             <StopIcon size={14} weight="fill" /> Stop
           </Button>
         </div>
@@ -159,24 +145,20 @@ export function MacroRunPanel({
             No macros match "{search.trim()}".
           </div>
         ) : (
-          <ul className="flex max-h-42 flex-col gap-2 overflow-y-auto overscroll-contain scrollbar-gutter-stabl">
+          <ul className="scrollbar-gutter-stabl flex max-h-42 flex-col gap-2 overflow-y-auto overscroll-contain">
             {filteredNames.map((name) => {
               const isActive = macroActive && macro?.name === name;
               return (
                 <li
                   key={name}
                   className={cn(
-                    "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/60 focus-within:bg-muted/60",
-                    selected === name
-                      ? "bg-muted/60"
-                      : isActive
-                        ? "bg-primary/5"
-                        : "bg-background",
+                    "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm focus-within:bg-muted/60 hover:bg-muted/60",
+                    selected === name ? "bg-muted/60" : isActive ? "bg-primary/5" : "bg-background",
                   )}
                 >
                   <Button
                     variant="ghost"
-                    className="relative z-0 h-auto min-w-0 flex-1 cursor-pointer justify-start rounded-none border-0 bg-transparent px-1 py-0 text-left font-mono font-normal hover:bg-transparent active:translate-y-0 after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                    className="relative z-0 h-auto min-w-0 flex-1 cursor-pointer justify-start rounded-none border-0 bg-transparent px-1 py-0 text-left font-mono font-normal after:absolute after:inset-0 after:rounded-md hover:bg-transparent focus-visible:after:ring-2 focus-visible:after:ring-ring active:translate-y-0"
                     aria-pressed={selected === name}
                     onClick={() => onSelect(name)}
                     title={name}
@@ -193,9 +175,7 @@ export function MacroRunPanel({
                     <PencilSimpleIcon size={12} /> Edit
                   </Button>
                   {isActive && isPaused && (
-                    <span className="text-xs text-muted-foreground">
-                      paused
-                    </span>
+                    <span className="text-xs text-muted-foreground">paused</span>
                   )}
                   <Button
                     size="xs"

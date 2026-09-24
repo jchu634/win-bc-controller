@@ -21,14 +21,8 @@ export function useMacroRunner() {
   );
 
   const pause = useCallback(() => send({ type: "macro", op: "pause" }), [send]);
-  const resume = useCallback(
-    () => send({ type: "macro", op: "resume" }),
-    [send],
-  );
-  const cancel = useCallback(
-    () => send({ type: "macro", op: "cancel" }),
-    [send],
-  );
+  const resume = useCallback(() => send({ type: "macro", op: "resume" }), [send]);
+  const cancel = useCallback(() => send({ type: "macro", op: "cancel" }), [send]);
 
   const mode = status?.mode ?? "manual";
   const macro = status?.macro ?? null;

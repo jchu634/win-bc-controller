@@ -15,10 +15,15 @@
       --media-accent-text-color,
       contrast-color(var(--media-accent-color, var(--media-default-accent-color)))
     );
-    --media-accent: var(--media-accent-color, color-mix(in oklab, var(--media-default-accent-color) 10%, transparent));
+    --media-accent: var(
+      --media-accent-color,
+      color-mix(in oklab, var(--media-default-accent-color) 10%, transparent)
+    );
     --media-accent-foreground: var(
       --media-accent-text-color,
-      contrast-color(var(--media-accent-color, var(--media-internal-accent-text-fallback, oklch(0 0 0))))
+      contrast-color(
+        var(--media-accent-color, var(--media-internal-accent-text-fallback, oklch(0 0 0)))
+      )
     );
     --media-muted: oklch(1 0 0 / 0.15);
     --media-muted-foreground: oklch(1 0 0 / 0.65);
@@ -29,12 +34,18 @@
 
     /* Shadows and surfaces. Preferences switch the backdrop filters off and strengthen the inset highlight. */
     --media-shadow-surface: 0 1px 3px 0 oklch(0 0 0 / 0.15), 0 1px 2px -1px oklch(0 0 0 / 0.15);
-    --media-shadow-surface-inset: inset 0 1px 0 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.05);
-    --media-shadow-thumb: 0 0 0 1px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.35);
+    --media-shadow-surface-inset:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.05);
+    --media-shadow-thumb:
+      0 0 0 1px rgb(0 0 0 / 0.1), 0 1px 3px 0 rgb(0 0 0 / 0.35), 0 1px 2px -1px rgb(0 0 0 / 0.35);
     --media-shadow-tooltip: 0 0 0 1px var(--media-border), var(--media-shadow-surface);
     --media-shadow-separator: 0 1px 0 0 oklch(1 0 0 / 0.075);
-    --media-shadow-current-color: oklch(from currentColor 0 0 0 / clamp(0, calc((l - 0.5) * 0.5), 0.15));
-    --media-shadow-subtle-current-color: oklch(from var(--media-shadow-current-color) l c h / calc(alpha * 0.4));
+    --media-shadow-current-color: oklch(
+      from currentColor 0 0 0 / clamp(0, calc((l - 0.5) * 0.5), 0.15)
+    );
+    --media-shadow-subtle-current-color: oklch(
+      from var(--media-shadow-current-color) l c h / calc(alpha * 0.4)
+    );
     --media-text-shadow-dialog: 0 1px 0 rgb(0 0 0 / 0.25);
     --media-backdrop-filter-surface: blur(16px) saturate(150%);
     --media-backdrop-filter-indicator: blur(8px);

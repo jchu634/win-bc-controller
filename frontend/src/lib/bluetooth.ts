@@ -9,17 +9,28 @@ export type BluetoothStatus = {
 };
 
 function isBluetoothStatus(value: unknown): value is BluetoothStatus {
-  return typeof value === "object" && value !== null &&
-    "available" in value && typeof value.available === "boolean" &&
-    "pairing" in value && typeof value.pairing === "boolean" &&
-    "state" in value && (value.state === "disconnected" ||
-      value.state === "connecting" || value.state === "reconnecting" ||
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "available" in value &&
+    typeof value.available === "boolean" &&
+    "pairing" in value &&
+    typeof value.pairing === "boolean" &&
+    "state" in value &&
+    (value.state === "disconnected" ||
+      value.state === "connecting" ||
+      value.state === "reconnecting" ||
       value.state === "connected") &&
-    "address" in value && (value.address === null || typeof value.address === "string") &&
-    "peers" in value && Array.isArray(value.peers) &&
+    "address" in value &&
+    (value.address === null || typeof value.address === "string") &&
+    "peers" in value &&
+    Array.isArray(value.peers) &&
     value.peers.every((peer: unknown) => typeof peer === "string") &&
-    "failure_id" in value && Number.isInteger(value.failure_id) &&
-    "failure" in value && (value.failure === null || typeof value.failure === "string");
+    "failure_id" in value &&
+    Number.isInteger(value.failure_id) &&
+    "failure" in value &&
+    (value.failure === null || typeof value.failure === "string")
+  );
 }
 
 export async function requestStatus(init?: RequestInit): Promise<BluetoothStatus> {
@@ -46,12 +57,12 @@ export async function requestStatus(init?: RequestInit): Promise<BluetoothStatus
     throw new Error(`Bluetooth status returned an invalid response (HTTP ${response.status}).`);
   }
   if (!response.ok) {
-    const message = typeof body === "object" && body !== null &&
-      "error" in body && typeof body.error === "string"
-      ? body.error : `Bluetooth request failed (HTTP ${response.status})`;
+    const message =
+      typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+        ? body.error
+        : `Bluetooth request failed (HTTP ${response.status})`;
     throw new Error(message);
   }
   if (!isBluetoothStatus(body)) throw new Error("Invalid Bluetooth status response");
   return body;
 }
-

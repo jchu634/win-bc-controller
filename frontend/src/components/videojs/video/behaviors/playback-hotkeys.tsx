@@ -1,4 +1,4 @@
-import { Hotkey } from '@videojs/react';
+import { Hotkey } from "@videojs/react";
 
 export interface PlaybackHotkeysProps {
   disabled?: boolean | undefined;

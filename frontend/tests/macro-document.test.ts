@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseMacroDocument,
-  parseVisualMacroDocument,
-} from "@/src/lib/macro-document";
+import { parseMacroDocument, parseVisualMacroDocument } from "@/src/lib/macro-document";
 
 describe("parseMacroDocument", () => {
   it("parses every supported action", () => {
@@ -32,11 +29,7 @@ describe("parseMacroDocument", () => {
     ["future version", { version: 2, actions: [] }, ["version"]],
     ["negative repeat", { version: 1, repeat: -1, actions: [] }, ["repeat"]],
     ["fractional repeat", { version: 1, repeat: 1.5, actions: [] }, ["repeat"]],
-    [
-      "negative wait",
-      { version: 1, actions: [{ do: "wait", ms: -1 }] },
-      ["actions", 0, "ms"],
-    ],
+    ["negative wait", { version: 1, actions: [{ do: "wait", ms: -1 }] }, ["actions", 0, "ms"]],
     [
       "fractional loop count",
       { version: 1, actions: [{ do: "loop", count: 1.5, actions: [] }] },

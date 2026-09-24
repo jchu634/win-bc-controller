@@ -4,10 +4,7 @@ import { Effect } from "effect";
 import { ArrowLeftIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import {
-  MacroEditor,
-  type MacroEditorHandle,
-} from "@/src/components/editors/macro-editor";
+import { MacroEditor, type MacroEditorHandle } from "@/src/components/editors/macro-editor";
 import { MacroPicker } from "@/src/components/panels/macro-picker";
 import {
   Dialog,
@@ -28,9 +25,12 @@ function MacrosPage() {
   const hash = useLocation({ select: (location) => location.hash });
   const selected = hash || null;
   const navigate = Route.useNavigate();
-  const setSelected = useCallback((name: string | null) => {
-    void navigate({ hash: name ?? "", ignoreBlocker: true });
-  }, [navigate]);
+  const setSelected = useCallback(
+    (name: string | null) => {
+      void navigate({ hash: name ?? "", ignoreBlocker: true });
+    },
+    [navigate],
+  );
   const [listVersion, setListVersion] = useState(0);
   const [creating, setCreating] = useState(false);
   const [creatingMacro, setCreatingMacro] = useState(false);
@@ -66,22 +66,25 @@ function MacrosPage() {
     [requestNavigation, selected, setSelected],
   );
 
-  const createMacro = useCallback(async (name: string) => {
-    setCreatingMacro(true);
-    const ok = await Effect.runPromise(putMacro(name, createMacroDocument(name)))
-      .then(() => true)
-      .catch((error: unknown) => {
-        setCreateError(errorMessage(error));
-        return false;
-      });
-    setCreatingMacro(false);
-    if (ok) {
-      setCreating(false);
-      setOverwriteName(null);
-      setListVersion((v) => v + 1);
-      setSelected(name);
-    }
-  }, [setSelected]);
+  const createMacro = useCallback(
+    async (name: string) => {
+      setCreatingMacro(true);
+      const ok = await Effect.runPromise(putMacro(name, createMacroDocument(name)))
+        .then(() => true)
+        .catch((error: unknown) => {
+          setCreateError(errorMessage(error));
+          return false;
+        });
+      setCreatingMacro(false);
+      if (ok) {
+        setCreating(false);
+        setOverwriteName(null);
+        setListVersion((v) => v + 1);
+        setSelected(name);
+      }
+    },
+    [setSelected],
+  );
 
   const submitCreate = useCallback(async () => {
     const name = newName.trim();
@@ -94,10 +97,10 @@ function MacrosPage() {
     }
     setCreatingMacro(true);
     const existingName = await Effect.runPromise(listMacros())
-      .then(({ names }) =>
-        names.find(
-          (candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase(),
-        ) ?? null,
+      .then(
+        ({ names }) =>
+          names.find((candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase()) ??
+          null,
       )
       .catch((error: unknown) => {
         setCreateError(errorMessage(error));
@@ -116,15 +119,9 @@ function MacrosPage() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-3 text-left">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Macro Editor
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Macro Editor</h1>
         </div>
-        <Button
-          render={<Link to="/" />}
-          variant="outline"
-          size="sm"
-        >
+        <Button render={<Link to="/" />} variant="outline" size="sm">
           <ArrowLeftIcon size={14} /> Back to controller
         </Button>
       </header>
@@ -185,19 +182,14 @@ function MacrosPage() {
                 </p>
               )}
               <DialogFooter>
-                <DialogClose
-                  render={<Button variant="outline" />}
-                  disabled={creatingMacro}
-                >
+                <DialogClose render={<Button variant="outline" />} disabled={creatingMacro}>
                   Cancel
                 </DialogClose>
                 <Button
                   onClick={() => void submitCreate()}
                   disabled={creatingMacro || newName.trim().length === 0}
                 >
-                  {creatingMacro && (
-                    <SpinnerGapIcon size={14} className="animate-spin" />
-                  )}
+                  {creatingMacro && <SpinnerGapIcon size={14} className="animate-spin" />}
                   Create macro
                 </Button>
               </DialogFooter>
@@ -231,9 +223,7 @@ function MacrosPage() {
                   onClick={() => void createMacro(overwriteName)}
                   disabled={creatingMacro}
                 >
-                  {creatingMacro && (
-                    <SpinnerGapIcon size={14} className="animate-spin" />
-                  )}
+                  {creatingMacro && <SpinnerGapIcon size={14} className="animate-spin" />}
                   Overwrite macro
                 </Button>
               </DialogFooter>

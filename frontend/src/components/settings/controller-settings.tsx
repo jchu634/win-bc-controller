@@ -1,9 +1,6 @@
 import { useRef, useState } from "react";
 import { ControllerPanel } from "@/src/components/settings/controller-panel";
-import {
-  PresetEditor,
-  type PresetEditorHandle,
-} from "@/src/components/editors/preset-editor";
+import { PresetEditor, type PresetEditorHandle } from "@/src/components/editors/preset-editor";
 import { PresetPicker } from "@/src/components/settings/controller-preset-picker";
 
 export function ControllerSettings() {
@@ -31,7 +28,7 @@ export function ControllerSettings() {
     <div className="flex min-w-0 flex-col gap-6">
       <ControllerPanel />
 
-      <div className="2xl:flex 2xl:gap-x-4 space-y-4 2xl:space-y-0">
+      <div className="space-y-4 2xl:flex 2xl:space-y-0 2xl:gap-x-4">
         <PresetPicker
           selected={selectedPreset}
           onSelect={(preset) => requestPreset(preset.filename, preset.builtin)}

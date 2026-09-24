@@ -57,10 +57,7 @@ export function AnalogStick({
     if (disabled || pointer.current !== event.pointerId) return;
     const origin = start.current;
     if (origin === null) return;
-    if (
-      !origin.dragged &&
-      Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 6
-    )
+    if (!origin.dragged && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) < 6)
       return;
     origin.dragged = true;
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -83,7 +80,7 @@ export function AnalogStick({
       aria-label={label}
       aria-disabled={disabled}
       className={cn(
-        "relative size-36 touch-none select-none rounded-full border-2 border-border bg-muted/30",
+        "relative size-36 touch-none rounded-full border-2 border-border bg-muted/30 select-none",
         disabled ? "opacity-50" : "group cursor-grab active:cursor-grabbing",
         className,
       )}
@@ -108,8 +105,7 @@ export function AnalogStick({
         if (pointer.current === event.pointerId) release();
       }}
       onKeyDown={(event) => {
-        if (!disabled && (event.key === " " || event.key === "Enter"))
-          event.preventDefault();
+        if (!disabled && (event.key === " " || event.key === "Enter")) event.preventDefault();
       }}
       onKeyUp={(event) => {
         if (disabled || (event.key !== " " && event.key !== "Enter")) return;

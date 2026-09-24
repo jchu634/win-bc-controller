@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import '../styles/base.css';
-import '../styles/audio/theme.css';
-import '../styles/video/captions.css';
-import '../styles/video/theme.css';
-import { qualityText } from '@videojs/core/i18n/text/menu';
-import { Menu } from '@videojs/react';
-import { Text as TextPrimitive } from '@videojs/react';
-import { SwitchesIcon as SwitchesIconPrimitive } from '@videojs/react/icons';
-import { QualityRadioGroup } from '@videojs/react/ui/quality-radio-group';
+import "../styles/base.css";
+import "../styles/audio/theme.css";
+import "../styles/video/captions.css";
+import "../styles/video/theme.css";
+import { qualityText } from "@videojs/core/i18n/text/menu";
+import { Menu } from "@videojs/react";
+import { Text as TextPrimitive } from "@videojs/react";
+import { SwitchesIcon as SwitchesIconPrimitive } from "@videojs/react/icons";
+import { QualityRadioGroup } from "@videojs/react/ui/quality-radio-group";
 
-import { MenuChevron } from '@/src/components/videojs/ui/menu-chevron';
-import { RadioItem } from '@/src/components/videojs/ui/radio-item';
-import { cn } from '@/src/lib/utils';
+import { MenuChevron } from "@/src/components/videojs/ui/menu-chevron";
+import { RadioItem } from "@/src/components/videojs/ui/radio-item";
+import { cn } from "@/src/lib/utils";
 
-export type QualityMenuProps = Omit<Menu.RootProps, 'children'>;
+export type QualityMenuProps = Omit<Menu.RootProps, "children">;
 
 export function QualityMenu({ ...props }: QualityMenuProps = {}) {
   return (
@@ -22,64 +22,64 @@ export function QualityMenu({ ...props }: QualityMenuProps = {}) {
       <QualityRadioGroup.Root>
         <Menu.Trigger
           className={cn(
-            'group/menu-trigger-item',
-            'relative flex cursor-pointer select-none items-center gap-1.5 rounded-media-menu-item px-2 py-1.5 text-start whitespace-nowrap',
-            'focus-ring-media',
-            'media-highlighted:highlight-media',
-            'focus-visible:outline-media-ring focus-visible:outline-offset-2',
-            'text-shadow-media',
-            'transition-[background-color,color] duration-media-fast ease-in-out',
-            'media-anchored:duration-media-instant media-anchored:media-highlighted:duration-media-slow',
-            'justify-between tabular-nums text-inherit',
-            'data-[availability=unavailable]:hidden data-[availability=unsupported]:hidden',
-            'aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
-            'media-anchored:data-highlighted:[anchor-name:--media-menu-item-highlight-anchor]',
-            'media-anchored:media-highlighted:bg-transparent'
+            "group/menu-trigger-item",
+            "relative flex cursor-pointer items-center gap-1.5 rounded-media-menu-item px-2 py-1.5 text-start whitespace-nowrap select-none",
+            "focus-ring-media",
+            "media-highlighted:highlight-media",
+            "focus-visible:outline-offset-2 focus-visible:outline-media-ring",
+            "text-shadow-media",
+            "transition-[background-color,color] duration-media-fast ease-in-out",
+            "media-anchored:duration-media-instant media-anchored:media-highlighted:duration-media-slow",
+            "justify-between text-inherit tabular-nums",
+            "data-[availability=unavailable]:hidden data-[availability=unsupported]:hidden",
+            "aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
+            "media-anchored:data-highlighted:[anchor-name:--media-menu-item-highlight-anchor]",
+            "media-anchored:media-highlighted:bg-transparent",
           )}
         >
           <SwitchesIconPrimitive
             className={cn(
-              'shrink-0 drop-shadow-media-icon text-media-muted-foreground',
-              'size-media-icon',
-              'group-media-highlighted/menu-trigger-item:text-inherit'
+              "shrink-0 text-media-muted-foreground drop-shadow-media-icon",
+              "size-media-icon",
+              "group-media-highlighted/menu-trigger-item:text-inherit",
             )}
           />
           <TextPrimitive token={qualityText.key}>{qualityText.text}</TextPrimitive>
-          <span className={'ms-auto inline-flex min-w-0 items-center gap-1 ps-2 text-current/65'}>
-            <QualityRadioGroup.Value className={'max-w-24 truncate'} />
+          <span className={"ms-auto inline-flex min-w-0 items-center gap-1 ps-2 text-current/65"}>
+            <QualityRadioGroup.Value className={"max-w-24 truncate"} />
             <MenuChevron />
           </span>
         </Menu.Trigger>
         <Menu.Content
           className={cn(
-            '[anchor-scope:--media-menu-item-highlight-anchor]',
-            'media-anchored:before:anchor-media-highlight',
-            'media-anchored:has-data-[highlighted=]:before:duration-0',
-            'absolute max-h-[inherit] overflow-auto overscroll-none outline-hidden',
-            'not-data-submenu:flex not-data-submenu:flex-col not-data-submenu:gap-0.5',
-            'transition-[translate,filter] duration-media-menu ease-out',
-            'not-data-submenu:inset-x-1 not-data-submenu:top-1',
-            'not-data-submenu:data-child-open:-translate-x-full rtl:not-data-submenu:data-child-open:translate-x-full',
-            'not-data-submenu:data-child-open:rtl:translate-x-full rtl:not-data-submenu:data-child-open:rtl:-translate-x-full',
-            'not-data-submenu:data-child-open:blur-media-hidden',
-            'not-data-submenu:data-child-open:before:hidden',
-            'data-submenu:inset-x-0 data-submenu:top-0 data-submenu:z-10 data-submenu:max-h-[inherit] data-submenu:p-1',
-            'data-submenu:media-transitioning:pointer-events-none data-submenu:media-transitioning:overflow-hidden',
-            'data-submenu:media-transitioning:translate-x-full rtl:data-submenu:media-transitioning:-translate-x-full data-submenu:media-transitioning:rtl:-translate-x-full rtl:data-submenu:media-transitioning:rtl:translate-x-full',
-            'data-submenu:media-transitioning:blur-media-hidden'
+            "[anchor-scope:--media-menu-item-highlight-anchor]",
+            "media-anchored:before:anchor-media-highlight",
+            "media-anchored:has-data-[highlighted=]:before:duration-0",
+            "absolute max-h-[inherit] overflow-auto overscroll-none outline-hidden",
+            "not-data-submenu:flex not-data-submenu:flex-col not-data-submenu:gap-0.5",
+            "transition-[translate,filter] duration-media-menu ease-out",
+            "not-data-submenu:inset-x-1 not-data-submenu:top-1",
+            "not-data-submenu:data-child-open:-translate-x-full rtl:not-data-submenu:data-child-open:translate-x-full",
+            "not-data-submenu:data-child-open:rtl:translate-x-full rtl:not-data-submenu:data-child-open:rtl:-translate-x-full",
+            "not-data-submenu:data-child-open:blur-media-hidden",
+            "not-data-submenu:data-child-open:before:hidden",
+            "data-submenu:inset-x-0 data-submenu:top-0 data-submenu:z-10 data-submenu:max-h-[inherit] data-submenu:p-1",
+            "data-submenu:media-transitioning:pointer-events-none data-submenu:media-transitioning:overflow-hidden",
+            "data-submenu:media-transitioning:translate-x-full data-submenu:media-transitioning:rtl:-translate-x-full rtl:data-submenu:media-transitioning:-translate-x-full rtl:data-submenu:media-transitioning:rtl:translate-x-full",
+            "data-submenu:media-transitioning:blur-media-hidden",
           )}
         >
           <Menu.Item
             className={cn(
-              'group/menu-back-item',
-              'relative flex cursor-pointer select-none items-center gap-1.5 rounded-media-menu-item px-2 py-1.5 text-start whitespace-nowrap',
-              'focus-ring-media',
-              'media-highlighted:highlight-media',
-              'focus-visible:outline-media-ring focus-visible:outline-offset-2',
-              'text-shadow-media',
-              'transition-[background-color,color] duration-media-fast ease-in-out',
-              'media-anchored:duration-media-instant media-anchored:media-highlighted:duration-media-slow',
-              'mb-0.5 w-full'
+              "group/menu-back-item",
+              "relative flex cursor-pointer items-center gap-1.5 rounded-media-menu-item px-2 py-1.5 text-start whitespace-nowrap select-none",
+              "focus-ring-media",
+              "media-highlighted:highlight-media",
+              "focus-visible:outline-offset-2 focus-visible:outline-media-ring",
+              "text-shadow-media",
+              "transition-[background-color,color] duration-media-fast ease-in-out",
+              "media-anchored:duration-media-instant media-anchored:media-highlighted:duration-media-slow",
+              "mb-0.5 w-full",
             )}
           >
             <MenuChevron back />
@@ -87,29 +87,37 @@ export function QualityMenu({ ...props }: QualityMenuProps = {}) {
           </Menu.Item>
           <Menu.Separator
             className={cn(
-              'my-1 block border-b border-media-border media-opaque:border-media-foreground/25',
-              'shadow-media-separator'
+              "my-1 block border-b border-media-border media-opaque:border-media-foreground/25",
+              "shadow-media-separator",
             )}
           />
           <QualityRadioGroup.Options
             className={cn(
-              'flex [max-height:inherit] flex-col gap-0.5',
-              '[anchor-scope:--media-menu-item-highlight-anchor]',
-              'media-anchored:before:anchor-media-highlight',
-              'media-anchored:has-data-[highlighted=]:before:duration-0'
+              "flex [max-height:inherit] flex-col gap-0.5",
+              "[anchor-scope:--media-menu-item-highlight-anchor]",
+              "media-anchored:before:anchor-media-highlight",
+              "media-anchored:has-data-[highlighted=]:before:duration-0",
             )}
             renderItem={(props, item) => (
               <RadioItem {...props}>
                 <span>
                   <span>{item.label}</span>
                   {item.tier ? (
-                    <sup className={'ps-0.5 pt-px text-media-xs font-semibold leading-none text-current/70'}>
+                    <sup
+                      className={
+                        "ps-0.5 pt-px text-media-xs leading-none font-semibold text-current/70"
+                      }
+                    >
                       {item.tier}
                     </sup>
                   ) : null}
                 </span>
                 {item.badge ? (
-                  <span className={'rounded-media-control bg-media-accent px-1.5 text-media-xs font-semibold'}>
+                  <span
+                    className={
+                      "rounded-media-control bg-media-accent px-1.5 text-media-xs font-semibold"
+                    }
+                  >
                     {item.badge}
                   </span>
                 ) : null}

@@ -41,11 +41,7 @@ export const describeError = (err: CameraError): string => {
   }
 };
 
-export type CameraPermissionState =
-  | "granted"
-  | "denied"
-  | "prompt"
-  | "unsupported";
+export type CameraPermissionState = "granted" | "denied" | "prompt" | "unsupported";
 
 export const requestPermission = Effect.gen(function* () {
   const md = navigator.mediaDevices;
@@ -87,9 +83,7 @@ export const acquireStream = (deviceId: string, audioDeviceId: string) =>
       try: () =>
         md.getUserMedia({
           video: deviceId ? { deviceId: { exact: deviceId } } : true,
-          audio: audioDeviceId
-            ? { deviceId: { exact: audioDeviceId } }
-            : true,
+          audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true,
         }),
       catch: (e) => toCameraError(e),
     });

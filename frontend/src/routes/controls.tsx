@@ -3,10 +3,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { MacroRunPanel } from "@/src/components/panels/macro-runner";
 import { ManualControl } from "@/src/components/panels/manual-control";
-import {
-  SwitchConnection,
-  useSwitchConnection,
-} from "@/src/components/panels/connection";
+import { SwitchConnection, useSwitchConnection } from "@/src/components/panels/connection";
 import { SettingsDialog } from "@/src/components/settings/dialog";
 import { generalSettingsStore } from "@/src/stores/general-settings";
 import "@/src/App.css";
@@ -35,10 +32,7 @@ function ControlsPage() {
         </div>
         <div className="grid items-start gap-6 xl:grid-cols-2">
           <div className="min-w-0 rounded-md border border-border bg-card p-4">
-            <MacroRunPanel
-              selected={selectedMacro}
-              onSelect={setSelectedMacro}
-            />
+            <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
           </div>
           <div className="min-w-0 overflow-x-auto">
             <ManualControl />

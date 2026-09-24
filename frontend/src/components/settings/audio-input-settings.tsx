@@ -31,11 +31,7 @@ export function AudioInputSettings({
       try {
         const devices = await mediaDevices.enumerateDevices();
         if (active)
-          setInputs(
-            devices.filter(
-              (device) => device.kind === "audioinput" && device.deviceId,
-            ),
-          );
+          setInputs(devices.filter((device) => device.kind === "audioinput" && device.deviceId));
       } catch {
         if (active) setError("Unable to list audio inputs.");
       }
@@ -83,9 +79,7 @@ export function AudioInputSettings({
           const amplitude = (sample - 128) / 128;
           sum += amplitude * amplitude;
         }
-        setLevel(
-          Math.min(100, Math.round(Math.sqrt(sum / samples.length) * 300)),
-        );
+        setLevel(Math.min(100, Math.round(Math.sqrt(sum / samples.length) * 300)));
         frame = requestAnimationFrame(updateLevel);
       };
       cleanupRef.current = () => {
@@ -97,11 +91,7 @@ export function AudioInputSettings({
       setTesting(true);
       updateLevel();
       const devices = await navigator.mediaDevices.enumerateDevices();
-      setInputs(
-        devices.filter(
-          (device) => device.kind === "audioinput" && device.deviceId,
-        ),
-      );
+      setInputs(devices.filter((device) => device.kind === "audioinput" && device.deviceId));
     } catch (cause) {
       stream?.getTracks().forEach((track) => track.stop());
       setError(
@@ -125,18 +115,13 @@ export function AudioInputSettings({
           }}
         >
           <SelectTrigger className="w-1/2 min-w-64" aria-label="Audio input">
-            <SelectValue placeholder="Audio input">
-              {selected?.label}
-            </SelectValue>
+            <SelectValue placeholder="Audio input">{selected?.label}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectLabel>Audio input</SelectLabel>
               {inputs.map((input, index) => (
-                <SelectItem
-                  key={input.deviceId || index}
-                  value={input.deviceId}
-                >
+                <SelectItem key={input.deviceId || index} value={input.deviceId}>
                   {input.label || `Microphone ${index + 1}`}
                 </SelectItem>
               ))}
@@ -155,7 +140,7 @@ export function AudioInputSettings({
         </Button>
         {testing && (
           <div
-            className="min-w-24 max-w-40 flex-1"
+            className="max-w-40 min-w-24 flex-1"
             role="meter"
             aria-label="Microphone input level"
             aria-valuemin={0}
@@ -163,10 +148,7 @@ export function AudioInputSettings({
             aria-valuenow={level}
           >
             <div className="h-3 overflow-hidden rounded bg-muted">
-              <div
-                className="h-full bg-primary"
-                style={{ width: `${level}%` }}
-              />
+              <div className="h-full bg-primary" style={{ width: `${level}%` }} />
             </div>
           </div>
         )}

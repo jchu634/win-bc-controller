@@ -1,7 +1,10 @@
 import * as Blockly from "blockly/core";
 import { BUTTON_NAMES, type ButtonName, type MacroAction, type MacroDoc } from "@/src/lib/types";
 import { MACRO_VERSION, type MacroPath } from "@/src/lib/macro-document";
-import { MACRO_BLOCK_TYPES, registerMacroBlocks } from "@/src/components/editors/blockly/macro-blocks";
+import {
+  MACRO_BLOCK_TYPES,
+  registerMacroBlocks,
+} from "@/src/components/editors/blockly/macro-blocks";
 
 export type WorkspaceIssue = {
   blockId: string | null;
@@ -30,20 +33,13 @@ function initializeBlock(block: Blockly.Block): void {
   block.initModel();
 }
 
-function newBlock(
-  workspace: Blockly.Workspace,
-  type: string,
-): Blockly.Block {
+function newBlock(workspace: Blockly.Workspace, type: string): Blockly.Block {
   const block = workspace.newBlock(type);
   initializeBlock(block);
   return block;
 }
 
-function connectInput(
-  parent: Blockly.Block,
-  inputName: string,
-  child: Blockly.Block,
-): void {
+function connectInput(parent: Blockly.Block, inputName: string, child: Blockly.Block): void {
   const parentConnection = parent.getInput(inputName)?.connection ?? null;
   const childConnection = child.previousConnection;
   if (parentConnection === null || childConnection === null) {
@@ -59,10 +55,7 @@ function connectNext(previous: Blockly.Block, next: Blockly.Block): void {
   previous.nextConnection.connect(next.previousConnection);
 }
 
-function createActionBlock(
-  workspace: Blockly.Workspace,
-  action: MacroAction,
-): Blockly.Block {
+function createActionBlock(workspace: Blockly.Workspace, action: MacroAction): Blockly.Block {
   switch (action.do) {
     case "press":
     case "release": {
@@ -177,10 +170,7 @@ function signedNumberField(
 }
 
 function isButtonName(value: unknown): value is ButtonName {
-  return (
-    typeof value === "string" &&
-    BUTTON_NAMES.some((buttonName) => buttonName === value)
-  );
+  return typeof value === "string" && BUTTON_NAMES.some((buttonName) => buttonName === value);
 }
 
 function readAction(
@@ -194,10 +184,7 @@ function readAction(
     case MACRO_BLOCK_TYPES.button: {
       const operation = fieldValue(block, "OPERATION");
       const button = fieldValue(block, "BUTTON");
-      if (
-        (operation !== "press" && operation !== "release") ||
-        !isButtonName(button)
-      ) {
+      if ((operation !== "press" && operation !== "release") || !isButtonName(button)) {
         context.issues.push({
           blockId: block.id,
           message: "Choose a valid button action.",
@@ -221,9 +208,7 @@ function readAction(
         });
         return null;
       }
-      return x === null || y === null
-        ? null
-        : { do: "stick", side, x, y };
+      return x === null || y === null ? null : { do: "stick", side, x, y };
     }
     case MACRO_BLOCK_TYPES.loop: {
       if (depth >= 16) {
@@ -269,10 +254,7 @@ function readActionChain(
   return actions;
 }
 
-function applyWarnings(
-  workspace: Blockly.Workspace,
-  issues: WorkspaceIssue[],
-): void {
+function applyWarnings(workspace: Blockly.Workspace, issues: WorkspaceIssue[]): void {
   for (const block of workspace.getAllBlocks(false)) block.setWarningText(null);
   for (const issue of issues) {
     if (issue.blockId === null) continue;
@@ -292,9 +274,7 @@ export function readMacroWorkspace({
     issues: [],
   };
   const topBlocks = workspace.getTopBlocks(false);
-  const roots = topBlocks.filter(
-    (block) => block.type === MACRO_BLOCK_TYPES.root,
-  );
+  const roots = topBlocks.filter((block) => block.type === MACRO_BLOCK_TYPES.root);
   if (roots.length !== 1) {
     context.issues.push({
       blockId: null,
@@ -317,12 +297,7 @@ export function readMacroWorkspace({
   }
   context.pathsByBlockId.set(root.id, []);
   const repeat = numberField(root, "REPEAT", "Macro repeat", context, true);
-  const actions = readActionChain(
-    root.getInputTargetBlock("ACTIONS"),
-    ["actions"],
-    0,
-    context,
-  );
+  const actions = readActionChain(root.getInputTargetBlock("ACTIONS"), ["actions"], 0, context);
 
   applyWarnings(workspace, context.issues);
   if (repeat === null || context.issues.length > 0) {

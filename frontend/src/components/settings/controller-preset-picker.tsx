@@ -95,11 +95,7 @@ export function PresetPicker({
         >
           <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
           <p className="flex-1">{error}</p>
-          <Button
-            size="xs"
-            variant="ghost"
-            onClick={() => setError(null)}
-          >
+          <Button size="xs" variant="ghost" onClick={() => setError(null)}>
             Dismiss
           </Button>
         </div>
@@ -140,9 +136,7 @@ export function PresetPicker({
                     )}
                   </p>
                   {p.description && (
-                    <p className="truncate text-xs text-muted-foreground">
-                      {p.description}
-                    </p>
+                    <p className="truncate text-xs text-muted-foreground">{p.description}</p>
                   )}
                 </div>
               </Button>
@@ -170,9 +164,7 @@ export function PresetPicker({
                   }}
                   disabled={p.active || macroActive || busy !== null}
                   title={
-                    macroActive
-                      ? "Presets are locked while a macro runs"
-                      : "Activate this preset"
+                    macroActive ? "Presets are locked while a macro runs" : "Activate this preset"
                   }
                 >
                   {busy === p.filename ? (
@@ -206,17 +198,9 @@ export function PresetPicker({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              Cancel
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => void remove()}
-              disabled={busy !== null}
-            >
-              {busy === deleting?.filename && (
-                <SpinnerGapIcon size={14} className="animate-spin" />
-              )}
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button variant="destructive" onClick={() => void remove()} disabled={busy !== null}>
+              {busy === deleting?.filename && <SpinnerGapIcon size={14} className="animate-spin" />}
               Delete
             </Button>
           </DialogFooter>

@@ -1,40 +1,40 @@
-'use client';
+"use client";
 
-import '../styles/base.css';
-import '../styles/audio/theme.css';
-import '../styles/video/captions.css';
-import '../styles/video/theme.css';
-import { FullscreenButton as FullscreenButtonPrimitive } from '@videojs/react';
+import "../styles/base.css";
+import "../styles/audio/theme.css";
+import "../styles/video/captions.css";
+import "../styles/video/theme.css";
+import { FullscreenButton as FullscreenButtonPrimitive } from "@videojs/react";
 import {
   FullscreenEnterIcon as FullscreenEnterIconPrimitive,
   FullscreenExitIcon as FullscreenExitIconPrimitive,
-} from '@videojs/react/icons';
+} from "@videojs/react/icons";
 
-import { Button } from '@/src/components/videojs/ui/button';
-import { resolveClassName } from '@/src/lib/resolve-class-name';
-import { cn } from '@/src/lib/utils';
+import { Button } from "@/src/components/videojs/ui/button";
+import { resolveClassName } from "@/src/lib/resolve-class-name";
+import { cn } from "@/src/lib/utils";
 
-export type FullscreenButtonProps = Omit<FullscreenButtonPrimitive.Props, 'children'>;
+export type FullscreenButtonProps = Omit<FullscreenButtonPrimitive.Props, "children">;
 
 export function FullscreenButton({ className, ...props }: FullscreenButtonProps = {}) {
   return (
     <FullscreenButtonPrimitive
       render={<Button />}
-      className={(state) => cn('group/fullscreen', resolveClassName(className, state))}
+      className={(state) => cn("group/fullscreen", resolveClassName(className, state))}
       {...props}
     >
       <FullscreenEnterIconPrimitive
         className={cn(
-          'col-start-1 row-start-1 size-media-icon drop-shadow-media-icon [text-shadow:inherit]',
-          'transition-[opacity,scale] duration-media-base ease-out',
-          'opacity-0 group-not-data-fullscreen/fullscreen:scale-100 group-not-data-fullscreen/fullscreen:opacity-100'
+          "col-start-1 row-start-1 size-media-icon drop-shadow-media-icon [text-shadow:inherit]",
+          "transition-[opacity,scale] duration-media-base ease-out",
+          "opacity-0 group-not-data-fullscreen/fullscreen:scale-100 group-not-data-fullscreen/fullscreen:opacity-100",
         )}
       />
       <FullscreenExitIconPrimitive
         className={cn(
-          'col-start-1 row-start-1 size-media-icon drop-shadow-media-icon [text-shadow:inherit]',
-          'transition-[opacity,scale] duration-media-base ease-out',
-          'opacity-0 group-data-fullscreen/fullscreen:scale-100 group-data-fullscreen/fullscreen:opacity-100'
+          "col-start-1 row-start-1 size-media-icon drop-shadow-media-icon [text-shadow:inherit]",
+          "transition-[opacity,scale] duration-media-base ease-out",
+          "opacity-0 group-data-fullscreen/fullscreen:scale-100 group-data-fullscreen/fullscreen:opacity-100",
         )}
       />
     </FullscreenButtonPrimitive>

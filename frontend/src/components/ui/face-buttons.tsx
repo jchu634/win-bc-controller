@@ -52,10 +52,7 @@ export function FaceButtons({
     : undefined;
   const Icon = selected?.icon ?? SwitchButtons;
 
-  const releasePointer = (
-    event: PointerEvent<HTMLButtonElement>,
-    name: FaceButtonName,
-  ) => {
+  const releasePointer = (event: PointerEvent<HTMLButtonElement>, name: FaceButtonName) => {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -72,10 +69,7 @@ export function FaceButtons({
         className,
       )}
     >
-      <Icon
-        className="pointer-events-none absolute inset-0 size-full"
-        aria-hidden="true"
-      />
+      <Icon className="pointer-events-none absolute inset-0 size-full" aria-hidden="true" />
       {buttons.map(({ name, handler, x, y }) => (
         <Button
           key={name}
@@ -85,7 +79,7 @@ export function FaceButtons({
           aria-label={name}
           aria-pressed={pressedButtons?.has(name) ?? false}
           disabled={disabled}
-          className="absolute size-1/4 touch-none cursor-pointer rounded-full border-0 bg-transparent p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
+          className="absolute size-1/4 cursor-pointer touch-none rounded-full border-0 bg-transparent p-0 hover:bg-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
           style={{ left: `${(x / 64) * 100}%`, top: `${(y / 64) * 100}%` }}
           onPointerEnter={(event) => {
             if (event.pointerType !== "touch") setHovered(name);
@@ -104,17 +98,12 @@ export function FaceButtons({
           }}
           onLostPointerCapture={() => onButtonRelease?.(name)}
           onKeyDown={(event) => {
-            if (!onButtonPress || (event.key !== " " && event.key !== "Enter"))
-              return;
+            if (!onButtonPress || (event.key !== " " && event.key !== "Enter")) return;
             event.preventDefault();
             if (!event.repeat) onButtonPress(name);
           }}
           onKeyUp={(event) => {
-            if (
-              !onButtonRelease ||
-              (event.key !== " " && event.key !== "Enter")
-            )
-              return;
+            if (!onButtonRelease || (event.key !== " " && event.key !== "Enter")) return;
             event.preventDefault();
             onButtonRelease(name);
           }}

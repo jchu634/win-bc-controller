@@ -23,7 +23,7 @@ export function CapturePreviewSkin({ children }: { children: ReactNode }) {
 
   return (
     <Container
-      className="aspect-video h-auto w-4/5 rounded-xl data-expanded:fixed data-expanded:inset-0 data-expanded:z-50 data-expanded:h-dvh data-expanded:w-dvw data-expanded:aspect-auto data-expanded:rounded-none data-expanded:after:hidden"
+      className="aspect-video h-auto w-4/5 rounded-xl data-expanded:fixed data-expanded:inset-0 data-expanded:z-50 data-expanded:aspect-auto data-expanded:h-dvh data-expanded:w-dvw data-expanded:rounded-none data-expanded:after:hidden"
       data-theme="minimal"
       data-preset="live-video"
       data-expanded={expanded ? "" : undefined}
@@ -32,10 +32,7 @@ export function CapturePreviewSkin({ children }: { children: ReactNode }) {
       {children}
       <Controls.Root>
         <Controls.Content className="absolute inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 bg-(image:--media-controls-gradient) px-3 pt-6 pb-3 text-media-controls-foreground transition-opacity duration-media-controls not-data-visible:pointer-events-none not-data-visible:opacity-0 focus-within:pointer-events-auto focus-within:opacity-100 motion-reduce:transition-none">
-          <Controls.Group
-            aria-label="Audio controls"
-            className="flex items-center gap-2"
-          >
+          <Controls.Group aria-label="Audio controls" className="flex items-center gap-2">
             <MuteButton />
             <VolumeSlider className="w-22 flex-none" />
           </Controls.Group>
@@ -43,9 +40,7 @@ export function CapturePreviewSkin({ children }: { children: ReactNode }) {
             <Button
               type="button"
               onClick={() => setExpanded((current) => !current)}
-              aria-label={
-                expanded ? "Exit expanded preview" : "Maximise preview"
-              }
+              aria-label={expanded ? "Exit expanded preview" : "Maximise preview"}
               aria-pressed={expanded}
               title={expanded ? "Exit expanded preview" : "Maximise preview"}
             >
