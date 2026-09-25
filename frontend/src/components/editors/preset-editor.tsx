@@ -307,7 +307,8 @@ export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s") return;
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s")
+        return;
       event.preventDefault();
       if (!event.repeat && dirty && !saving && !loading && !saveAsOpen) void save();
     };

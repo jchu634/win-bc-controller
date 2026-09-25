@@ -195,12 +195,7 @@ export function JsonEditor({
   );
 
   return (
-    <div
-      className={cn(
-        "overflow-auto rounded-xl border border-border bg-background",
-        className,
-      )}
-    >
+    <div className={cn("overflow-auto rounded-xl border border-border bg-background", className)}>
       {editModule !== null ? (
         <EditProvider
           createEditor={(options: EditorOptions<undefined>) =>

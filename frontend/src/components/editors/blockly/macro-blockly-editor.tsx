@@ -3,10 +3,7 @@ import * as Blockly from "blockly/core";
 import * as English from "blockly/msg/en";
 import type { MacroDoc } from "@/src/lib/types";
 import { cn } from "@/src/lib/utils";
-import {
-  MACRO_TOOLBOX,
-  registerMacroBlocks,
-} from "@/src/components/editors/blockly/macro-blocks";
+import { MACRO_TOOLBOX, registerMacroBlocks } from "@/src/components/editors/blockly/macro-blocks";
 import {
   loadMacroWorkspace,
   readMacroWorkspace,
@@ -112,8 +109,7 @@ export function MacroBlocklyEditor({
         callbacks.current.onChange(result.document);
         return;
       }
-      const message =
-        result.issues[0]?.message ?? "The block workspace is invalid.";
+      const message = result.issues[0]?.message ?? "The block workspace is invalid.";
       setIssue(message);
       callbacks.current.onValidityChange(false);
     };
@@ -124,16 +120,12 @@ export function MacroBlocklyEditor({
     };
     workspace.addChangeListener(changeListener);
 
-    const resizeObserver = new ResizeObserver(() =>
-      Blockly.svgResize(workspace),
-    );
+    const resizeObserver = new ResizeObserver(() => Blockly.svgResize(workspace));
     resizeObserver.observe(element);
 
     const syncTheme = () => {
       workspace.setTheme(
-        globalThis.document.documentElement.classList.contains("dark")
-          ? darkTheme
-          : lightTheme,
+        globalThis.document.documentElement.classList.contains("dark") ? darkTheme : lightTheme,
       );
     };
     const themeObserver = new MutationObserver(syncTheme);
