@@ -28,6 +28,25 @@ export function CaptureDeviceSettings({
   draftInputId: string;
   onDraftInputChange: (deviceId: string) => void;
 }) {
+  return (
+    <CaptureDeviceSettingsContent
+      key={String(disabled)}
+      disabled={disabled}
+      draftInputId={draftInputId}
+      onDraftInputChange={onDraftInputChange}
+    />
+  );
+}
+
+function CaptureDeviceSettingsContent({
+  disabled,
+  draftInputId,
+  onDraftInputChange,
+}: {
+  disabled: boolean;
+  draftInputId: string;
+  onDraftInputChange: (deviceId: string) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
@@ -41,17 +60,6 @@ export function CaptureDeviceSettings({
   const selectedInputLabel = cameras.find(
     (camera) => camera.deviceId === draftInputId,
   )?.label;
-
-  useEffect(() => {
-    if (disabled) {
-      previewRequestedRef.current = false;
-      setVisible(false);
-      const current = previewStreamRef.current;
-      previewStreamRef.current = null;
-      setPreviewStream(null);
-      if (current) void Effect.runPromise(releaseStream(current));
-    }
-  }, [disabled]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -69,11 +77,11 @@ export function CaptureDeviceSettings({
     if (current) void Effect.runPromise(releaseStream(current));
   };
 
-  previewStreamRef.current = previewStream;
-
   useEffect(
     () => () => {
+      previewRequestedRef.current = false;
       const current = previewStreamRef.current;
+      previewStreamRef.current = null;
       if (current) void Effect.runPromise(releaseStream(current));
     },
     [],
