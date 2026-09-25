@@ -96,7 +96,7 @@ export function PresetPicker({
   }, [deleting, onDeleted, refresh]);
 
   return (
-    <section className="flex flex-col gap-3 text-left w-full max-w-100">
+    <section className="flex w-full max-w-100 flex-col gap-3 text-left">
       <h2 className="text-lg font-semibold text-foreground">Presets</h2>
 
       {error !== null && (
@@ -122,7 +122,7 @@ export function PresetPicker({
             <li
               key={p.filename}
               className={cn(
-                "flex flex-wrap group items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
+                "group flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
                 p.active && "bg-primary/40",
                 selected === p.filename && "bg-blue-200 text-black",
               )}
@@ -134,11 +134,6 @@ export function PresetPicker({
                   {p.builtin && (
                     <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
                       built-in
-                    </span>
-                  )}
-                  {p.active && (
-                    <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
-                      active
                     </span>
                   )}
                 </p>
