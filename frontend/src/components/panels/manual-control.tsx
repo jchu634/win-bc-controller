@@ -25,7 +25,10 @@ import {
   SwitchStickRUp,
 } from "@/src/assets/input-prompts/switch";
 import { Dpad, type DpadDirection } from "@/src/components/ui/dpad";
-import { FaceButtons, type FaceButtonName } from "@/src/components/ui/face-buttons";
+import {
+  FaceButtons,
+  type FaceButtonName,
+} from "@/src/components/ui/face-buttons";
 import { AnalogStick } from "@/src/components/ui/analog-stick";
 import type { StickPosition } from "@/src/lib/analog-stick";
 import { useSocket } from "@/src/hooks/use-socket";
@@ -58,7 +61,9 @@ const STICK_MODES_KEY = "manual-control-stick-modes";
 
 function loadStickMode(): StickMode {
   try {
-    const saved: unknown = JSON.parse(localStorage.getItem(STICK_MODES_KEY) ?? "null");
+    const saved: unknown = JSON.parse(
+      localStorage.getItem(STICK_MODES_KEY) ?? "null",
+    );
     if (saved === "drag" || saved === "buttons") return saved;
     if (typeof saved !== "object" || saved === null) return "drag";
     return ("left" in saved && saved.left === "buttons") ||
@@ -82,9 +87,14 @@ const DPAD_BUTTONS = {
   right: "RIGHT",
 } satisfies Record<DpadDirection, ButtonName>;
 
-function stickPosition(side: StickSide, inputs: ReadonlySet<StickInput>): [number, number] {
-  const x = Number(inputs.has(`${side}-right`)) - Number(inputs.has(`${side}-left`));
-  const y = Number(inputs.has(`${side}-up`)) - Number(inputs.has(`${side}-down`));
+function stickPosition(
+  side: StickSide,
+  inputs: ReadonlySet<StickInput>,
+): [number, number] {
+  const x =
+    Number(inputs.has(`${side}-right`)) - Number(inputs.has(`${side}-left`));
+  const y =
+    Number(inputs.has(`${side}-up`)) - Number(inputs.has(`${side}-down`));
   return [x, y];
 }
 
@@ -205,8 +215,12 @@ export function ManualControl() {
   });
   const [analogPositions, setAnalogPositions] = useState(analogSticks.current);
   const [stickMode, setStickMode] = useState(loadStickMode);
-  const [pressedButtons, setPressedButtons] = useState<Set<ButtonName>>(() => new Set());
-  const [pressedSticks, setPressedSticks] = useState<Set<StickInput>>(() => new Set());
+  const [pressedButtons, setPressedButtons] = useState<Set<ButtonName>>(
+    () => new Set(),
+  );
+  const [pressedSticks, setPressedSticks] = useState<Set<StickInput>>(
+    () => new Set(),
+  );
   const disabled = connection !== "open" || status?.mode === "macro";
 
   useEffect(() => {
@@ -214,6 +228,7 @@ export function ManualControl() {
       localStorage.setItem(STICK_MODES_KEY, JSON.stringify(stickMode));
     } catch {
       // Controls still work when browser storage is unavailable.
+      console.log("Localstorage sticks setting write failed");
     }
   }, [stickMode]);
 
@@ -221,8 +236,11 @@ export function ManualControl() {
     send({
       type: "state",
       buttons: [...heldButtons.current],
-      left: analogSticks.current.left ?? stickPosition("left", heldSticks.current),
-      right: analogSticks.current.right ?? stickPosition("right", heldSticks.current),
+      left:
+        analogSticks.current.left ?? stickPosition("left", heldSticks.current),
+      right:
+        analogSticks.current.right ??
+        stickPosition("right", heldSticks.current),
     });
   }, [send]);
 
@@ -412,7 +430,9 @@ export function ManualControl() {
                 <AnalogStick
                   aria-label={`${side} stick, drag to move or click for ${side === "left" ? "L3" : "R3"}`}
                   value={analogPositions[side] ?? [0, 0]}
-                  onChange={side === "left" ? changeLeftStick : changeRightStick}
+                  onChange={
+                    side === "left" ? changeLeftStick : changeRightStick
+                  }
                   onStickClick={() => {
                     press(STICK_BUTTONS[side]);
                     release(STICK_BUTTONS[side]);
@@ -491,7 +511,9 @@ export function ManualControl() {
           <Switch
             size="sm"
             checked={stickMode === "buttons"}
-            onCheckedChange={(checked) => changeStickMode(checked ? "buttons" : "drag")}
+            onCheckedChange={(checked) =>
+              changeStickMode(checked ? "buttons" : "drag")
+            }
             aria-label="Stick input style"
           />
           <span>Buttons</span>

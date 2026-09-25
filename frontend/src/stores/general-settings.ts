@@ -56,6 +56,7 @@ export function setControlsOnlyHomepage(enabled: boolean) {
     localStorage.setItem(CONTROLS_ONLY_STORAGE_KEY, String(enabled));
   } catch {
     // Keep the setting usable for this session if storage is unavailable.
+    console.log("Localstorage controls only write failed");
   }
 }
 
@@ -69,5 +70,6 @@ export function setTheme(theme: Theme) {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     // Keep the setting usable for this session if storage is unavailable.
+    console.log("Localstorage theme write failed");
   }
 }
