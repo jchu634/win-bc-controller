@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from "react";
-import PlayStation5Controller from "../assets/controllers/PlayStation5Controller";
-import SwitchProController from "../assets/controllers/SwitchProController";
-import XboxSeriesController from "../assets/controllers/XboxSeriesController";
+import PlayStation5Controller from "@/src/assets/controllers/PlayStation5Controller";
+import SwitchProController from "@/src/assets/controllers/SwitchProController";
+import XboxSeriesController from "@/src/assets/controllers/XboxSeriesController";
 
 export type ControllerLayout = "generic" | "switch" | "xbox" | "playstation";
 export type ControllerLayoutDefinition = {
@@ -44,7 +44,14 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Capture",
     ],
-    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "ZL", "ZR"],
+    axisNames: [
+      "Left stick X",
+      "Left stick Y",
+      "Right stick X",
+      "Right stick Y",
+      "ZL",
+      "ZR",
+    ],
   },
   {
     value: "xbox",
@@ -94,6 +101,13 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Touch pad",
     ],
-    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "L2", "R2"],
+    axisNames: [
+      "Left stick X",
+      "Left stick Y",
+      "Right stick X",
+      "Right stick Y",
+      "L2",
+      "R2",
+    ],
   },
 ];

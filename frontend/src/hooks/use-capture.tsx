@@ -87,7 +87,11 @@ export function CaptureProvider({
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [starting, setStarting] = useState(false);
   const [requestingPermission, setRequestingPermission] = useState(false);
-  const [permission, setPermission] = useState<CameraPermissionState>("prompt");
+  const [permission, setPermission] = useState<CameraPermissionState>(() =>
+    typeof navigator.permissions?.query === "function"
+      ? "prompt"
+      : "unsupported",
+  );
   const [error, setError] = useState<string | null>(null);
 
   const syncActiveStream = (nextStream: MediaStream | null) => {
@@ -145,7 +149,6 @@ export function CaptureProvider({
     try {
       await Effect.runPromise(requestPermission);
       setPermission("granted");
-      await refreshCameras();
     } catch (cause: unknown) {
       const captureError = cause instanceof CameraError ? cause : null;
       setError(
@@ -157,7 +160,7 @@ export function CaptureProvider({
     } finally {
       setRequestingPermission(false);
     }
-  }, [refreshCameras]);
+  }, []);
 
   const selectInput = (deviceId: string) => {
     setSelectedCameraInputId(deviceId);
@@ -186,7 +189,6 @@ export function CaptureProvider({
     let status: PermissionStatus | null = null;
     const permissions = navigator.permissions;
     if (!permissions?.query) {
-      setPermission("unsupported");
       return;
     }
 
@@ -213,6 +215,7 @@ export function CaptureProvider({
 
   useEffect(() => {
     if (permission !== "granted" && permission !== "unsupported") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncs the browser device list.
     void refreshCameras();
     const handleDeviceChange = () => void refreshCameras();
     navigator.mediaDevices?.addEventListener?.(

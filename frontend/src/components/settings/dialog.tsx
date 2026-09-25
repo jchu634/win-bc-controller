@@ -42,12 +42,12 @@ export function SettingsDialog() {
   );
   const theme = useSelector(generalSettingsStore, (settings) => settings.theme);
   const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] = useState(controlsOnlyHomepage);
-  const { selectedAudioInputId, selectedInputId, selectInputs } = useCaptureInput();
+  const { selectedAudioInputId, selectedCameraInputId, selectInputs } = useCaptureInput();
   const [draftAudioInputId, setDraftAudioInputId] = useState(selectedAudioInputId);
-  const [draftCaptureInputId, setDraftCaptureInputId] = useState(selectedInputId);
+  const [draftCaptureInputId, setDraftCaptureInputId] = useState(selectedCameraInputId);
   const { stop, starting } = useCaptureControls();
   const hasUnsavedInputChanges =
-    draftAudioInputId !== selectedAudioInputId || draftCaptureInputId !== selectedInputId;
+    draftAudioInputId !== selectedAudioInputId || draftCaptureInputId !== selectedCameraInputId;
 
   return (
     <>
@@ -58,7 +58,7 @@ export function SettingsDialog() {
             setOpen(true);
             setDraftControlsOnlyHomepage(controlsOnlyHomepage);
             setDraftAudioInputId(selectedAudioInputId);
-            setDraftCaptureInputId(selectedInputId);
+            setDraftCaptureInputId(selectedCameraInputId);
             return;
           }
 
@@ -111,7 +111,7 @@ export function SettingsDialog() {
                 <Button
                   disabled={
                     draftAudioInputId === selectedAudioInputId &&
-                    draftCaptureInputId === selectedInputId
+                    draftCaptureInputId === selectedCameraInputId
                   }
                   onClick={() => {
                     selectInputs({
