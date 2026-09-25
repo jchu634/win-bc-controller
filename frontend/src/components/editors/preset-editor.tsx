@@ -146,9 +146,10 @@ export type PresetEditorHandle = {
 type SaveResult = "saved" | "save-as-required" | "failed";
 
 export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps) {
+  const [initialName] = useState(name);
   const [value, setValue] = useState("");
   const [savedText, setSavedText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initialName !== null);
   const [saving, setSaving] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
@@ -165,24 +166,26 @@ export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps)
   const saveAsForNavigation = useRef(false);
 
   useEffect(() => {
-    if (name === null) return;
-    setLoading(true);
-    setError(null);
-    setNotice(null);
-    setMarkers([]);
-    setSavedText(null);
-    setAdvanced(false);
-    Effect.runPromise(getPreset(name))
+    if (initialName === null) return;
+    let cancelled = false;
+    Effect.runPromise(getPreset(initialName))
       .then((r) => {
+        if (cancelled) return;
         setValue(r.contents);
         setSavedText(r.contents);
       })
       .catch((error: unknown) => {
+        if (cancelled) return;
         setValue("");
         setError(errorMessage(error));
       })
-      .finally(() => setLoading(false));
-  }, [name]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialName]);
 
   const dirty = savedText !== null && value !== savedText;
 

@@ -27,11 +27,17 @@ function MacrosPage() {
   const navigate = Route.useNavigate();
   const setSelected = useCallback(
     (name: string | null) => {
+      setEditorSession((session) => session + 1);
       void navigate({ hash: name ?? "", ignoreBlocker: true });
     },
     [navigate],
   );
   const [listVersion, setListVersion] = useState(0);
+  const [editorSession, setEditorSession] = useState(0);
+  const [renamedSelection, setRenamedSelection] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   const [creating, setCreating] = useState(false);
   const [creatingMacro, setCreatingMacro] = useState(false);
   const [newName, setNewName] = useState("");
@@ -134,10 +140,15 @@ function MacrosPage() {
           refreshKey={listVersion}
         />
         <MacroEditor
+          key={`${editorSession}:${renamedSelection?.to === selected ? renamedSelection.from : selected}`}
           ref={macroEditor}
           name={selected}
           onRenamed={(name) => {
-            setSelected(name);
+            if (selected !== null) {
+              const from = renamedSelection?.to === selected ? renamedSelection.from : selected;
+              setRenamedSelection({ from, to: name });
+            }
+            void navigate({ hash: name, ignoreBlocker: true });
             setListVersion((v) => v + 1);
           }}
           onDeleted={() => {

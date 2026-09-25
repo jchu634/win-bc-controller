@@ -6,10 +6,12 @@ import { PresetPicker } from "@/src/components/settings/controller-preset-picker
 export function ControllerSettings() {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [selectedBuiltin, setSelectedBuiltin] = useState(false);
+  const [editorSession, setEditorSession] = useState(0);
   const [presetListVersion, setPresetListVersion] = useState(0);
   const presetEditor = useRef<PresetEditorHandle | null>(null);
 
   function openPreset(name: string, builtin: boolean) {
+    setEditorSession((session) => session + 1);
     setSelectedPreset(name);
     setSelectedBuiltin(builtin);
   }
@@ -42,11 +44,12 @@ export function ControllerSettings() {
           refreshKey={presetListVersion}
         />
         <PresetEditor
+          key={editorSession}
           ref={presetEditor}
           name={selectedPreset}
           builtin={selectedBuiltin}
           onSaved={(name) => {
-            openPreset(name, false);
+            if (name !== selectedPreset || selectedBuiltin) openPreset(name, false);
             setPresetListVersion((version) => version + 1);
           }}
         />
