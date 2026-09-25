@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { MacroRunPanel } from "@/src/components/panels/macro-runner";
 import { ManualControl } from "@/src/components/panels/manual-control";
 import { SwitchConnection } from "@/src/components/panels/connection";
 import { useSwitchConnection } from "@/src/lib/switch-connection";
+import { loadMacroList } from "@/src/lib/load-macro-list";
 import { SettingsDialog } from "@/src/components/settings/dialog";
 import { generalSettingsStore } from "@/src/stores/general-settings";
 import "@/src/App.css";
@@ -18,6 +19,8 @@ function ControlsHomepage() {
 }
 
 function ControlsPage() {
+  const macroList = Route.useLoaderData();
+  const router = useRouter();
   const [selectedMacro, setSelectedMacro] = useState<string | null>(null);
   const switchConnection = useSwitchConnection();
 
@@ -34,6 +37,9 @@ function ControlsPage() {
         <div className="grid items-start gap-6 xl:grid-cols-2">
           <div className="min-w-0 rounded-md border border-border bg-card p-4">
             <MacroRunPanel
+              names={macroList.kind === "loaded" ? macroList.names : []}
+              listError={macroList.kind === "error" ? macroList.message : null}
+              onRetry={() => void router.invalidate()}
               selected={selectedMacro}
               onSelect={setSelectedMacro}
             />
@@ -48,5 +54,6 @@ function ControlsPage() {
 }
 
 export const Route = createFileRoute("/controls")({
+  loader: loadMacroList,
   component: ControlsHomepage,
 });

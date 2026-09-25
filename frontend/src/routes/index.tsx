@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
 import {
   PlayIcon,
   SpinnerGapIcon,
@@ -18,6 +18,7 @@ import { Button } from "@/src/components/ui/button";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/settings/dialog";
 import { useSelector } from "@tanstack/react-store";
+import { loadMacroList } from "@/src/lib/load-macro-list";
 import { generalSettingsStore } from "@/src/stores/general-settings";
 import "@/src/App.css";
 
@@ -34,6 +35,8 @@ function Homepage() {
 }
 
 function PreviewPage() {
+  const macroList = Route.useLoaderData();
+  const router = useRouter();
   const [selectedMacro, setSelectedMacro] = useState<string | null>(null);
   const switchConnection = useSwitchConnection();
   const { selectedCameraInputId } = useCaptureInput();
@@ -63,7 +66,9 @@ function PreviewPage() {
           <div className="flex gap-2">
             {permissionGranted ? (
               <Button
-                onClick={streaming ? stop : () => void start(selectedCameraInputId)}
+                onClick={
+                  streaming ? stop : () => void start(selectedCameraInputId)
+                }
                 variant={streaming ? "destructive" : "tertiary"}
                 disabled={starting || !selectedCameraInputId}
                 className="h-10 flex-1 text-sm 2xl:text-lg"
@@ -117,7 +122,13 @@ function PreviewPage() {
               className="h-10 shrink-0 text-sm 2xl:text-lg"
             />
           </div>
-          <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
+          <MacroRunPanel
+            names={macroList.kind === "loaded" ? macroList.names : []}
+            listError={macroList.kind === "error" ? macroList.message : null}
+            onRetry={() => void router.invalidate()}
+            selected={selectedMacro}
+            onSelect={setSelectedMacro}
+          />
           <ManualControl />
         </div>
       </div>
@@ -126,5 +137,6 @@ function PreviewPage() {
 }
 
 export const Route = createFileRoute("/")({
+  loader: loadMacroList,
   component: Homepage,
 });
