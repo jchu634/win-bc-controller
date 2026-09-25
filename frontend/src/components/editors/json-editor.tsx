@@ -1,7 +1,7 @@
 import {
-  useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -77,7 +77,12 @@ export function JsonEditor({
   const [editModule, setEditModule] = useState<EditModule | null>(null);
   const editorRef = useRef<AnyEditor | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const valueRef = useRef(value);
+
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+    valueRef.current = value;
+  }, [onChange, value]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,8 +109,6 @@ export function JsonEditor({
       },
     };
   }, []);
-
-  const valueRef = useRef(value);
 
   // Push markers into the attached editor (must be attached first).
   useEffect(() => {
@@ -147,23 +150,20 @@ export function JsonEditor({
     [dark],
   );
 
-  const createEditor = useCallback(
-    (options: EditorOptions<undefined>) =>
-      new editModule!.Editor({ persistState: true, ...options }),
-    [editModule],
-  );
-
   useImperativeHandle(
     ref,
     () => ({
       replaceDocument: (text: string) => {
         const editor = editorRef.current;
         if (editor === null) return false;
+
         const current = editor.getText();
         if (current === text) return true;
+
         const lines = current.split("\n");
         const lastLine = lines.length - 1;
         const lastChar = lines[lastLine]?.length ?? 0;
+
         editor.applyEdits(
           [
             {
@@ -202,7 +202,13 @@ export function JsonEditor({
       )}
     >
       {editModule !== null ? (
-        <EditProvider createEditor={createEditor}>{surface}</EditProvider>
+        <EditProvider
+          createEditor={(options: EditorOptions<undefined>) =>
+            new editModule.Editor({ persistState: true, ...options })
+          }
+        >
+          {surface}
+        </EditProvider>
       ) : (
         surface
       )}
