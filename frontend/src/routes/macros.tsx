@@ -1,10 +1,13 @@
 import { useCallback, useRef, useState } from "react";
-import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useRouter } from "@tanstack/react-router";
 import { Effect } from "effect";
 import { ArrowLeftIcon, SpinnerGapIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { MacroEditor, type MacroEditorHandle } from "@/src/components/editors/macro-editor";
+import {
+  MacroEditor,
+  type MacroEditorHandle,
+} from "@/src/components/editors/macro-editor";
 import { MacroPicker } from "@/src/components/panels/macro-picker";
 import {
   Dialog,
@@ -22,6 +25,8 @@ import { createMacroDocument } from "@/src/lib/macro-document";
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$/;
 
 function MacrosPage() {
+  const { names } = Route.useLoaderData();
+  const router = useRouter();
   const hash = useLocation({ select: (location) => location.hash });
   const selected = hash || null;
   const navigate = Route.useNavigate();
@@ -32,7 +37,6 @@ function MacrosPage() {
     },
     [navigate],
   );
-  const [listVersion, setListVersion] = useState(0);
   const [editorSession, setEditorSession] = useState(0);
   const [renamedSelection, setRenamedSelection] = useState<{
     from: string;
@@ -75,7 +79,9 @@ function MacrosPage() {
   const createMacro = useCallback(
     async (name: string) => {
       setCreatingMacro(true);
-      const ok = await Effect.runPromise(putMacro(name, createMacroDocument(name)))
+      const ok = await Effect.runPromise(
+        putMacro(name, createMacroDocument(name)),
+      )
         .then(() => true)
         .catch((error: unknown) => {
           setCreateError(errorMessage(error));
@@ -85,11 +91,11 @@ function MacrosPage() {
       if (ok) {
         setCreating(false);
         setOverwriteName(null);
-        setListVersion((v) => v + 1);
+        await router.invalidate();
         setSelected(name);
       }
     },
-    [setSelected],
+    [router, setSelected],
   );
 
   const submitCreate = useCallback(async () => {
@@ -105,8 +111,10 @@ function MacrosPage() {
     const existingName = await Effect.runPromise(listMacros())
       .then(
         ({ names }) =>
-          names.find((candidate) => candidate.toLocaleLowerCase() === name.toLocaleLowerCase()) ??
-          null,
+          names.find(
+            (candidate) =>
+              candidate.toLocaleLowerCase() === name.toLocaleLowerCase(),
+          ) ?? null,
       )
       .catch((error: unknown) => {
         setCreateError(errorMessage(error));
@@ -125,7 +133,9 @@ function MacrosPage() {
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8">
       <header className="flex flex-wrap items-start justify-between gap-3 text-left">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Macro Editor</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Macro Editor
+          </h1>
         </div>
         <Button render={<Link to="/" />} variant="outline" size="sm">
           <ArrowLeftIcon size={14} /> Back to controller
@@ -134,10 +144,10 @@ function MacrosPage() {
 
       <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <MacroPicker
+          names={names}
           selected={selected}
           onSelect={selectMacro}
           onCreate={startCreate}
-          refreshKey={listVersion}
         />
         <MacroEditor
           key={`${editorSession}:${renamedSelection?.to === selected ? renamedSelection.from : selected}`}
@@ -145,15 +155,18 @@ function MacrosPage() {
           name={selected}
           onRenamed={(name) => {
             if (selected !== null) {
-              const from = renamedSelection?.to === selected ? renamedSelection.from : selected;
+              const from =
+                renamedSelection?.to === selected
+                  ? renamedSelection.from
+                  : selected;
               setRenamedSelection({ from, to: name });
             }
             void navigate({ hash: name, ignoreBlocker: true });
-            setListVersion((v) => v + 1);
+            void router.invalidate();
           }}
           onDeleted={() => {
             setSelected(null);
-            setListVersion((v) => v + 1);
+            void router.invalidate();
           }}
         />
       </div>
@@ -193,14 +206,19 @@ function MacrosPage() {
                 </p>
               )}
               <DialogFooter>
-                <DialogClose render={<Button variant="outline" />} disabled={creatingMacro}>
+                <DialogClose
+                  render={<Button variant="outline" />}
+                  disabled={creatingMacro}
+                >
                   Cancel
                 </DialogClose>
                 <Button
                   onClick={() => void submitCreate()}
                   disabled={creatingMacro || newName.trim().length === 0}
                 >
-                  {creatingMacro && <SpinnerGapIcon size={14} className="animate-spin" />}
+                  {creatingMacro && (
+                    <SpinnerGapIcon size={14} className="animate-spin" />
+                  )}
                   Create macro
                 </Button>
               </DialogFooter>
@@ -210,7 +228,8 @@ function MacrosPage() {
               <DialogHeader>
                 <DialogTitle>Overwrite macro?</DialogTitle>
                 <DialogDescription>
-                  A macro with this name already exists. Do you want to overwrite it?
+                  A macro with this name already exists. Do you want to
+                  overwrite it?
                 </DialogDescription>
               </DialogHeader>
               {createError !== null && (
@@ -234,7 +253,9 @@ function MacrosPage() {
                   onClick={() => void createMacro(overwriteName)}
                   disabled={creatingMacro}
                 >
-                  {creatingMacro && <SpinnerGapIcon size={14} className="animate-spin" />}
+                  {creatingMacro && (
+                    <SpinnerGapIcon size={14} className="animate-spin" />
+                  )}
                   Overwrite macro
                 </Button>
               </DialogFooter>
@@ -247,5 +268,6 @@ function MacrosPage() {
 }
 
 export const Route = createFileRoute("/macros")({
+  loader: () => Effect.runPromise(listMacros()),
   component: MacrosPage,
 });
