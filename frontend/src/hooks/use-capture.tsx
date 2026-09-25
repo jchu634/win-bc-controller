@@ -27,7 +27,7 @@ type CaptureContextValue = {
   readonly permission: CameraPermissionState;
   readonly requestingPermission: boolean;
   readonly selectedAudioInputId: string;
-  readonly selectedInputId: string;
+  readonly selectedCameraInputId: string;
   readonly starting: boolean;
   readonly stream: MediaStream | null;
   readonly selectInput: (deviceId: string) => void;
@@ -42,7 +42,7 @@ type CaptureContextValue = {
 
 const CaptureContext = createContext<CaptureContextValue | null>(null);
 
-const AUDIO_INPUT_STORAGE_KEY = "win-bc-controller.audio-input";
+const AUDIO_INPUT_STORAGE_KEY = "ounce-bt.audio-input";
 
 function readSavedAudioInputId(): string {
   try {
@@ -57,6 +57,7 @@ function saveAudioInputId(deviceId: string): void {
     localStorage.setItem(AUDIO_INPUT_STORAGE_KEY, deviceId);
   } catch {
     // Capture still works when storage is unavailable.
+    console.log("Localstorage audio input storage key write failed");
   }
 }
 
@@ -68,15 +69,21 @@ function useCaptureContext(): CaptureContextValue {
   return context;
 }
 
-export function CaptureProvider({ children }: { readonly children: ReactNode }) {
+export function CaptureProvider({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
   const controlsOnlyHomepage = useSelector(
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
   const activeStreamRef = useRef<MediaStream | null>(null);
   const [cameras, setCameras] = useState<readonly CameraDevice[]>([]);
-  const [selectedAudioInputId, setSelectedAudioInputId] = useState(readSavedAudioInputId);
-  const [selectedInputId, setSelectedInputId] = useState("");
+  const [selectedAudioInputId, setSelectedAudioInputId] = useState(
+    readSavedAudioInputId,
+  );
+  const [selectedCameraInputId, setSelectedCameraInputId] = useState("");
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [starting, setStarting] = useState(false);
   const [requestingPermission, setRequestingPermission] = useState(false);
@@ -93,7 +100,9 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
       (): readonly CameraDevice[] => [],
     );
     setCameras(devices);
-    setSelectedInputId((currentId) => currentId || devices[0]?.deviceId || "");
+    setSelectedCameraInputId(
+      (currentId) => currentId || devices[0]?.deviceId || "",
+    );
   }, []);
 
   const stop = () => {
@@ -110,20 +119,25 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     if (previous) await Effect.runPromise(releaseStream(previous));
 
     try {
-      const nextStream = await Effect.runPromise(acquireStream(deviceId, audioDeviceId));
+      const nextStream = await Effect.runPromise(
+        acquireStream(deviceId, audioDeviceId),
+      );
       syncActiveStream(nextStream);
       setPermission("granted");
       await refreshCameras();
     } catch (cause: unknown) {
       const captureError = cause instanceof CameraError ? cause : null;
-      setError(captureError ? describeError(captureError) : "Unable to access camera.");
+      setError(
+        captureError ? describeError(captureError) : "Unable to access camera.",
+      );
       if (captureError?.reason === "denied") setPermission("denied");
     } finally {
       setStarting(false);
     }
   };
 
-  const start = (deviceId: string) => startWithInputs(deviceId, selectedAudioInputId);
+  const start = (deviceId: string) =>
+    startWithInputs(deviceId, selectedAudioInputId);
 
   const requestAccess = useCallback(async () => {
     setError(null);
@@ -134,15 +148,19 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
       await refreshCameras();
     } catch (cause: unknown) {
       const captureError = cause instanceof CameraError ? cause : null;
-      setError(captureError ? describeError(captureError) : "Unable to access camera.");
-      setPermission(captureError?.reason === "unsupported" ? "unsupported" : "denied");
+      setError(
+        captureError ? describeError(captureError) : "Unable to access camera.",
+      );
+      setPermission(
+        captureError?.reason === "unsupported" ? "unsupported" : "denied",
+      );
     } finally {
       setRequestingPermission(false);
     }
   }, [refreshCameras]);
 
   const selectInput = (deviceId: string) => {
-    setSelectedInputId(deviceId);
+    setSelectedCameraInputId(deviceId);
     if (activeStreamRef.current) {
       void startWithInputs(deviceId, selectedAudioInputId);
     }
@@ -155,7 +173,7 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     readonly audioDeviceId: string;
     readonly videoDeviceId: string;
   }) => {
-    setSelectedInputId(videoDeviceId);
+    setSelectedCameraInputId(videoDeviceId);
     setSelectedAudioInputId(audioDeviceId);
     saveAudioInputId(audioDeviceId);
     if (activeStreamRef.current) {
@@ -197,9 +215,15 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
     if (permission !== "granted" && permission !== "unsupported") return;
     void refreshCameras();
     const handleDeviceChange = () => void refreshCameras();
-    navigator.mediaDevices?.addEventListener?.("devicechange", handleDeviceChange);
+    navigator.mediaDevices?.addEventListener?.(
+      "devicechange",
+      handleDeviceChange,
+    );
     return () => {
-      navigator.mediaDevices?.removeEventListener?.("devicechange", handleDeviceChange);
+      navigator.mediaDevices?.removeEventListener?.(
+        "devicechange",
+        handleDeviceChange,
+      );
     };
   }, [permission, refreshCameras]);
 
@@ -220,7 +244,7 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
         permission,
         requestingPermission,
         selectedAudioInputId,
-        selectedInputId,
+        selectedCameraInputId,
         starting,
         stream,
         selectInput,
@@ -236,8 +260,16 @@ export function CaptureProvider({ children }: { readonly children: ReactNode }) 
 }
 
 export function useCaptureControls() {
-  const { error, permission, requestAccess, requestingPermission, start, starting, stop, stream } =
-    useCaptureContext();
+  const {
+    error,
+    permission,
+    requestAccess,
+    requestingPermission,
+    start,
+    starting,
+    stop,
+    stream,
+  } = useCaptureContext();
   return {
     error,
     permission,
@@ -251,13 +283,19 @@ export function useCaptureControls() {
 }
 
 export function useCaptureInput() {
-  const { cameras, permission, selectedAudioInputId, selectedInputId, selectInput, selectInputs } =
-    useCaptureContext();
+  const {
+    cameras,
+    permission,
+    selectedAudioInputId,
+    selectedCameraInputId,
+    selectInput,
+    selectInputs,
+  } = useCaptureContext();
   return {
     cameras,
     permission,
     selectedAudioInputId,
-    selectedInputId,
+    selectedCameraInputId,
     selectInput,
     selectInputs,
   } as const;

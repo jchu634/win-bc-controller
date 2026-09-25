@@ -1,7 +1,7 @@
 import { createStore } from "@tanstack/react-store";
 
-const CONTROLS_ONLY_STORAGE_KEY = "win-bc-controller.controls-only-homepage";
-const THEME_STORAGE_KEY = "win-bc-controller.theme";
+const CONTROLS_ONLY_STORAGE_KEY = "ounce-bt.controls-only-homepage";
+const THEME_STORAGE_KEY = "ounce-bt.theme";
 
 export type Theme = "dark" | "light" | "system";
 
@@ -17,7 +17,8 @@ function isTheme(value: string | null): value is Theme {
 function loadSettings(): GeneralSettings {
   try {
     return {
-      controlsOnlyHomepage: localStorage.getItem(CONTROLS_ONLY_STORAGE_KEY) === "true",
+      controlsOnlyHomepage:
+        localStorage.getItem(CONTROLS_ONLY_STORAGE_KEY) === "true",
       theme: getStoredTheme(),
     };
   } catch {
