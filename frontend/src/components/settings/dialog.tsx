@@ -16,7 +16,8 @@ import {
   setTheme,
 } from "@/src/stores/general-settings";
 import { GearSixIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { Effect } from "effect";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { Checkbox } from "@/src/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/src/components/ui/toggle-group";
@@ -24,6 +25,9 @@ import { Separator } from "@/src/components/ui/separator";
 import { Label } from "@/src/components/ui/label";
 import { AudioInputSettings } from "@/src/components/settings/audio-input-settings";
 import { ControllerSettings } from "@/src/components/settings/controller-settings";
+import { listPresets } from "@/src/lib/api";
+import { errorMessage } from "@/src/lib/errors";
+import type { PresetInfo } from "@/src/lib/types";
 import { CaptureDeviceSettings } from "@/src/components/settings/capture-device-settings";
 
 const SETTINGS_DESCRIPTIONS: Record<string, string> = {
@@ -36,18 +40,37 @@ export function SettingsDialog() {
   const [open, setOpen] = useState(false);
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState("general");
+  const [presets, setPresets] = useState<PresetInfo[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(false);
+  const [presetsError, setPresetsError] = useState<string | null>(null);
+  const presetRequestId = useRef(0);
+  const refreshPresets = useCallback(() => {
+    const requestId = ++presetRequestId.current;
+    setPresetsLoading(true);
+    setPresetsError(null);
+    void Effect.runPromise(listPresets())
+      .then(({ presets }) => {
+        if (requestId === presetRequestId.current) setPresets(presets);
+      })
+      .catch((error: unknown) => {
+        if (requestId === presetRequestId.current) setPresetsError(errorMessage(error));
+      })
+      .finally(() => {
+        if (requestId === presetRequestId.current) setPresetsLoading(false);
+      });
+  }, []);
   const controlsOnlyHomepage = useSelector(
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
   const theme = useSelector(generalSettingsStore, (settings) => settings.theme);
   const [draftControlsOnlyHomepage, setDraftControlsOnlyHomepage] = useState(controlsOnlyHomepage);
-  const { selectedAudioInputId, selectedInputId, selectInputs } = useCaptureInput();
+  const { selectedAudioInputId, selectedCameraInputId, selectInputs } = useCaptureInput();
   const [draftAudioInputId, setDraftAudioInputId] = useState(selectedAudioInputId);
-  const [draftCaptureInputId, setDraftCaptureInputId] = useState(selectedInputId);
+  const [draftCaptureInputId, setDraftCaptureInputId] = useState(selectedCameraInputId);
   const { stop, starting } = useCaptureControls();
   const hasUnsavedInputChanges =
-    draftAudioInputId !== selectedAudioInputId || draftCaptureInputId !== selectedInputId;
+    draftAudioInputId !== selectedAudioInputId || draftCaptureInputId !== selectedCameraInputId;
 
   return (
     <>
@@ -56,9 +79,10 @@ export function SettingsDialog() {
         onOpenChange={(nextOpen) => {
           if (nextOpen) {
             setOpen(true);
+            if (currentTab === "controller") refreshPresets();
             setDraftControlsOnlyHomepage(controlsOnlyHomepage);
             setDraftAudioInputId(selectedAudioInputId);
-            setDraftCaptureInputId(selectedInputId);
+            setDraftCaptureInputId(selectedCameraInputId);
             return;
           }
 
@@ -87,7 +111,10 @@ export function SettingsDialog() {
           </DialogHeader>
           <Tabs
             value={currentTab}
-            onValueChange={(newTab) => setCurrentTab(newTab)}
+            onValueChange={(newTab) => {
+              setCurrentTab(newTab);
+              if (newTab === "controller") refreshPresets();
+            }}
             orientation="vertical"
             className="min-h-0 min-w-0 flex-1 overflow-hidden"
           >
@@ -111,7 +138,7 @@ export function SettingsDialog() {
                 <Button
                   disabled={
                     draftAudioInputId === selectedAudioInputId &&
-                    draftCaptureInputId === selectedInputId
+                    draftCaptureInputId === selectedCameraInputId
                   }
                   onClick={() => {
                     selectInputs({
@@ -171,7 +198,12 @@ export function SettingsDialog() {
               </div>
             </TabsContent>
             <TabsContent className="min-h-0 min-w-0 overflow-y-auto p-2" value="controller">
-              <ControllerSettings />
+              <ControllerSettings
+                presets={presets}
+                loading={presetsLoading}
+                listError={presetsError}
+                onRefresh={refreshPresets}
+              />
             </TabsContent>
             <TabsContent className="min-h-0 min-w-0 overflow-y-auto p-2" value="credits">
               This PLACEHOLDER NAME application was developed by JCHU634

@@ -9,7 +9,7 @@ from pathlib import Path
 
 logger = logging.getLogger("switch_pair")
 
-APP_NAME = "win-bc-controller"
+APP_NAME = "ounce-bt"
 
 
 def _normalize_controller_presets(value: object) -> dict[str, str]:
@@ -64,9 +64,7 @@ class Config:
     controller_presets: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        self.controller_presets = _normalize_controller_presets(
-            self.controller_presets
-        )
+        self.controller_presets = _normalize_controller_presets(self.controller_presets)
 
     @classmethod
     def _valid_keys(cls) -> set[str]:

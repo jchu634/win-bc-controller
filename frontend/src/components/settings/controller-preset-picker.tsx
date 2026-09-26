@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Effect } from "effect";
 import { SpinnerGapIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
@@ -12,55 +12,32 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
-import { activatePreset, deletePreset, listPresets } from "@/src/lib/api";
+import { activatePreset, deletePreset } from "@/src/lib/api";
 import { errorMessage } from "@/src/lib/errors";
 import type { PresetInfo } from "@/src/lib/types";
 import { cn } from "cnfast";
 
 export function PresetPicker({
+  presets,
+  loading,
+  listError,
+  onRefresh,
   selected,
   onSelect,
   onDeleted,
-  refreshKey = 0,
 }: {
+  presets: PresetInfo[];
+  loading: boolean;
+  listError: string | null;
+  onRefresh: () => void;
   selected: string | null;
   onSelect: (preset: PresetInfo) => void;
   onDeleted?: (name: string) => void;
-  /** Bump to re-fetch the preset list (after save / delete). */
-  refreshKey?: number;
 }) {
-  const [presets, setPresets] = useState<PresetInfo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<PresetInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const requestId = useRef(0);
   const { macroActive } = useMacroRunner();
-
-  const refresh = useCallback(() => {
-    const id = ++requestId.current;
-    setLoading(true);
-    Effect.runPromise(listPresets())
-      .then((r) => {
-        if (id !== requestId.current) return;
-        setPresets(r.presets);
-        setError(null);
-      })
-      .catch((error: unknown) => {
-        if (id === requestId.current) setError(errorMessage(error));
-      })
-      .finally(() => {
-        if (id === requestId.current) setLoading(false);
-      });
-
-    return () => {
-      if (id === requestId.current) requestId.current++;
-    };
-  }, []);
-
-  useEffect(() => {
-    return refresh();
-  }, [refresh, refreshKey]);
 
   const activate = useCallback(
     async (name: string) => {
@@ -73,9 +50,9 @@ export function PresetPicker({
           return false;
         });
       setBusy(null);
-      if (ok) refresh();
+      if (ok) onRefresh();
     },
-    [refresh],
+    [onRefresh],
   );
 
   const remove = useCallback(async () => {
@@ -91,24 +68,30 @@ export function PresetPicker({
     setBusy(null);
     if (!ok) return;
     setDeleting(null);
-    if (onDeleted) onDeleted(filename);
-    else refresh();
-  }, [deleting, onDeleted, refresh]);
+    onDeleted?.(filename);
+    onRefresh();
+  }, [deleting, onDeleted, onRefresh]);
 
   return (
-    <section className="flex flex-col gap-3 text-left w-full max-w-100">
+    <section className="flex w-full max-w-100 flex-col gap-3 text-left">
       <h2 className="text-lg font-semibold text-foreground">Presets</h2>
 
-      {error !== null && (
+      {(error !== null || listError !== null) && (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm"
         >
           <WarningIcon size={16} className="mt-0.5 shrink-0 text-destructive" />
-          <p className="flex-1">{error}</p>
-          <Button size="xs" variant="ghost" onClick={() => setError(null)}>
-            Dismiss
-          </Button>
+          <p className="flex-1">{error ?? listError}</p>
+          {error !== null ? (
+            <Button size="xs" variant="ghost" onClick={() => setError(null)}>
+              Dismiss
+            </Button>
+          ) : (
+            <Button size="xs" variant="outline" onClick={onRefresh}>
+              Retry
+            </Button>
+          )}
         </div>
       )}
 
@@ -122,7 +105,7 @@ export function PresetPicker({
             <li
               key={p.filename}
               className={cn(
-                "flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
+                "group flex flex-wrap items-center gap-2 px-3 py-2 text-sm hover:bg-blue-200/40",
                 p.active && "bg-primary/40",
                 selected === p.filename && "bg-blue-200 text-black",
               )}
@@ -134,11 +117,6 @@ export function PresetPicker({
                   {p.builtin && (
                     <span className="ms-2 rounded-4xl bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground uppercase">
                       built-in
-                    </span>
-                  )}
-                  {p.active && (
-                    <span className="ms-2 rounded-4xl bg-primary/10 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
-                      active
                     </span>
                   )}
                 </p>
@@ -184,8 +162,8 @@ export function PresetPicker({
                   }
                   className={cn(
                     "",
-                    p.active && "bg-transparent",
-                    selected === p.filename && "text-black",
+                    p.active && "bg-transparent group-hover:text-black",
+                    p.active && selected === p.filename && "text-black",
                   )}
                 >
                   {busy === p.filename ? (

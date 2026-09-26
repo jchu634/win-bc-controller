@@ -1,8 +1,13 @@
+import type { ComponentType, SVGProps } from "react";
+import PlayStation5Controller from "@/src/assets/controllers/PlayStation5Controller";
+import SwitchProController from "@/src/assets/controllers/SwitchProController";
+import XboxSeriesController from "@/src/assets/controllers/XboxSeriesController";
+
 export type ControllerLayout = "generic" | "switch" | "xbox" | "playstation";
 export type ControllerLayoutDefinition = {
   value: ControllerLayout;
   label: string;
-  image: string | null;
+  image: ComponentType<SVGProps<SVGSVGElement>> | null;
   buttonNames: readonly string[];
   axisNames: readonly string[];
 };
@@ -20,7 +25,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
   {
     value: "switch",
     label: "Switch Pro",
-    image: "/assets/controllers/switch-pro.svg",
+    image: SwitchProController,
     buttonNames: [
       "A",
       "B",
@@ -39,12 +44,19 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Capture",
     ],
-    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "ZL", "ZR"],
+    axisNames: [
+      "Left stick X",
+      "Left stick Y",
+      "Right stick X",
+      "Right stick Y",
+      "ZL",
+      "ZR",
+    ],
   },
   {
     value: "xbox",
     label: "Xbox Series",
-    image: "/assets/controllers/xbox-series.svg",
+    image: XboxSeriesController,
     buttonNames: [
       "A",
       "B",
@@ -70,7 +82,7 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
   {
     value: "playstation",
     label: "PlayStation",
-    image: "/assets/controllers/playstation-5.svg",
+    image: PlayStation5Controller,
     buttonNames: [
       "Cross",
       "Circle",
@@ -89,6 +101,13 @@ export const CONTROLLER_LAYOUTS: readonly ControllerLayoutDefinition[] = [
       "D-pad right",
       "Touch pad",
     ],
-    axisNames: ["Left stick X", "Left stick Y", "Right stick X", "Right stick Y", "L2", "R2"],
+    axisNames: [
+      "Left stick X",
+      "Left stick Y",
+      "Right stick X",
+      "Right stick Y",
+      "L2",
+      "R2",
+    ],
   },
 ];

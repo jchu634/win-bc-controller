@@ -1,4 +1,4 @@
-"""Input subsystem for win-bc-controller.
+"""Input subsystem for ounce-bt.
 
 Defines a single standardized controller-state packet (``ControllerState``)
 and the input sources (physical controller via pygame, file-based macros)

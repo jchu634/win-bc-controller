@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import { LiveVideoPlayer, Video } from "@videojs/react/live-video";
-import { VideoCameraIcon, VideoCameraSlashIcon, WarningIcon } from "@phosphor-icons/react";
+import {
+  VideoCameraIcon,
+  VideoCameraSlashIcon,
+  WarningIcon,
+} from "@phosphor-icons/react";
 import { CapturePreviewSkin } from "./capture-preview-skin";
 import { useCaptureControls, useCaptureStream } from "@/src/hooks/use-capture";
 
@@ -8,7 +12,8 @@ export function CapturePreview() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const stream = useCaptureStream();
   const { error, permission, starting } = useCaptureControls();
-  const permissionGranted = permission === "granted" || permission === "unsupported";
+  const permissionGranted =
+    permission === "granted" || permission === "unsupported";
 
   useEffect(() => {
     const video = videoRef.current;
@@ -40,13 +45,16 @@ export function CapturePreview() {
               <>
                 <VideoCameraSlashIcon size={36} weight="duotone" />
                 <p className="px-6 text-center text-sm">
-                  Camera access is blocked. Enable it in your browser's site settings to continue.
+                  Camera access is blocked. Enable it in your browser's site
+                  settings to use the capture preview.
                 </p>
               </>
             ) : !permissionGranted ? (
               <>
                 <VideoCameraIcon size={36} weight="duotone" />
-                <p className="text-sm">Camera access required to begin</p>
+                <p className="text-sm">
+                  Camera access required to usae capture preview
+                </p>
               </>
             ) : (
               <>

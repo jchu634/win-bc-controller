@@ -146,9 +146,10 @@ export type PresetEditorHandle = {
 type SaveResult = "saved" | "save-as-required" | "failed";
 
 export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps) {
+  const [initialName] = useState(name);
   const [value, setValue] = useState("");
   const [savedText, setSavedText] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initialName !== null);
   const [saving, setSaving] = useState(false);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
@@ -165,24 +166,26 @@ export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps)
   const saveAsForNavigation = useRef(false);
 
   useEffect(() => {
-    if (name === null) return;
-    setLoading(true);
-    setError(null);
-    setNotice(null);
-    setMarkers([]);
-    setSavedText(null);
-    setAdvanced(false);
-    Effect.runPromise(getPreset(name))
+    if (initialName === null) return;
+    let cancelled = false;
+    Effect.runPromise(getPreset(initialName))
       .then((r) => {
+        if (cancelled) return;
         setValue(r.contents);
         setSavedText(r.contents);
       })
       .catch((error: unknown) => {
+        if (cancelled) return;
         setValue("");
         setError(errorMessage(error));
       })
-      .finally(() => setLoading(false));
-  }, [name]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialName]);
 
   const dirty = savedText !== null && value !== savedText;
 
@@ -304,6 +307,17 @@ export function PresetEditor({ name, builtin, onSaved, ref }: PresetEditorProps)
     }
     return "failed";
   }, [name, builtin, value, syntaxPrecheck, buildMarkers, onSaved]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "s")
+        return;
+      event.preventDefault();
+      if (!event.repeat && dirty && !saving && !loading && !saveAsOpen) void save();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [dirty, saving, loading, saveAsOpen, save]);
 
   const activate = useCallback(async () => {
     if (name === null) return;
@@ -941,6 +955,7 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
   const axisOptions = Array.from({ length: gamepadAxisCount }, (_, index) => index);
   const controllerLayout = inferControllerLayout(parsed.document);
   const controller = controllerLayoutDefinition(controllerLayout);
+  const ControllerImage = controller.image;
 
   const setControllerLayout = (layout: ControllerLayout) => {
     if (disabled) return;
@@ -1099,12 +1114,12 @@ function PresetMappingEditor({ value, onChange, disabled }: PresetMappingEditorP
           ))}
         </div>
         <div className="h-100% center flex flex-col items-center justify-center p-5 2.5xl:w-3/5">
-          {controller.image === null ? (
+          {ControllerImage === null ? (
             <GameControllerIcon weight="light" className="size-32 text-muted-foreground" />
           ) : (
-            <img
-              src={controller.image}
-              alt={`${controller.label} controller layout`}
+            <ControllerImage
+              role="img"
+              aria-label={`${controller.label} controller layout`}
               className="w-full max-w-56 opacity-80 brightness-0 dark:invert"
             />
           )}

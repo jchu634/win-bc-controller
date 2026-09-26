@@ -1,69 +1,50 @@
-/**
- * Macro list + run controls (start / pause / resume / stop).
- * Self-contained panel: usable from the /macros route or a dialog.
- */
-
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Effect } from "effect";
 import {
   FilePlusIcon,
   MagnifyingGlassIcon,
   PauseIcon,
   PencilSimpleIcon,
   PlayIcon,
-  SpinnerGapIcon,
   StopIcon,
   WarningIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/src/components/ui/button";
 import { useMacroRunner } from "@/src/hooks/use-macro-runner";
 import { useSocket } from "@/src/hooks/use-socket";
-import { listMacros } from "@/src/lib/api";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { cn } from "cnfast";
 
 export function MacroRunPanel({
+  names,
+  listError,
+  onRetry,
   selected,
   onSelect,
   onCreate,
-  refreshKey = 0,
 }: {
+  names: string[];
+  listError: string | null;
+  onRetry: () => void;
   selected: string | null;
   onSelect: (name: string) => void;
   onCreate?: () => void;
-  /** Bump to re-fetch the macro list (after create / delete). */
-  refreshKey?: number;
 }) {
-  const [names, setNames] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { macro, macroActive, isPaused, startByName, pause, resume, cancel } = useMacroRunner();
+  const { macro, macroActive, isPaused, startByName, pause, resume, cancel } =
+    useMacroRunner();
   const { lastError, clearError } = useSocket();
 
-  const refresh = useCallback(() => {
-    setLoading(true);
-    Effect.runPromise(listMacros())
-      .then((r) => {
-        setNames(r.names);
-        setError(null);
-      })
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh, refreshKey]);
-
-  const wsError = lastError !== null && lastError.message !== "" ? lastError : null;
+  const wsError =
+    lastError !== null && lastError.message !== "" ? lastError : null;
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filteredNames =
     normalizedSearch === ""
       ? names
-      : names.filter((name) => name.toLocaleLowerCase().includes(normalizedSearch));
+      : names.filter((name) =>
+          name.toLocaleLowerCase().includes(normalizedSearch),
+        );
 
   return (
     <section className="flex w-full flex-col gap-3 text-left">
@@ -111,23 +92,29 @@ export function MacroRunPanel({
               <PlayIcon size={14} weight="fill" /> Resume
             </Button>
           ) : (
-            <Button size="sm" variant="outline" onClick={pause} disabled={!macroActive}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={pause}
+              disabled={!macroActive}
+            >
               <PauseIcon size={14} weight="fill" /> Pause
             </Button>
           )}
-          <Button size="sm" variant="destructive" onClick={cancel} disabled={!macroActive}>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={cancel}
+            disabled={!macroActive}
+          >
             <StopIcon size={14} weight="fill" /> Stop
           </Button>
         </div>
-        {loading ? (
-          <div className="flex flex-1 items-center justify-center gap-2 rounded-md py-6 text-sm text-muted-foreground">
-            <SpinnerGapIcon size={16} className="animate-spin" /> Loading…
-          </div>
-        ) : error !== null ? (
+        {listError !== null ? (
           <div className="flex flex-1 flex-col items-center gap-2 rounded-md py-6 text-sm">
             <WarningIcon size={20} className="text-destructive" />
-            <p>{error}</p>
-            <Button size="xs" variant="outline" onClick={refresh}>
+            <p>{listError}</p>
+            <Button size="xs" variant="outline" onClick={onRetry}>
               Retry
             </Button>
           </div>
@@ -153,7 +140,11 @@ export function MacroRunPanel({
                   key={name}
                   className={cn(
                     "relative flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm focus-within:bg-muted/60 hover:bg-muted/60",
-                    selected === name ? "bg-muted/60" : isActive ? "bg-primary/5" : "bg-background",
+                    selected === name
+                      ? "bg-muted/60"
+                      : isActive
+                        ? "bg-primary/5"
+                        : "bg-background",
                   )}
                 >
                   <Button
@@ -175,7 +166,9 @@ export function MacroRunPanel({
                     <PencilSimpleIcon size={12} /> Edit
                   </Button>
                   {isActive && isPaused && (
-                    <span className="text-xs text-muted-foreground">paused</span>
+                    <span className="text-xs text-muted-foreground">
+                      paused
+                    </span>
                   )}
                   <Button
                     size="xs"

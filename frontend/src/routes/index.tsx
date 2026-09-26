@@ -1,18 +1,24 @@
 import { useState } from "react";
-import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { PlayIcon, SpinnerGapIcon, StopIcon, VideoCameraIcon } from "@phosphor-icons/react";
+import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
+import {
+  PlayIcon,
+  SpinnerGapIcon,
+  StopIcon,
+  VideoCameraIcon,
+} from "@phosphor-icons/react";
 import { CapturePreview } from "@/src/components/panels/capture-preview";
 import { MacroRunPanel } from "@/src/components/panels/macro-runner";
 import { ManualControl } from "@/src/components/panels/manual-control";
 import {
   ConnectionToggleButton,
   SwitchConnection,
-  useSwitchConnection,
 } from "@/src/components/panels/connection";
+import { useSwitchConnection } from "@/src/lib/switch-connection";
 import { Button } from "@/src/components/ui/button";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
 import { SettingsDialog } from "@/src/components/settings/dialog";
 import { useSelector } from "@tanstack/react-store";
+import { loadMacroList } from "@/src/lib/load-macro-list";
 import { generalSettingsStore } from "@/src/stores/general-settings";
 import "@/src/App.css";
 
@@ -21,16 +27,30 @@ function Homepage() {
     generalSettingsStore,
     (settings) => settings.controlsOnlyHomepage,
   );
-  return controlsOnlyHomepage ? <Navigate to="/controls" replace /> : <PreviewPage />;
+  return controlsOnlyHomepage ? (
+    <Navigate to="/controls" replace />
+  ) : (
+    <PreviewPage />
+  );
 }
 
 function PreviewPage() {
+  const macroList = Route.useLoaderData();
+  const router = useRouter();
   const [selectedMacro, setSelectedMacro] = useState<string | null>(null);
   const switchConnection = useSwitchConnection();
-  const { selectedInputId } = useCaptureInput();
-  const { permission, requestAccess, requestingPermission, start, starting, stop, streaming } =
-    useCaptureControls();
-  const permissionGranted = permission === "granted" || permission === "unsupported";
+  const { selectedCameraInputId } = useCaptureInput();
+  const {
+    permission,
+    requestAccess,
+    requestingPermission,
+    start,
+    starting,
+    stop,
+    streaming,
+  } = useCaptureControls();
+  const permissionGranted =
+    permission === "granted" || permission === "unsupported";
 
   return (
     <div className="flex h-full w-full flex-col gap-6 bg-background px-4">
@@ -46,13 +66,19 @@ function PreviewPage() {
           <div className="flex gap-2">
             {permissionGranted ? (
               <Button
-                onClick={streaming ? stop : () => void start(selectedInputId)}
+                onClick={
+                  streaming ? stop : () => void start(selectedCameraInputId)
+                }
                 variant={streaming ? "destructive" : "tertiary"}
-                disabled={starting || !selectedInputId}
+                disabled={starting || !selectedCameraInputId}
                 className="h-10 flex-1 text-sm 2xl:text-lg"
               >
                 {starting ? (
-                  <SpinnerGapIcon size={16} weight="bold" className="animate-spin" />
+                  <SpinnerGapIcon
+                    size={16}
+                    weight="bold"
+                    className="animate-spin"
+                  />
                 ) : streaming ? (
                   <StopIcon size={16} weight="fill" />
                 ) : (
@@ -67,7 +93,11 @@ function PreviewPage() {
                 disabled={requestingPermission}
               >
                 {requestingPermission ? (
-                  <SpinnerGapIcon size={16} weight="bold" className="animate-spin" />
+                  <SpinnerGapIcon
+                    size={16}
+                    weight="bold"
+                    className="animate-spin"
+                  />
                 ) : (
                   <VideoCameraIcon size={16} weight="fill" />
                 )}
@@ -92,7 +122,13 @@ function PreviewPage() {
               className="h-10 shrink-0 text-sm 2xl:text-lg"
             />
           </div>
-          <MacroRunPanel selected={selectedMacro} onSelect={setSelectedMacro} />
+          <MacroRunPanel
+            names={macroList.kind === "loaded" ? macroList.names : []}
+            listError={macroList.kind === "error" ? macroList.message : null}
+            onRetry={() => void router.invalidate()}
+            selected={selectedMacro}
+            onSelect={setSelectedMacro}
+          />
           <ManualControl />
         </div>
       </div>
@@ -101,5 +137,6 @@ function PreviewPage() {
 }
 
 export const Route = createFileRoute("/")({
+  loader: loadMacroList,
   component: Homepage,
 });

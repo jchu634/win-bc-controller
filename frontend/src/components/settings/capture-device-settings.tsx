@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { SpinnerGapIcon } from "@phosphor-icons/react";
 import { Effect } from "effect";
 import { useCaptureControls, useCaptureInput } from "@/src/hooks/use-capture";
-import { CameraError, acquireStream, describeError, releaseStream } from "@/src/lib/webcam";
+import {
+  CameraError,
+  acquireStream,
+  describeError,
+  releaseStream,
+} from "@/src/lib/webcam";
 import { Button } from "@/src/components/ui/button";
 import {
   Select,
@@ -23,6 +28,25 @@ export function CaptureDeviceSettings({
   draftInputId: string;
   onDraftInputChange: (deviceId: string) => void;
 }) {
+  return (
+    <CaptureDeviceSettingsContent
+      key={String(disabled)}
+      disabled={disabled}
+      draftInputId={draftInputId}
+      onDraftInputChange={onDraftInputChange}
+    />
+  );
+}
+
+function CaptureDeviceSettingsContent({
+  disabled,
+  draftInputId,
+  onDraftInputChange,
+}: {
+  disabled: boolean;
+  draftInputId: string;
+  onDraftInputChange: (deviceId: string) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
@@ -30,20 +54,12 @@ export function CaptureDeviceSettings({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewRequestedRef = useRef(false);
   const previewStreamRef = useRef<MediaStream | null>(null);
-  const { permission, requestAccess, requestingPermission } = useCaptureControls();
+  const { permission, requestAccess, requestingPermission } =
+    useCaptureControls();
   const { cameras } = useCaptureInput();
-  const selectedInputLabel = cameras.find((camera) => camera.deviceId === draftInputId)?.label;
-
-  useEffect(() => {
-    if (disabled) {
-      previewRequestedRef.current = false;
-      setVisible(false);
-      const current = previewStreamRef.current;
-      previewStreamRef.current = null;
-      setPreviewStream(null);
-      if (current) void Effect.runPromise(releaseStream(current));
-    }
-  }, [disabled]);
+  const selectedInputLabel = cameras.find(
+    (camera) => camera.deviceId === draftInputId,
+  )?.label;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -61,11 +77,11 @@ export function CaptureDeviceSettings({
     if (current) void Effect.runPromise(releaseStream(current));
   };
 
-  previewStreamRef.current = previewStream;
-
   useEffect(
     () => () => {
+      previewRequestedRef.current = false;
       const current = previewStreamRef.current;
+      previewStreamRef.current = null;
       if (current) void Effect.runPromise(releaseStream(current));
     },
     [],
@@ -86,12 +102,14 @@ export function CaptureDeviceSettings({
     try {
       const audioDeviceId = (() => {
         try {
-          return localStorage.getItem("win-bc-controller.audio-input") ?? "";
+          return localStorage.getItem("ounce-bt.audio-input") ?? "";
         } catch {
           return "";
         }
       })();
-      const nextStream = await Effect.runPromise(acquireStream(draftInputId, audioDeviceId));
+      const nextStream = await Effect.runPromise(
+        acquireStream(draftInputId, audioDeviceId),
+      );
       if (!previewRequestedRef.current) {
         void Effect.runPromise(releaseStream(nextStream));
         return;
@@ -100,7 +118,9 @@ export function CaptureDeviceSettings({
       setPreviewStream(nextStream);
     } catch (cause: unknown) {
       const captureError = cause instanceof CameraError ? cause : null;
-      setPreviewError(captureError ? describeError(captureError) : "Unable to access camera.");
+      setPreviewError(
+        captureError ? describeError(captureError) : "Unable to access camera.",
+      );
     } finally {
       setPreviewStarting(false);
     }
@@ -114,7 +134,9 @@ export function CaptureDeviceSettings({
           disabled={disabled || requestingPermission}
           onClick={() => void requestAccess()}
         >
-          {requestingPermission ? "Requesting camera access..." : "Request camera access"}
+          {requestingPermission
+            ? "Requesting camera access..."
+            : "Request camera access"}
         </Button>
       )}
       <div className="flex w-full flex-wrap items-center gap-2">
@@ -133,7 +155,9 @@ export function CaptureDeviceSettings({
           }}
         >
           <SelectTrigger className="w-1/2 min-w-64">
-            <SelectValue placeholder="Capture Device">{selectedInputLabel}</SelectValue>
+            <SelectValue placeholder="Capture Device">
+              {selectedInputLabel}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -153,7 +177,9 @@ export function CaptureDeviceSettings({
           disabled={disabled || !draftInputId || previewStarting}
           onClick={() => void togglePreview()}
         >
-          {previewStarting && <SpinnerGapIcon className="animate-spin" weight="bold" />}
+          {previewStarting && (
+            <SpinnerGapIcon className="animate-spin" weight="bold" />
+          )}
           {visible ? "Hide preview" : "Show preview"}
         </Button>
       </div>
@@ -174,7 +200,9 @@ export function CaptureDeviceSettings({
               ? "Capture controls are disabled while the controls-only homepage is enabled."
               : visible
                 ? (previewError ??
-                  (previewStarting ? "Starting preview..." : "Preview unavailable"))
+                  (previewStarting
+                    ? "Starting preview..."
+                    : "Preview unavailable"))
                 : "Preview disabled"}
           </div>
         )}

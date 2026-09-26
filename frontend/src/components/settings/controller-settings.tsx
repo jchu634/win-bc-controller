@@ -2,14 +2,26 @@ import { useRef, useState } from "react";
 import { ControllerPanel } from "@/src/components/settings/controller-panel";
 import { PresetEditor, type PresetEditorHandle } from "@/src/components/editors/preset-editor";
 import { PresetPicker } from "@/src/components/settings/controller-preset-picker";
+import type { PresetInfo } from "@/src/lib/types";
 
-export function ControllerSettings() {
+export function ControllerSettings({
+  presets,
+  loading,
+  listError,
+  onRefresh,
+}: {
+  presets: PresetInfo[];
+  loading: boolean;
+  listError: string | null;
+  onRefresh: () => void;
+}) {
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [selectedBuiltin, setSelectedBuiltin] = useState(false);
-  const [presetListVersion, setPresetListVersion] = useState(0);
+  const [editorSession, setEditorSession] = useState(0);
   const presetEditor = useRef<PresetEditorHandle | null>(null);
 
   function openPreset(name: string, builtin: boolean) {
+    setEditorSession((session) => session + 1);
     setSelectedPreset(name);
     setSelectedBuiltin(builtin);
   }
@@ -30,6 +42,10 @@ export function ControllerSettings() {
 
       <div className="space-y-4 2xl:flex 2xl:space-y-0 2xl:gap-x-4">
         <PresetPicker
+          presets={presets}
+          loading={loading}
+          listError={listError}
+          onRefresh={onRefresh}
           selected={selectedPreset}
           onSelect={(preset) => requestPreset(preset.filename, preset.builtin)}
           onDeleted={(name) => {
@@ -37,17 +53,16 @@ export function ControllerSettings() {
               setSelectedPreset(null);
               setSelectedBuiltin(false);
             }
-            setPresetListVersion((version) => version + 1);
           }}
-          refreshKey={presetListVersion}
         />
         <PresetEditor
+          key={editorSession}
           ref={presetEditor}
           name={selectedPreset}
           builtin={selectedBuiltin}
           onSaved={(name) => {
-            openPreset(name, false);
-            setPresetListVersion((version) => version + 1);
+            if (name !== selectedPreset || selectedBuiltin) openPreset(name, false);
+            onRefresh();
           }}
         />
       </div>
